@@ -1,0 +1,40 @@
+# Dependencias
+node_modules/
+
+# Secretos (entregar solo .env.example)
+.env
+.env.*
+!.env.example
+
+# Archivos subidos por usuarios (planos, fotos, STL)
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Expo / React Native
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/android/
+mobile/ios/
+*.apk
+*.aab
+*.jks
+*.keystore
+*.p8
+*.p12
+*.mobileprovision
+google-services.json
+
+# Logs y sistema
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# Editor / herramientas
+.vscode/
+.idea/
+.claude/settings.local.json
+
+# Entregas
+*.zip
