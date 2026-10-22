@@ -1,0 +1,26 @@
+// Autenticación: exige `Authorization: Bearer <accessToken>` y carga el usuario actualizado.
+import { verificarAcceso } from '../services/tokens.js';
+import { buscarUsuarioPorId } from '../services/usuarios.js';
+import { errores } from '../utils/errores.js';
+import { auditar } from '../services/auditoria.js';
+
+export async function autenticar(req, res, next) {
+  const [esquema, token] = (req.get('authorization') ?? '').split(' ');
+  if (esquema !== 'Bearer' || !token) return next(errores.noAutenticado());
+
+  let payload;
+  try {
+    payload = verificarAcceso(token);
+  } catch (err) {
+    if (err.codigo !== 'TOKEN_EXPIRADO') await auditar(req, { accion: 'token_invalido', usuarioId: null });
+    return next(err);
+  }
+
+  // Se lee de la base en cada petición: si un admin desactiva la cuenta o
+  // cambia el rol, el cambio rige de inmediato y no recién cuando vence el token.
+  const usuario = await buscarUsuarioPorId(Number(payload.sub));
+  if (!usuario || !usuario.activo) return next(errores.noAutenticado('Tu cuenta no está activa'));
+
+  req.usuario = usuario;
+  next();
+}

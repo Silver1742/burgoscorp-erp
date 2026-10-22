@@ -49,8 +49,9 @@ CREATE TABLE modulos (
 --             'escritura' = todos pueden ver, pero crear/editar/borrar/aprobar solo el área dueña
 --                           (un jefe de Compras aprueba órdenes de compra; uno de Mecanizado no)
 --             'todo'      = solo el área dueña accede al módulo (ej. Finanzas)
---   Regla adicional: si el área del usuario es dueña del módulo, su alcance pasa a 'todo'
+--   Regla adicional: si un JEFE pertenece al área dueña del módulo, su alcance pasa a 'todo'
 --   (el jefe de RRHH ve los legajos de toda la empresa; el de Soldadura, solo los de su equipo).
+--   Los empleados conservan el alcance configurado.
 CREATE TABLE permisos_rol (
   rol_id               TINYINT UNSIGNED NOT NULL,
   modulo_id            TINYINT UNSIGNED NOT NULL,
