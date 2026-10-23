@@ -1,7 +1,7 @@
 # Guía de instalación y configuración
 
-> En construcción: por ahora cubre la API y la base de datos. La app móvil y el despliegue
-> en la nube se suman en los próximos pasos.
+> En construcción: cubre la API, la base de datos y la app en desarrollo. El despliegue en la
+> nube y el APK se suman en los próximos pasos.
 
 ## Requisitos
 
@@ -79,7 +79,24 @@ Son datos de prueba: no usar esta contraseña en un servidor público.
 
 La lista completa se imprime al correr `npm run seed`.
 
-## 4. Tests
+## 4. App móvil
+
+```bash
+cd mobile
+npm install
+cp .env.example .env
+npx expo start
+```
+
+- **En el navegador:** con la tecla `w`. En `backend/.env` hay que agregar
+  `CORS_ORIGINS=http://localhost:8081`.
+- **En el celular con Expo Go:** celular y PC en la misma WiFi, `HOST=0.0.0.0` en
+  `backend/.env` y `EXPO_PUBLIC_API_URL=http://<IP-de-la-PC>:3000/api/v1` en `mobile/.env`.
+  Escanear el QR con Expo Go.
+
+Más detalles en [mobile/README.md](../mobile/README.md).
+
+## 5. Tests
 
 Los tests modifican datos: correrlos contra una base de prueba. Los tests de login social no se
 conectan a Google, GitHub ni Facebook (los simulan), pero necesitan valores de prueba en las

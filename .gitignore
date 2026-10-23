@@ -35,6 +35,8 @@ Thumbs.db
 .vscode/
 .idea/
 .claude/settings.local.json
+# Configuración local de vista previa (rutas de esta PC)
+.claude/launch.json
 
 # Entregas
 *.zip
