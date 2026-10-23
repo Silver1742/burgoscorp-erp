@@ -1,8 +1,8 @@
 // Grilla de módulos que el rol puede ver. Se adapta al ancho (2 a 4 columnas).
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Tarjeta, Texto, Vacio } from '../../../componentes/ui';
+import { EncabezadoPagina, Tarjeta, Vacio, Insignia } from '../../../componentes/ui';
 import { useSesion } from '../../../contexto/sesion';
 import { MODULOS } from '../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../tema';
@@ -22,14 +22,18 @@ export default function Modulos() {
       keyExtractor={(m) => m.codigo}
       contentContainerStyle={estilos.lista}
       style={{ backgroundColor: t.fondo }}
+      ListHeaderComponent={<EncabezadoPagina titulo="Módulos" icono="apps" sub="Las áreas del sistema a las que tenés acceso." />}
       ListEmptyComponent={<Vacio titulo="No tenés módulos habilitados" texto="Pedile a un administrador que revise tu rol." />}
       renderItem={({ item }) => (
         <View style={{ flex: 1 / columnas, padding: espacio.xs }}>
-          <Tarjeta onPress={() => router.push(`/modulos/${item.codigo}`)} estilo={estilos.tarjeta}>
-            <Ionicons name={item.icono} size={30} color={t.acento} />
-            <Texto estilo={estilos.titulo}>{item.titulo}</Texto>
-            <Texto suave estilo={{ fontSize: 13 }}>{item.descripcion}</Texto>
-            {!item.recursos.length ? <Texto suave estilo={estilos.pronto}>Próximamente</Texto> : null}
+          <Tarjeta onPress={() => router.push(`/modulos/${item.codigo}`)} acentoArriba estilo={estilos.tarjeta}>
+            <View style={[estilos.icono, { backgroundColor: t.rojoSuave }]}>
+              <Ionicons name={item.icono.replace('-outline', '')} size={22} color={t.primario} />
+            </View>
+            <Text style={[estilos.titulo, { color: t.texto }]}>{item.titulo}</Text>
+            <Text style={{ color: t.textoSuave, fontSize: 13 }}>{item.descripcion}</Text>
+            {!item.recursos.length && !item.acciones?.length
+              ? <View style={{ marginTop: espacio.s }}><Insignia texto="Próximamente" /></View> : null}
           </Tarjeta>
         </View>
       )}
@@ -38,8 +42,8 @@ export default function Modulos() {
 }
 
 const estilos = StyleSheet.create({
-  lista: { padding: espacio.m, maxWidth: 1100, width: '100%', alignSelf: 'center' },
-  tarjeta: { minHeight: 140, marginBottom: 0 },
-  titulo: { fontSize: 16, fontWeight: '700', marginTop: espacio.s },
-  pronto: { fontSize: 12, marginTop: espacio.s, fontStyle: 'italic' },
+  lista: { padding: espacio.l, maxWidth: 1140, width: '100%', alignSelf: 'center' },
+  tarjeta: { minHeight: 150, marginBottom: 0 },
+  icono: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  titulo: { fontSize: 16, fontWeight: '600', marginTop: espacio.m, marginBottom: 2 },
 });

@@ -1,63 +1,96 @@
-// Identidad visual de BurgosCorp: rojo, negro y gris, en modo claro y oscuro.
+// Identidad visual de BurgosCorp: la misma del portal R3 (React/R3 V, packages/ui/src/styles/index.css).
+// Rojo corporativo + negro + escala de grises (zinc), en modo claro y oscuro.
 // El modo lo elige el usuario (Sistema / Claro / Oscuro) y queda guardado en el dispositivo.
 import { createContext, use, useEffect, useMemo, useState } from 'react';
-import { useColorScheme, useWindowDimensions } from 'react-native';
+import { Platform, useColorScheme, useWindowDimensions } from 'react-native';
 import { leerPreferencia, guardarPreferencia } from './lib/preferencias';
-
-// Rojo BurgosCorp y sus variantes
-const ROJO = '#C8102E';
-const ROJO_CLARO = '#E5383B';
 
 const claro = {
   modo: 'claro',
-  fondo: '#F2F2F3',
-  superficie: '#FFFFFF',
-  superficieAlt: '#E9E9EB',
-  borde: '#D2D2D6',
-  texto: '#151517',
-  textoSuave: '#5C5C63',
-  primario: ROJO,
-  primarioTexto: '#FFFFFF',
-  acento: ROJO,
-  // Barras (cabecera y pestañas): negras en los dos modos, como la marca
-  barra: '#141416',
-  barraTexto: '#FFFFFF',
-  barraTextoSuave: '#9A9AA2',
-  barraBorde: '#2A2A2E',
-  exito: '#2B8A3E',
-  error: '#B3261E',
-  errorFondo: '#FCEBEA',
-  aviso: '#A85A00',
-  avisoFondo: '#FFF4E0',
+  // --bc-red y variantes
+  primario: '#c8102e',
+  primarioPresionado: '#a50d26',
+  primarioTexto: '#ffffff',
+  rojoSuave: '#fde8eb',
+  rojoTexto: '#8f0b21',
+  acento: '#c8102e',
+  marcaAcento: '#c8102e',     // "Corp" sobre fondo claro
+  negro: '#111111',
+  // superficies y texto
+  fondo: '#f4f4f5',           // --bc-page
+  superficie: '#ffffff',      // --bc-surface
+  superficieAlt: '#fafafa',   // --bc-muted-surface
+  superficieSec: '#e4e4e7',   // --bs-secondary-bg
+  borde: '#e4e4e7',           // --bc-gray-200
+  texto: '#18181b',           // --bc-gray-900
+  textoSuave: '#52525b',      // --bc-gray-600
+  textoTenue: '#a1a1aa',      // --bc-gray-400
+  // insignia de jefe: negra en claro, invertida en oscuro
+  insigniaJefeFondo: '#111111',
+  insigniaJefeTexto: '#ffffff',
+  // estados (Bootstrap)
+  exito: '#198754',
+  exitoSuave: '#d1e7dd',
+  exitoTexto: '#0a3622',
+  error: '#dc3545',
+  errorSuave: '#f8d7da',
+  errorTexto: '#58151c',
+  aviso: '#ffc107',
+  avisoSuave: '#fff3cd',
+  avisoTexto: '#664d03',
+  // barra superior y pestañas: siempre negras (identidad), en ambos modos
+  barra: '#111111',
+  barraBorde: '#26262b',
+  barraTexto: '#ffffff',
+  barraTextoSuave: '#d4d4d8',
+  barraTextoInactivo: '#a1a1aa',
+  marcaAcentoBarra: '#ff4d61',
 };
 
 const oscuro = {
+  ...claro,
   modo: 'oscuro',
-  fondo: '#0C0C0D',
-  superficie: '#18181B',
-  superficieAlt: '#242428',
-  borde: '#34343A',
-  texto: '#F2F2F3',
-  textoSuave: '#A3A3AB',
-  primario: ROJO_CLARO,
-  primarioTexto: '#FFFFFF',
-  acento: ROJO_CLARO,
-  barra: '#000000',
-  barraTexto: '#FFFFFF',
-  barraTextoSuave: '#8E8E96',
-  barraBorde: '#26262A',
-  exito: '#51CF66',
-  error: '#FF6B6B',
-  errorFondo: '#3A1517',
-  aviso: '#FFB84D',
-  avisoFondo: '#3A2C14',
+  primario: '#ef3b4f',
+  primarioPresionado: '#f45d6e',
+  rojoSuave: 'rgba(239, 59, 79, 0.14)',
+  rojoTexto: '#ff8a97',
+  acento: '#ef3b4f',
+  marcaAcento: '#ff4d61',
+  fondo: '#0b0b0c',
+  superficie: '#17171a',
+  superficieAlt: '#1f1f23',
+  superficieSec: '#26262b',
+  borde: '#2a2a30',
+  texto: '#e4e4e7',
+  textoSuave: '#a1a1aa',
+  textoTenue: '#71717a',
+  insigniaJefeFondo: '#e4e4e7',
+  insigniaJefeTexto: '#111111',
+  exitoSuave: 'rgba(25, 135, 84, 0.18)',
+  exitoTexto: '#75b798',
+  errorSuave: 'rgba(220, 53, 69, 0.18)',
+  errorTexto: '#ea868f',
+  avisoSuave: 'rgba(255, 193, 7, 0.15)',
+  avisoTexto: '#ffda6a',
 };
 
 export const espacio = { xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32 };
-export const radio = { s: 6, m: 10, l: 16 };
+export const radio = { s: 6, m: 6, l: 8, xl: 12 }; // botones y campos como Bootstrap (0.375rem); tarjetas 0.5rem
+
+// Tipografías: la marca usa serif (Georgia en web/iOS); el resto, la del sistema.
+export const fuentes = {
+  marca: Platform.select({ ios: 'Georgia', android: 'serif', default: "Georgia, 'Times New Roman', serif" }),
+  mono: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'Consolas, monospace' }),
+};
+
+// Sombra suave de tarjeta (.shadow-sm)
+export const sombra = Platform.select({
+  web: { boxShadow: '0 .125rem .25rem rgba(0,0,0,.075)' },
+  default: { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+});
 
 export const PREFERENCIAS_TEMA = [
-  { valor: 'sistema', titulo: 'Como el sistema', icono: 'phone-portrait-outline' },
+  { valor: 'sistema', titulo: 'Sistema', icono: 'desktop-outline' },
   { valor: 'claro', titulo: 'Claro', icono: 'sunny-outline' },
   { valor: 'oscuro', titulo: 'Oscuro', icono: 'moon-outline' },
 ];
@@ -95,7 +128,7 @@ export function useTema() {
   return ctx ? ctx.colores : claro;
 }
 
-/** Preferencia del usuario y función para cambiarla (pantalla Perfil, botón del login). */
+/** Preferencia del usuario y función para cambiarla. */
 export function usePreferenciaTema() {
   const ctx = use(TemaContext);
   return { preferencia: ctx?.preferencia ?? 'sistema', cambiar: ctx?.cambiarPreferencia ?? (() => {}) };
@@ -108,7 +141,7 @@ export function usePantalla() {
     ancho: width,
     horizontal: width > height,
     esTablet: Math.min(width, height) >= 600,
-    // Columnas para grillas de tarjetas según el ancho disponible.
+    esAncho: width >= 992, // como el breakpoint lg de Bootstrap (panel de marca del login)
     columnas: width >= 1000 ? 4 : width >= 700 ? 3 : 2,
   };
 }
@@ -118,7 +151,8 @@ export function opcionesCabecera(t) {
   return {
     headerStyle: { backgroundColor: t.barra },
     headerTintColor: t.barraTexto,
-    headerTitleStyle: { color: t.barraTexto },
+    headerTitleStyle: { color: t.barraTexto, fontWeight: '600' },
+    headerShadowVisible: false,
     contentStyle: { backgroundColor: t.fondo },
   };
 }

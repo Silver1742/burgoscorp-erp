@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { Pantalla, Titulo, Campo, Boton, Aviso } from '../../componentes/ui';
+import AuthLayout from '../../componentes/AuthLayout';
+import VolverAlLogin from '../../componentes/VolverAlLogin';
+import { Campo, Boton } from '../../componentes/ui';
+import { useToast } from '../../contexto/toast';
 import { api } from '../../lib/api';
 import { esEmail } from '../../lib/validacion';
 
 export default function Olvide() {
   const router = useRouter();
+  const toast = useToast();
   const [email, setEmail] = useState('');
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -18,22 +22,22 @@ export default function Olvide() {
     setError(null);
     setEnviando(true);
     try {
-      await api('/auth/password/olvide', { metodo: 'POST', cuerpo: { email: email.trim() }, conToken: false });
+      const r = await api('/auth/password/olvide', { metodo: 'POST', cuerpo: { email: email.trim() }, conToken: false });
+      toast.info(r.mensaje);
       router.push({ pathname: '/restablecer', params: { email: email.trim() } });
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message);
     } finally {
       setEnviando(false);
     }
   }
 
   return (
-    <Pantalla anchoMax={440}>
-      <Titulo sub="Te mandamos un código de 6 dígitos para que definas una contraseña nueva.">Recuperar contraseña</Titulo>
-      <Aviso>{error}</Aviso>
-      <Campo etiqueta="Email de tu cuenta" value={email} onChangeText={setEmail}
+    <AuthLayout titulo="Recuperar contraseña" sub="Te mandamos un código de 6 dígitos para que definas una contraseña nueva.">
+      <Campo etiqueta="Email de tu cuenta" value={email} onChangeText={setEmail} error={error}
         keyboardType="email-address" autoCapitalize="none" autoComplete="email" maxLength={254} onSubmitEditing={enviar} />
-      <Boton titulo="Enviar código" onPress={enviar} cargando={enviando} icono="mail-outline" />
-    </Pantalla>
+      <Boton titulo="Enviar código" onPress={enviar} cargando={enviando} textoCargando="Enviando…" icono="mail-outline" />
+      <VolverAlLogin />
+    </AuthLayout>
   );
 }

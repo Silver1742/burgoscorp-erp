@@ -1,12 +1,13 @@
-// Elección de modo claro / oscuro.
-//   <SelectorTema />           tres opciones (Perfil)
-//   <SelectorTema compacto />  un botón que alterna claro ↔ oscuro (pantallas sin sesión)
-import { Pressable, StyleSheet, View } from 'react-native';
+// Cambio de modo claro / oscuro (ThemeToggle de R3).
+//   <SelectorTema />               botones Sistema / Claro / Oscuro (Perfil)
+//   <SelectorTema compacto />      botón redondo luna/sol (login y registro)
+//   <SelectorTema compacto barra/> ícono para la barra negra
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Texto } from './ui';
-import { PREFERENCIAS_TEMA, espacio, radio, useTema, usePreferenciaTema } from '../tema';
+import { Pressable, StyleSheet } from 'react-native';
+import { Opciones } from './ui';
+import { PREFERENCIAS_TEMA, useTema, usePreferenciaTema } from '../tema';
 
-export default function SelectorTema({ compacto = false }) {
+export default function SelectorTema({ compacto = false, barra = false }) {
   const t = useTema();
   const { preferencia, cambiar } = usePreferenciaTema();
 
@@ -16,40 +17,22 @@ export default function SelectorTema({ compacto = false }) {
       <Pressable
         onPress={() => cambiar(oscuro ? 'claro' : 'oscuro')}
         accessibilityRole="button"
-        accessibilityLabel={oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+        accessibilityLabel={oscuro ? 'Activar modo claro' : 'Activar modo oscuro'}
         hitSlop={8}
-        style={({ pressed }) => [estilos.compacto, { borderColor: t.borde, backgroundColor: t.superficie, opacity: pressed ? 0.7 : 1 }]}
+        style={({ pressed }) => [
+          barra ? estilos.barra : [estilos.redondo, { borderColor: t.textoTenue }],
+          pressed && { opacity: 0.6 },
+        ]}
       >
-        <Ionicons name={oscuro ? 'sunny-outline' : 'moon-outline'} size={20} color={t.texto} />
+        <Ionicons name={oscuro ? 'sunny-outline' : 'moon-outline'} size={barra ? 20 : 16} color={barra ? t.barraTextoSuave : t.textoSuave} />
       </Pressable>
     );
   }
 
-  return (
-    <View style={[estilos.grupo, { borderColor: t.borde, backgroundColor: t.superficie }]} accessibilityRole="radiogroup">
-      {PREFERENCIAS_TEMA.map((p) => {
-        const activo = preferencia === p.valor;
-        return (
-          <Pressable
-            key={p.valor}
-            onPress={() => cambiar(p.valor)}
-            accessibilityRole="radio"
-            accessibilityState={{ selected: activo }}
-            style={[estilos.opcion, activo && { backgroundColor: t.primario }]}
-          >
-            <Ionicons name={p.icono} size={18} color={activo ? t.primarioTexto : t.textoSuave} />
-            <Texto estilo={{ fontSize: 13, marginTop: 2, color: activo ? t.primarioTexto : t.texto, fontWeight: activo ? '700' : '400' }}>
-              {p.titulo}
-            </Texto>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
+  return <Opciones opciones={PREFERENCIAS_TEMA} valor={preferencia} alCambiar={cambiar} />;
 }
 
 const estilos = StyleSheet.create({
-  compacto: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  grupo: { flexDirection: 'row', borderWidth: 1, borderRadius: radio.m, padding: 3 },
-  opcion: { flex: 1, alignItems: 'center', paddingVertical: espacio.s, borderRadius: radio.m - 2 },
+  redondo: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  barra: { paddingHorizontal: 10, paddingVertical: 6 },
 });

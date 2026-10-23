@@ -9,6 +9,8 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SesionProvider, useSesion } from '../contexto/sesion';
 import { TemaProvider, useTema, opcionesCabecera } from '../tema';
+import { ToastProvider } from '../contexto/toast';
+import IntroSplash from '../componentes/IntroSplash';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -16,10 +18,13 @@ export default function Raiz() {
   return (
     <SafeAreaProvider>
       <TemaProvider>
-        <SesionProvider>
-          <ControlSplash />
-          <Navegador />
-        </SesionProvider>
+        <ToastProvider>
+          <SesionProvider>
+            <ControlSplash />
+            <Navegador />
+          </SesionProvider>
+          <IntroSplash />
+        </ToastProvider>
       </TemaProvider>
     </SafeAreaProvider>
   );
@@ -46,19 +51,19 @@ function Navegador() {
 
   return (
     <>
-      {/* Las cabeceras son negras en los dos modos: íconos de la barra de estado en blanco */}
-      <StatusBar style="light" />
+      {/* Con sesión la cabecera es negra (íconos blancos); sin sesión el fondo sigue el modo */}
+      <StatusBar style={conSesion || t.modo === 'oscuro' ? 'light' : 'dark'} />
       <Stack screenOptions={opcionesCabecera(t)}>
         <Stack.Protected guard={conSesion && verificado} redirectTo={destino}>
           <Stack.Screen name="(app)" options={{ headerShown: false }} />
         </Stack.Protected>
 
         <Stack.Protected guard={conSesion && !verificado} redirectTo={destino}>
-          <Stack.Screen name="verificar-email" options={{ title: 'Verificá tu email', headerBackVisible: false }} />
+          <Stack.Screen name="verificar-email" options={{ headerShown: false }} />
         </Stack.Protected>
 
         <Stack.Protected guard={!conSesion && Boolean(pendiente2fa)} redirectTo={destino}>
-          <Stack.Screen name="dos-pasos" options={{ title: 'Verificación en dos pasos' }} />
+          <Stack.Screen name="dos-pasos" options={{ headerShown: false }} />
         </Stack.Protected>
 
         <Stack.Protected guard={!conSesion && !pendiente2fa} redirectTo={destino}>

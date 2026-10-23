@@ -1,15 +1,18 @@
 // Confirmación del email con el código de 6 dígitos que se envía al registrarse.
 import { useState } from 'react';
-import { Pantalla, Titulo, Campo, Boton, Aviso } from '../componentes/ui';
+import AuthLayout from '../componentes/AuthLayout';
+import VolverAlLogin from '../componentes/VolverAlLogin';
+import { Campo, Boton } from '../componentes/ui';
 import { useSesion } from '../contexto/sesion';
+import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
 import { esCodigo6 } from '../lib/validacion';
 
 export default function VerificarEmail() {
   const { usuario, refrescarPerfil, logout } = useSesion();
+  const toast = useToast();
   const [codigo, setCodigo] = useState('');
   const [error, setError] = useState(null);
-  const [info, setInfo] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
   async function verificar() {
@@ -21,35 +24,32 @@ export default function VerificarEmail() {
     setEnviando(true);
     try {
       await api('/auth/email/verificar', { metodo: 'POST', cuerpo: { codigo: codigo.trim() } });
+      toast.exito('Email confirmado. ¡Bienvenido a BurgosCorp!');
       await refrescarPerfil(); // el layout raíz pasa solo a la app
     } catch (err) {
-      setError(err.message);
+      setError(err.porCampo?.codigo ?? null);
+      toast.error(err.message);
     } finally {
       setEnviando(false);
     }
   }
 
   async function reenviar() {
-    setError(null);
-    setInfo(null);
     try {
       const r = await api('/auth/email/enviar', { metodo: 'POST' });
-      setInfo(r.mensaje);
+      toast.info(r.mensaje);
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message);
     }
   }
 
   return (
-    <Pantalla anchoMax={440}>
-      <Titulo sub={`Te enviamos un código de 6 dígitos a ${usuario?.email}. Vence en 10 minutos.`}>Confirmá tu email</Titulo>
-      <Aviso tipo="info">{info}</Aviso>
-      <Aviso>{error}</Aviso>
-      <Campo etiqueta="Código" value={codigo} onChangeText={setCodigo} keyboardType="number-pad" maxLength={6}
+    <AuthLayout titulo="Confirmá tu email" sub={`Te enviamos un código de 6 dígitos a ${usuario?.email}. Vence en 10 minutos.`}>
+      <Campo etiqueta="Código" value={codigo} onChangeText={setCodigo} error={error} keyboardType="number-pad" maxLength={6}
         autoComplete="one-time-code" textContentType="oneTimeCode" onSubmitEditing={verificar} autoFocus />
-      <Boton titulo="Confirmar" onPress={verificar} cargando={enviando} icono="checkmark-outline" />
-      <Boton titulo="Reenviar código" variante="secundario" onPress={reenviar} />
-      <Boton titulo="Cerrar sesión" variante="texto" onPress={() => logout()} />
-    </Pantalla>
+      <Boton titulo="Confirmar" onPress={verificar} cargando={enviando} textoCargando="Confirmando…" icono="checkmark-outline" />
+      <Boton titulo="Reenviar código" variante="secundario" icono="refresh" onPress={reenviar} />
+      <VolverAlLogin alPresionar={() => logout()} />
+    </AuthLayout>
   );
 }

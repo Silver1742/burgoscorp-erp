@@ -68,20 +68,25 @@ export function SesionProvider({ children }) {
     })();
   }, [cargarPerfil, cerrarLocal]);
 
-  /** Procesa la respuesta de login / social: sesión directa o pedido de 2FA. */
-  const procesarRespuestaLogin = useCallback(async (respuesta) => {
+  /**
+   * Procesa la respuesta de login / social: sesión directa o pedido de 2FA.
+   * `antesDeEntrar` se ejecuta con las credenciales ya validadas y antes de cambiar de pantalla
+   * (el login lo usa para mostrar el escudo sellado, como en el portal R3).
+   */
+  const procesarRespuestaLogin = useCallback(async (respuesta, antesDeEntrar) => {
     if (respuesta.requiere2fa) {
       despachar({ tipo: 'REQUIERE_2FA', tokenTemporal: respuesta.tokenTemporal });
       return { requiere2fa: true };
     }
+    await antesDeEntrar?.();
     await abrirSesion(respuesta);
     return { requiere2fa: false };
   }, [abrirSesion]);
 
   const acciones = useMemo(() => ({
-    async login(email, password) {
+    async login(email, password, { antesDeEntrar } = {}) {
       const r = await api('/auth/login', { metodo: 'POST', cuerpo: { email, password }, conToken: false });
-      return procesarRespuestaLogin(r);
+      return procesarRespuestaLogin(r, antesDeEntrar);
     },
 
     async loginSocial(proveedor, datos) {
