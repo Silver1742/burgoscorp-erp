@@ -40,6 +40,13 @@ Editar `.env`:
 - `DB_USER` / `DB_PASSWORD`: el usuario creado en el paso anterior.
 - `JWT_ACCESS_SECRET` y `JWT_TEMP_SECRET`: dos valores distintos generados con
   `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`.
+- `TOTP_ENC_KEY`: clave para cifrar el 2FA, generada con
+  `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+- Correo (opcional en desarrollo): sin `SMTP_HOST`, los códigos de verificación se muestran en
+  la consola donde corre `npm run dev`. Para mandarlos de verdad con Gmail: `SMTP_HOST=smtp.gmail.com`,
+  `SMTP_USER` = tu Gmail y `SMTP_PASS` = una
+  [contraseña de aplicación](https://myaccount.google.com/apppasswords) (requiere tener 2FA en Google).
+- Redes sociales (opcional): ver [guia-oauth.md](guia-oauth.md).
 
 Cargar los datos de prueba y arrancar:
 
@@ -74,7 +81,10 @@ La lista completa se imprime al correr `npm run seed`.
 
 ## 4. Tests
 
-Los tests modifican datos: correrlos contra una base de prueba.
+Los tests modifican datos: correrlos contra una base de prueba. Los tests de login social no se
+conectan a Google, GitHub ni Facebook (los simulan), pero necesitan valores de prueba en las
+variables `GOOGLE_CLIENT_IDS`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `FACEBOOK_APP_ID`,
+`FACEBOOK_APP_SECRET` y `OAUTH_REDIRECT_URIS=burgoscorp://oauth`.
 
 ```bash
 npm test

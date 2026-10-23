@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { pool, query, queryOne, transaccion } from '../config/db.js';
-import { autenticar } from '../middlewares/auth.js';
+import { autenticado } from '../middlewares/auth.js';
 import { requierePermiso } from '../middlewares/permisos.js';
 import { validar } from '../middlewares/validar.js';
 import { auditar } from '../services/auditoria.js';
@@ -12,7 +12,7 @@ import { usuarioAdmin } from '../validators/catalogos.js';
 import { errores } from '../utils/errores.js';
 
 const router = Router();
-router.use(autenticar);
+router.use(autenticado);
 
 // Nunca se devuelven password_hash ni totp_secret_cifrado.
 const SELECT = `

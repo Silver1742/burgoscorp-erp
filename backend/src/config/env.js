@@ -28,6 +28,28 @@ const esquema = z.object({
 
   // Orígenes web permitidos por CORS (la app nativa no envía Origin). Separados por coma.
   CORS_ORIGINS: z.string().default(''),
+
+  // Clave AES-256 (32 bytes en base64) para cifrar los secretos 2FA en la base.
+  TOTP_ENC_KEY: z.string().refine((v) => Buffer.from(v, 'base64').length === 32,
+    'TOTP_ENC_KEY debe ser 32 bytes en base64'),
+  APP_NOMBRE: z.string().max(40).default('BurgosCorp ERP'),
+
+  // Correo saliente. Sin SMTP_HOST, en desarrollo los correos se muestran en la consola.
+  SMTP_HOST: z.string().default(''),
+  SMTP_PORT: z.coerce.number().int().default(587),
+  SMTP_SECURE: z.enum(['true', 'false']).default('false'),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASS: z.string().default(''),
+  SMTP_FROM: z.string().default('BurgosCorp ERP <no-responder@burgoscorp.test>'),
+
+  // Login social (vacío = proveedor deshabilitado)
+  GOOGLE_CLIENT_IDS: z.string().default(''),   // ids de cliente web/android/ios separados por coma
+  GITHUB_CLIENT_ID: z.string().default(''),
+  GITHUB_CLIENT_SECRET: z.string().default(''),
+  FACEBOOK_APP_ID: z.string().default(''),
+  FACEBOOK_APP_SECRET: z.string().default(''),
+  // Redirect URIs aceptadas en el canje de código (GitHub). Separadas por coma.
+  OAUTH_REDIRECT_URIS: z.string().default(''),
 });
 
 const resultado = esquema.safeParse(process.env);
@@ -44,8 +66,17 @@ if (env.JWT_ACCESS_SECRET === env.JWT_TEMP_SECRET) {
   process.exit(1);
 }
 
+if (env.NODE_ENV === 'production' && !env.SMTP_HOST) {
+  console.error('En producción hace falta SMTP_HOST para enviar los códigos por email.');
+  process.exit(1);
+}
+
+const lista = (v) => v.split(',').map((o) => o.trim()).filter(Boolean);
+
 export default {
   ...env,
   esProduccion: env.NODE_ENV === 'production',
-  corsOrigins: env.CORS_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean),
+  corsOrigins: lista(env.CORS_ORIGINS),
+  googleClientIds: lista(env.GOOGLE_CLIENT_IDS),
+  oauthRedirectUris: lista(env.OAUTH_REDIRECT_URIS),
 };

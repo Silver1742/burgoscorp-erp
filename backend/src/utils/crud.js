@@ -12,7 +12,7 @@
 // Cada consulta se filtra según el alcance del permiso (todo / área / propio).
 import { Router } from 'express';
 import { pool, query, queryOne } from '../config/db.js';
-import { autenticar } from '../middlewares/auth.js';
+import { autenticado } from '../middlewares/auth.js';
 import { requierePermiso } from '../middlewares/permisos.js';
 import { validar } from '../middlewares/validar.js';
 import { filtroAlcance } from '../services/permisos.js';
@@ -77,7 +77,7 @@ export function crearRecursoCrud(cfg) {
   }
 
   // ------------------------------------------------------------ listado
-  router.get('/', autenticar, requierePermiso(cfg.modulo, 'ver'), validar({ query: consultaListado }), async (req, res) => {
+  router.get('/', autenticado, requierePermiso(cfg.modulo, 'ver'), validar({ query: consultaListado }), async (req, res) => {
     const { pagina, limite, q, orden, dir, ...resto } = req.validado.query;
     const alc = condicionAlcance(req);
     const where = [`(${alc.sql})`];
@@ -118,14 +118,14 @@ export function crearRecursoCrud(cfg) {
   });
 
   // ------------------------------------------------------------ detalle
-  router.get('/:id', autenticar, requierePermiso(cfg.modulo, 'ver'), validar({ params: paramsId }), async (req, res) => {
+  router.get('/:id', autenticado, requierePermiso(cfg.modulo, 'ver'), validar({ params: paramsId }), async (req, res) => {
     const fila = await obtener(req, req.validado.params.id);
     if (!fila) throw errores.noEncontrado();
     res.json({ ok: true, data: limpiar(fila) });
   });
 
   // ------------------------------------------------------------ alta
-  router.post('/', autenticar, requierePermiso(cfg.modulo, 'crear'), validar({ body: cfg.esquemaCrear }), async (req, res) => {
+  router.post('/', autenticado, requierePermiso(cfg.modulo, 'crear'), validar({ body: cfg.esquemaCrear }), async (req, res) => {
     let datos = req.validado.body;
     controlarArea(req, datos);
     if (cfg.antesDeGuardar) datos = await cfg.antesDeGuardar(datos, { req });
@@ -142,7 +142,7 @@ export function crearRecursoCrud(cfg) {
   });
 
   // ------------------------------------------------------------ modificación
-  router.put('/:id', autenticar, requierePermiso(cfg.modulo, 'editar'), validar({ params: paramsId, body: esquemaEditar }), async (req, res) => {
+  router.put('/:id', autenticado, requierePermiso(cfg.modulo, 'editar'), validar({ params: paramsId, body: esquemaEditar }), async (req, res) => {
     const { id } = req.validado.params;
     if (!(await obtener(req, id))) throw errores.noEncontrado();
 
@@ -162,7 +162,7 @@ export function crearRecursoCrud(cfg) {
   });
 
   // ------------------------------------------------------------ baja
-  router.delete('/:id', autenticar, requierePermiso(cfg.modulo, 'borrar'), validar({ params: paramsId }), async (req, res) => {
+  router.delete('/:id', autenticado, requierePermiso(cfg.modulo, 'borrar'), validar({ params: paramsId }), async (req, res) => {
     const { id } = req.validado.params;
     if (!(await obtener(req, id))) throw errores.noEncontrado();
 

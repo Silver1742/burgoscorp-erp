@@ -5,6 +5,7 @@ import { errores, AppError } from '../utils/errores.js';
 import { auditar } from './auditoria.js';
 import { buscarUsuarioPorId, perfilPublico } from './usuarios.js';
 import { firmarAcceso, firmarTemporal, emitirRefresh, rotarRefresh, revocarFamilia, revocarTodas } from './tokens.js';
+import { enviarCodigoVerificacion } from './verificacion.js';
 
 const COSTO_BCRYPT = 12;
 const MAX_INTENTOS = 5;
@@ -40,6 +41,12 @@ export async function registrar({ email, password, nombre, apellido }, req) {
   await auditar(req, { accion: 'registro', entidad: 'usuario', entidadId: res.insertId, usuarioId: res.insertId });
 
   const usuario = await buscarUsuarioPorId(res.insertId);
+  // Se entrega la sesión, pero hasta confirmar el email solo puede usar /auth (ver requiereEmailVerificado).
+  try {
+    await enviarCodigoVerificacion(usuario);
+  } catch (err) {
+    console.error('[registro] no se pudo enviar el código de verificación', err.message);
+  }
   return emitirSesion(usuario, req);
 }
 
@@ -81,7 +88,8 @@ export async function login({ email, password }, req) {
   return emitirSesion(await buscarUsuarioPorId(fila.id), req);
 }
 
-async function registrarIntentoFallido(fila) {
+/** Suma un intento fallido (contraseña o segundo paso); al quinto bloquea 15 minutos. */
+export async function registrarIntentoFallido(fila) {
   const intentos = fila.intentos_fallidos + 1;
   if (intentos >= MAX_INTENTOS) {
     await query('UPDATE usuarios SET intentos_fallidos = 0, bloqueado_hasta = ? WHERE id = ?',

@@ -227,6 +227,7 @@ CREATE TABLE usuarios (
   email_verificado_at DATETIME NULL,
   totp_secret_cifrado VARCHAR(255) NULL,            -- AES-256-GCM (iv:tag:dato en base64)
   totp_habilitado     BOOLEAN NOT NULL DEFAULT 0,
+  totp_ultimo_paso    BIGINT UNSIGNED NULL,         -- último intervalo de 30 s usado (evita reusar un código)
   intentos_fallidos   TINYINT UNSIGNED NOT NULL DEFAULT 0,
   bloqueado_hasta     DATETIME NULL,
   ultimo_login_at     DATETIME NULL,
@@ -268,7 +269,7 @@ CREATE TABLE refresh_tokens (
   CONSTRAINT fk_rt_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- Códigos de 6 dígitos enviados por email (hasheados, un solo uso, 10 min).
+-- Códigos de 6 dígitos enviados por email (HMAC con secreto del servidor, un solo uso, 10 min).
 CREATE TABLE codigos_verificacion (
   id          BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   usuario_id  INT UNSIGNED NOT NULL,

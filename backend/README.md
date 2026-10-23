@@ -172,6 +172,80 @@ La validación real siempre la hace el servidor.
 
 Reglas de contraseña: entre 10 caracteres y 72 bytes, con letras y números.
 
+### Verificación de email · `/auth/email`
+
+Al registrarse se envía un código de 6 dígitos. **Hasta confirmarlo, el usuario solo puede usar
+`/auth/*`**: el resto de la API responde `403 EMAIL_NO_VERIFICADO`. Las cuentas creadas por el
+admin o con una red social ya vienen verificadas.
+
+| Método | Ruta | Auth | Body | Respuesta |
+|---|---|---|---|---|
+| POST | `/auth/email/enviar` | Sí | — | `200` · `409` ya verificado · `429 ESPERAR_REENVIO` (un código por minuto) |
+| POST | `/auth/email/verificar` | Sí | `codigo` | `200` · `400` incorrecto o vencido · `409` |
+
+### Recuperar contraseña · `/auth/password`
+
+| Método | Ruta | Auth | Body | Respuesta |
+|---|---|---|---|---|
+| POST | `/auth/password/olvide` | No | `email` | `200` **siempre con el mismo mensaje**, exista o no el email |
+| POST | `/auth/password/restablecer` | No | `email`, `codigo`, `nueva` | `200` · `400` código incorrecto o vencido |
+
+Restablecer la contraseña cierra todas las sesiones, marca el email como verificado y levanta el
+bloqueo por intentos fallidos. No inicia sesión: si el usuario tiene 2FA, igual se le pide.
+
+Los códigos por email vencen a los 10 minutos, sirven una sola vez, admiten 5 intentos y se
+guardan como HMAC (nunca en claro).
+
+### Verificación en dos pasos · `/auth/2fa`
+
+Primer factor: la contraseña o una red social. Segundo factor, a elección del usuario:
+
+- **App autenticadora (TOTP):** Google Authenticator, Microsoft Authenticator, Authy.
+- **Código por email.**
+- **Código de respaldo:** 10 códigos de un solo uso, para cuando se pierde el celular.
+
+Activación (con sesión iniciada):
+
+| Método | Ruta | Body | Respuesta |
+|---|---|---|---|
+| POST | `/auth/2fa/configurar` | — | `200 { secreto, otpauthUri }`: la app muestra el QR de `otpauthUri` · `409` si ya está activa |
+| POST | `/auth/2fa/activar` | `codigo` (de la app autenticadora) | `200 { codigosRespaldo: [10] }` (**se muestran una sola vez**) · `400` |
+| POST | `/auth/2fa/desactivar` | `codigo` (TOTP o de respaldo) | `200` · `400` |
+| POST | `/auth/2fa/codigos-respaldo` | `codigo` (TOTP o de respaldo) | `200 { codigosRespaldo }`: invalida los anteriores |
+
+Login con 2FA:
+
+1. `POST /auth/login` (o `/auth/social/:proveedor`) responde `{ requiere2fa: true, tokenTemporal }`.
+   El `tokenTemporal` dura 5 minutos y **no sirve como sesión**.
+2. Opcional: `POST /auth/2fa/email { tokenTemporal }` envía el código por email.
+3. `POST /auth/2fa/verificar { tokenTemporal, metodo, codigo }` con `metodo` = `totp` | `email`
+   | `respaldo` → `200` sesión · `400` código incorrecto · `423` bloqueada.
+
+Los fallos del segundo paso cuentan para el mismo bloqueo que la contraseña (5 intentos). Un
+código TOTP no se puede usar dos veces. El secreto TOTP se guarda cifrado con AES-256-GCM.
+
+### Redes sociales · `/auth/social`
+
+La app hace el flujo OAuth con PKCE (`expo-auth-session`) y le manda al backend lo que obtuvo.
+El backend lo **verifica con el proveedor** antes de emitir sus propios tokens.
+
+| Método | Ruta | Auth | Body | Respuesta |
+|---|---|---|---|---|
+| GET | `/auth/social/proveedores` | No | — | `200 { google, github, facebook }`: ids públicos de los proveedores configurados, `null` en los que no |
+| POST | `/auth/social/google` | No | `idToken` | Sesión · `{ requiere2fa, tokenTemporal }` |
+| POST | `/auth/social/github` | No | `code`, `codeVerifier`, `redirectUri` | Sesión · `{ requiere2fa, tokenTemporal }` |
+| POST | `/auth/social/facebook` | No | `accessToken` | Sesión · `{ requiere2fa, tokenTemporal }` |
+| DELETE | `/auth/social/:proveedor` | Sí | — | `204` · `422` si es la única forma de ingresar |
+
+Errores: `400` email no verificado por el proveedor o redirect URI no permitida · `401` token
+inválido, vencido o de otra app · `409` el usuario ya tiene otra cuenta de ese proveedor
+vinculada · `503 PROVEEDOR_NO_CONFIGURADO`.
+
+Vinculación: si la cuenta social ya está vinculada, se ingresa a ese usuario. Si no, y el
+proveedor confirma el email, se vincula al usuario con ese email (así un empleado dado de alta
+por RRHH entra con su Google) o se crea uno nuevo con rol `EMPLEADO`. La guía para crear las
+apps OAuth está en [`docs/guia-oauth.md`](../docs/guia-oauth.md).
+
 ### Usuarios · `/usuarios` (módulo `SEG`)
 
 | Método | Ruta | Permiso | Parámetros / Body | Respuesta |
@@ -242,7 +316,12 @@ Medidas aplicadas según OWASP Top 10:
   sin `X-Powered-By`, `Cache-Control: no-store`, CORS cerrado, `.env` validado al arrancar.
 - **Autenticación (A07):** bcrypt (costo 12), bloqueo después de 5 intentos, el mismo mensaje
   para un email inexistente que para una contraseña incorrecta, JWT solo HS256 con `iss`/`aud`,
-  refresh tokens rotativos guardados como hash y con detección de reutilización.
+  refresh tokens rotativos guardados como hash y con detección de reutilización. 2FA TOTP
+  (RFC 6238) que no acepta reusar un código, con el secreto cifrado (AES-256-GCM); códigos por
+  email de un solo uso guardados como HMAC; "olvidé mi contraseña" sin revelar si el email existe.
+- **OAuth:** verificación del `id_token` de Google (firma RS256 contra las claves de Google,
+  `aud`, `iss`, `exp`), canje del código de GitHub con PKCE y redirect URI en lista blanca,
+  `debug_token` y `appsecret_proof` en Facebook. No se vinculan cuentas sin email verificado.
 - **Inyección (A05):** consultas parametrizadas; los nombres de columna, orden y filtros solo
   pueden ser los que define el código. Esquemas `strict` que impiden la asignación masiva.
 - **Recursos (A06):** límite de 100 KB por cuerpo, rate limit general y estricto en login,

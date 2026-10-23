@@ -1,7 +1,7 @@
 // Autenticación: exige `Authorization: Bearer <accessToken>` y carga el usuario actualizado.
 import { verificarAcceso } from '../services/tokens.js';
 import { buscarUsuarioPorId } from '../services/usuarios.js';
-import { errores } from '../utils/errores.js';
+import { errores, AppError } from '../utils/errores.js';
 import { auditar } from '../services/auditoria.js';
 
 export async function autenticar(req, res, next) {
@@ -24,3 +24,14 @@ export async function autenticar(req, res, next) {
   req.usuario = usuario;
   next();
 }
+
+/** Para todo lo que no sea /auth: hasta confirmar el email no se accede a los módulos. */
+export function requiereEmailVerificado(req, res, next) {
+  if (!req.usuario.email_verificado_at) {
+    return next(new AppError(403, 'EMAIL_NO_VERIFICADO', 'Confirmá tu email con el código que te enviamos para continuar'));
+  }
+  next();
+}
+
+/** autenticar + email verificado: la cadena estándar de los endpoints de negocio. */
+export const autenticado = [autenticar, requiereEmailVerificado];
