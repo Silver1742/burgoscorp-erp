@@ -292,13 +292,24 @@ pendiente, y expone las acciones `login`, `registrar`, `completar2fa`, `logout`,
   Si el token venció, lo renueva y repite el pedido sin que el usuario se entere. También
   traduce cualquier error a un mensaje en castellano: sin conexión, tiempo agotado, sin permiso…
 
-### 5.4 Diseño adaptable
+### 5.4 Identidad visual y diseño adaptable
 
-**Archivos:** [`mobile/src/tema.js`](../mobile/src/tema.js) (colores y medidas) y
+**Archivos:** [`mobile/src/tema.js`](../mobile/src/tema.js) (paleta y medidas),
 [`mobile/src/componentes/ui.js`](../mobile/src/componentes/ui.js) (botones, campos, tarjetas,
-avisos).
+avisos), [`componentes/Logo.js`](../mobile/src/componentes/Logo.js) y
+[`componentes/SelectorTema.js`](../mobile/src/componentes/SelectorTema.js).
 
-- Modo claro y oscuro automático.
+- **Paleta BurgosCorp: rojo, negro y gris.**
+  - El rojo (`#C8102E`) es para la acción principal y lo destacado: botón principal, pestaña
+    activa, logo, rol.
+  - La cabecera y la barra de pestañas son negras en los dos modos.
+  - Los grises son para el texto secundario, las etiquetas y los botones secundarios, así el
+    rojo no se confunde con un error.
+- **Modo claro / oscuro:** se elige en Perfil → Apariencia (Como el sistema, Claro u Oscuro), o
+  con el botón de sol/luna en el login. La elección queda guardada en el dispositivo
+  ([`lib/preferencias.js`](../mobile/src/lib/preferencias.js)). Es un dato no sensible: los
+  tokens van aparte, en SecureStore.
+- **Logo:** isotipo "BC" en rojo con una franja negra, y el nombre con "Corp" en rojo.
 - Las grillas pasan de 2 a 4 columnas según el ancho, y los listados usan 2 columnas en tablet o
   en horizontal.
 - Los formularios tienen un ancho máximo para que no queden estirados en pantallas grandes.

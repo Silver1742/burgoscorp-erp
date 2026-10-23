@@ -8,17 +8,19 @@ import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { SesionProvider, useSesion } from '../contexto/sesion';
-import { useTema } from '../tema';
+import { TemaProvider, useTema, opcionesCabecera } from '../tema';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function Raiz() {
   return (
     <SafeAreaProvider>
-      <SesionProvider>
-        <ControlSplash />
-        <Navegador />
-      </SesionProvider>
+      <TemaProvider>
+        <SesionProvider>
+          <ControlSplash />
+          <Navegador />
+        </SesionProvider>
+      </TemaProvider>
     </SafeAreaProvider>
   );
 }
@@ -44,12 +46,9 @@ function Navegador() {
 
   return (
     <>
-      <StatusBar style="auto" />
-      <Stack screenOptions={{
-        headerStyle: { backgroundColor: t.superficie },
-        headerTintColor: t.texto,
-        contentStyle: { backgroundColor: t.fondo },
-      }}>
+      {/* Las cabeceras son negras en los dos modos: íconos de la barra de estado en blanco */}
+      <StatusBar style="light" />
+      <Stack screenOptions={opcionesCabecera(t)}>
         <Stack.Protected guard={conSesion && verificado} redirectTo={destino}>
           <Stack.Screen name="(app)" options={{ headerShown: false }} />
         </Stack.Protected>

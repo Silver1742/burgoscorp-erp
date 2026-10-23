@@ -9,11 +9,12 @@ export default function LayoutApp() {
   const t = useTema();
   return (
     <Tabs screenOptions={{
-      headerStyle: { backgroundColor: t.superficie },
-      headerTintColor: t.texto,
-      tabBarStyle: { backgroundColor: t.superficie, borderTopColor: t.borde },
+      headerStyle: { backgroundColor: t.barra },
+      headerTintColor: t.barraTexto,
+      headerTitleStyle: { color: t.barraTexto },
+      tabBarStyle: { backgroundColor: t.barra, borderTopColor: t.barraBorde },
       tabBarActiveTintColor: t.acento,
-      tabBarInactiveTintColor: t.textoSuave,
+      tabBarInactiveTintColor: t.barraTextoSuave,
       sceneStyle: { backgroundColor: t.fondo },
     }}>
       <Tabs.Screen name="index" options={{ title: 'Inicio', tabBarIcon: icono('home-outline') }} />

@@ -1,14 +1,10 @@
 import { Stack } from 'expo-router';
-import { useTema } from '../../tema';
+import { useTema, opcionesCabecera } from '../../tema';
 
 export default function LayoutAuth() {
   const t = useTema();
   return (
-    <Stack screenOptions={{
-      headerStyle: { backgroundColor: t.superficie },
-      headerTintColor: t.texto,
-      contentStyle: { backgroundColor: t.fondo },
-    }}>
+    <Stack screenOptions={opcionesCabecera(t)}>
       <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="registro" options={{ title: 'Crear cuenta' }} />
       <Stack.Screen name="olvide" options={{ title: 'Recuperar contraseña' }} />

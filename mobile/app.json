@@ -12,7 +12,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#1F2A37",
+        "backgroundColor": "#141416",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -32,6 +32,8 @@
       "expo-web-browser",
       "expo-font"
     ],
-    "scheme": "burgoscorp"
+    "scheme": "burgoscorp",
+    "backgroundColor": "#141416",
+    "primaryColor": "#C8102E"
   }
 }

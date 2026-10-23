@@ -59,7 +59,10 @@ mobile/
   un jefe de Mecanizado no ve Ventas ni Finanzas, y un operario ve solo las máquinas de su área.
 - **Responsive:** las grillas pasan de 2 a 4 columnas según el ancho, los listados se dividen en
   2 columnas en tablet o en horizontal, los formularios tienen ancho máximo, y se admiten las
-  dos orientaciones y el modo oscuro.
+  dos orientaciones.
+- **Marca y modo claro/oscuro:** paleta BurgosCorp (rojo, negro, gris) con cabecera y pestañas
+  negras; el usuario elige Sistema, Claro u Oscuro en Perfil (o con el botón del login) y queda
+  guardado en el dispositivo.
 - **Errores:** cada pantalla muestra mensajes claros para los errores de validación por campo,
   la falta de conexión, el timeout (15 s) y los 401/403/429/500, con botón de reintentar.
 

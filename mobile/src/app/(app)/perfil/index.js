@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pantalla, Tarjeta, Texto, Boton, Etiqueta } from '../../../componentes/ui';
 import { useSesion } from '../../../contexto/sesion';
 import { ROLES } from '../../../modulos';
+import SelectorTema from '../../../componentes/SelectorTema';
 import { espacio, useTema } from '../../../tema';
 
 /** Confirmación que funciona en el celular (Alert) y en el navegador (confirm). */
@@ -66,7 +67,10 @@ export default function Perfil() {
         </View>
       </Tarjeta>
 
-      <View style={{ marginTop: espacio.l }}>
+      <Texto estilo={estilos.seccion}>Apariencia</Texto>
+      <SelectorTema />
+
+      <View style={{ marginTop: espacio.xl }}>
         <Boton titulo="Cerrar sesión" variante="secundario" icono="log-out-outline" cargando={saliendo}
           onPress={() => salir(false)} />
         <Boton titulo="Cerrar sesión en todos los dispositivos" variante="peligro" deshabilitado={saliendo}

@@ -65,7 +65,7 @@ export function Boton({ titulo, onPress, variante = 'primario', cargando = false
   const inactivo = deshabilitado || cargando;
   const colores = {
     primario: { fondo: t.primario, texto: t.primarioTexto, borde: t.primario },
-    secundario: { fondo: 'transparent', texto: t.primario, borde: t.primario },
+    secundario: { fondo: 'transparent', texto: t.texto, borde: t.textoSuave },
     peligro: { fondo: 'transparent', texto: t.error, borde: t.error },
     texto: { fondo: 'transparent', texto: t.primario, borde: 'transparent' },
   }[variante];
@@ -109,7 +109,7 @@ export function Aviso({ tipo = 'error', children, onReintentar }) {
     error: [t.errorFondo, t.error, 'alert-circle'],
     aviso: [t.avisoFondo, t.aviso, 'warning'],
     exito: [t.superficieAlt, t.exito, 'checkmark-circle'],
-    info: [t.superficieAlt, t.primario, 'information-circle'],
+    info: [t.superficieAlt, t.textoSuave, 'information-circle'],
   }[tipo];
   if (!children) return null;
   return (
@@ -146,7 +146,7 @@ export function Vacio({ icono = 'file-tray-outline', titulo, texto }) {
 
 export function Etiqueta({ texto, color }) {
   const t = useTema();
-  const c = color ?? t.primario;
+  const c = color ?? t.textoSuave;
   return (
     <View style={[estilos.chip, { borderColor: c }]}>
       <Text style={{ color: c, fontSize: 12, fontWeight: '600' }}>{texto}</Text>
