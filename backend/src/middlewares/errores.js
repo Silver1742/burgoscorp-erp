@@ -36,7 +36,9 @@ export function manejarErrores(err, req, res, next) {
     return res.status(413).json({ ok: false, error: { codigo: 'DEMASIADO_GRANDE', mensaje: 'El cuerpo de la petición es demasiado grande' } });
   }
 
-  const mysql = ERRORES_MYSQL[err.code];
+  // Las violaciones de CHECK tienen distinto nombre según el motor: se reconocen también por número.
+  const porNumero = { 3819: 'ER_CHECK_CONSTRAINT_VIOLATED', 4025: 'ER_CONSTRAINT_FAILED' }[err.errno];
+  const mysql = ERRORES_MYSQL[err.code] ?? ERRORES_MYSQL[porNumero];
   if (mysql) {
     const [status, codigo, mensaje] = mysql;
     return res.status(status).json({ ok: false, error: { codigo, mensaje } });

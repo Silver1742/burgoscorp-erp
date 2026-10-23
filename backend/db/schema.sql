@@ -174,7 +174,7 @@ CREATE TABLE asistencias (
   observacion VARCHAR(255) NULL,
   KEY idx_asis_emp_fecha (empleado_id, fecha),
   CONSTRAINT fk_asis_empleado FOREIGN KEY (empleado_id) REFERENCES empleados(id),
-  CONSTRAINT ck_asis_salida CHECK (salida_at IS NULL OR salida_at > entrada_at)
+  CONSTRAINT ck_asis_salida CHECK (salida_at IS NULL OR salida_at >= entrada_at)
 ) ENGINE=InnoDB;
 
 -- Flujo: pendiente -> aprobada_jefe -> aprobada (RRHH) | rechazada | cancelada

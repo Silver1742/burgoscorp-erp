@@ -18,6 +18,13 @@ export const pool = mysql.createPool({
   supportBigNumbers: true,
 });
 
+// Las columnas con DEFAULT CURRENT_TIMESTAMP usan la zona horaria de la sesión de MySQL.
+// Se fija UTC en cada conexión para que coincida con cómo mysql2 lee las fechas (timezone: 'Z'),
+// sin depender de cómo esté configurado el servidor (XAMPP local en hora argentina, la nube en UTC).
+pool.pool.on('connection', (conexion) => {
+  conexion.query("SET time_zone = '+00:00'");
+});
+
 /** Ejecuta una consulta y devuelve las filas. */
 export async function query(sql, params = []) {
   const [filas] = await pool.execute(sql, params);

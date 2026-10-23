@@ -305,6 +305,76 @@ Content-Type: application/json
 { "razon_social": "Talleres Prueba SRL", "cuit": "30-71234567-1", "condicion_iva": "RI" }
 ```
 
+### Recursos Humanos y Organización (módulos `RRHH` y `ORG`)
+
+#### Legajos · `/empleados`
+
+Usan el motor común (listar, ver, crear, modificar), pero **no se borran**: la baja se registra
+con `estado: "baja"` y `fecha_egreso`.
+
+| Quién | Ve | Puede modificar |
+|---|---|---|
+| RRHH (jefe) y admin | Toda la empresa | Todo |
+| Jefe de otra área | Su área | Solo su propio teléfono y dirección |
+| Empleado | Solo su legajo | Solo su teléfono y dirección |
+
+Campos de alta: `legajo`\* (`L0001`), `nombre`\*, `apellido`\*, `dni`\* (7–8 dígitos), `cuil`,
+`fecha_nacimiento`, `telefono`, `email_laboral`, `direccion`, `area_id`\*, `puesto_id`,
+`supervisor_id`, `fecha_ingreso`\*, `fecha_egreso`, `estado`, `costo_hora`. Filtros: `area_id`,
+`estado`. Orden: `apellido`, `legajo`, `ingreso`, `area`. La respuesta incluye `area_nombre`,
+`puesto_nombre`, `supervisor_nombre` y `habilidades` (texto).
+
+| Método | Ruta | Permiso | Body | Respuesta |
+|---|---|---|---|---|
+| GET | `/empleados/:id/habilidades` | RRHH ver | — | Habilidades con `nivel`, `certificado_vence` y `vencida` (0/1) |
+| PUT | `/empleados/:id/habilidades/:habilidadId` | RRHH (toda la empresa) | `nivel`, `certificado_vence` | `200` · `400` si la habilidad requiere certificación y falta la fecha |
+| DELETE | `/empleados/:id/habilidades/:habilidadId` | RRHH (toda la empresa) | — | `204` |
+
+#### Fichaje · `/asistencias`
+
+Fichar es personal: alcanza con tener la cuenta vinculada a un legajo (si no, `422`).
+
+| Método | Ruta | Permiso | Body / Query | Respuesta |
+|---|---|---|---|---|
+| GET | `/asistencias/hoy` | Sesión | — | `{ dentro, desde, registros, minutosHoy }` |
+| POST | `/asistencias/entrada` | Sesión | — | `201` estado de hoy · `409` ya está dentro |
+| POST | `/asistencias/salida` | Sesión | — | `200` · `409` no registró la entrada |
+| GET | `/asistencias` | RRHH ver (según alcance) | `empleado_id`, `desde`, `hasta`, `pagina`, `limite` | Listado con `horas` |
+| PUT | `/asistencias/:id` | RRHH (toda la empresa) | `entrada_at`, `salida_at`, `observacion`\* | Corrección manual (`origen: "manual"`) |
+
+Un fichaje abierto por más de 16 horas se considera olvidado y no impide fichar de nuevo.
+
+#### Licencias y vacaciones · `/licencias`
+
+Circuito: **pendiente → aprobada por el jefe del área → aprobada por RRHH**. Si quien pide es
+jefe, o su área no tiene jefe, aprueba RRHH directamente. Nadie resuelve su propia solicitud.
+Cada paso genera un aviso para quien tiene que actuar.
+
+| Método | Ruta | Permiso | Body / Query | Respuesta |
+|---|---|---|---|---|
+| GET | `/licencias` | RRHH ver (según alcance) | `estado`, `empleado_id`, `para_aprobar=1`, `pagina`, `limite` | Listado. `para_aprobar=1` devuelve lo que el usuario puede resolver ahora |
+| POST | `/licencias` | Sesión con legajo | `tipo`\*, `fecha_desde`\*, `fecha_hasta`\*, `motivo` | `201` (calcula los `dias` hábiles) · `400` fechas pasadas o sin días hábiles · `409` se superpone con otra |
+| POST | `/licencias/:id/aprobar` | RRHH aprobar | `comentario` | `200` · `403` no le corresponde · `409` ya resuelta · `422` falta la aprobación del jefe |
+| POST | `/licencias/:id/rechazar` | RRHH aprobar | `comentario`\* | `200` |
+| POST | `/licencias/:id/cancelar` | La persona que la pidió | — | `200` · `409` ya resuelta |
+
+`tipo`: `vacaciones`, `enfermedad` (se puede cargar hasta 7 días hacia atrás), `estudio`,
+`personal`, `otro`.
+
+#### Elementos de protección personal · `/epp-entregas`
+
+Motor común. Solo RRHH registra entregas (`empleado_id`\*, `elemento`\*, `talle`, `cantidad`,
+`fecha_entrega`\*, `fecha_vencimiento`). Cada empleado ve las suyas y el jefe, las de su área. La
+respuesta incluye `vencido`.
+
+#### Organigrama y avisos
+
+| Método | Ruta | Permiso | Respuesta |
+|---|---|---|---|
+| GET | `/organigrama` | ORG ver | Áreas con su jefe, el puesto del jefe y la cantidad de personas |
+| GET | `/notificaciones` | Sesión | Últimos 50 avisos del usuario; `meta.sinLeer` |
+| POST | `/notificaciones/leidas` | Sesión | `204`, marca todos como leídos |
+
 ## Seguridad
 
 Medidas aplicadas según OWASP Top 10:

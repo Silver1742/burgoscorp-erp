@@ -2,7 +2,7 @@
 // "tirar para actualizar" y estados de carga, vacío y error.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Aviso, Campo, Cargando, Etiqueta, Tarjeta, Texto, Vacio } from '../../../../componentes/ui';
 import { api } from '../../../../lib/api';
 import { buscarRecurso } from '../../../../modulos';
@@ -14,6 +14,7 @@ export default function ListaRecurso() {
   const { recurso: ruta } = useLocalSearchParams();
   // useMemo: un objeto nuevo en cada render dispararía el efecto de carga en bucle.
   const encontrado = useMemo(() => buscarRecurso(String(ruta)), [ruta]);
+  const router = useRouter();
   const t = useTema();
   const { ancho } = usePantalla();
   const columnas = ancho >= 900 ? 2 : 1;
@@ -32,7 +33,7 @@ export default function ListaRecurso() {
     setError(null);
     setEstado(numPagina === 1 ? 'cargando' : 'mas');
     try {
-      const r = await api(`/${ruta}`, { consulta: { pagina: numPagina, limite: POR_PAGINA, q: q || undefined } });
+      const r = await api(`/${ruta}`, { consulta: { pagina: numPagina, limite: POR_PAGINA, q: encontrado?.recurso.sinBusqueda ? undefined : q || undefined } });
       if (id !== pedidoActual.current) return;
       setItems((prev) => (numPagina === 1 ? r.data : [...prev, ...r.data]));
       setTotal(r.meta.total);
@@ -43,7 +44,7 @@ export default function ListaRecurso() {
       setError(err.message);
       setEstado('error');
     }
-  }, [ruta]);
+  }, [ruta, encontrado]);
 
   // Búsqueda con espera de 400 ms para no consultar en cada tecla.
   useEffect(() => {
@@ -83,7 +84,7 @@ export default function ListaRecurso() {
         keyboardShouldPersistTaps="handled"
         ListHeaderComponent={(
           <View>
-            <Campo
+            {recurso.sinBusqueda ? null : <Campo
               placeholder="Buscar…"
               value={busqueda}
               onChangeText={setBusqueda}
@@ -92,7 +93,7 @@ export default function ListaRecurso() {
               maxLength={100}
               returnKeyType="search"
               accessibilityLabel={`Buscar en ${recurso.titulo}`}
-            />
+            />}
             {estado !== 'cargando' && !error ? (
               <Texto suave estilo={{ marginBottom: espacio.s, fontSize: 13 }}>{total} {total === 1 ? 'registro' : 'registros'}</Texto>
             ) : null}
@@ -105,7 +106,7 @@ export default function ListaRecurso() {
         ListFooterComponent={estado === 'mas' ? <ActivityIndicator style={{ margin: espacio.l }} color={t.primario} /> : null}
         renderItem={({ item }) => (
           <View style={{ flex: 1 / columnas, paddingHorizontal: columnas > 1 ? espacio.xs : 0 }}>
-            <Tarjeta>
+            <Tarjeta onPress={recurso.abrir ? () => router.push(recurso.abrir(item)) : undefined}>
               <Texto estilo={estilos.titular}>{recurso.titular(item)}</Texto>
               {recurso.detalle?.(item) ? <Texto suave estilo={estilos.detalle}>{recurso.detalle(item)}</Texto> : null}
               {recurso.chips ? (

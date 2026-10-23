@@ -13,6 +13,10 @@ export default function LayoutModulos() {
       contentStyle: { backgroundColor: t.fondo },
     }}>
       <Stack.Screen name="index" options={{ title: 'Módulos' }} />
+      <Stack.Screen name="rrhh/licencias" options={{ title: 'Mis licencias y vacaciones' }} />
+      <Stack.Screen name="rrhh/aprobaciones" options={{ title: 'Aprobar licencias' }} />
+      <Stack.Screen name="rrhh/organigrama" options={{ title: 'Organigrama' }} />
+      <Stack.Screen name="rrhh/legajo/[id]" options={{ title: 'Legajo' }} />
     </Stack>
   );
 }

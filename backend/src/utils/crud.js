@@ -34,6 +34,7 @@ import { errores } from './errores.js';
  * @param {import('zod').ZodObject} cfg.esquemaCrear
  * @param {import('zod').ZodObject} [cfg.esquemaEditar]  por defecto esquemaCrear.partial()
  * @param {boolean} [cfg.bajaLogica] DELETE pone activo = 0
+ * @param {boolean} [cfg.sinBorrar]  no expone DELETE (ej. legajos: la baja es un cambio de estado)
  * @param {object} [cfg.alcance]     { areaCol, areaCampo, propioCol, propioDe }; sin esto es catálogo compartido
  * @param {string[]} [cfg.ocultar]   columnas que nunca se devuelven
  * @param {Function} [cfg.antesDeGuardar] async (datos, { req, id }) => datos  reglas de negocio
@@ -162,6 +163,7 @@ export function crearRecursoCrud(cfg) {
   });
 
   // ------------------------------------------------------------ baja
+  if (cfg.sinBorrar) return router;
   router.delete('/:id', autenticado, requierePermiso(cfg.modulo, 'borrar'), validar({ params: paramsId }), async (req, res) => {
     const { id } = req.validado.params;
     if (!(await obtener(req, id))) throw errores.noEncontrado();

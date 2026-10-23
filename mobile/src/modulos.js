@@ -3,7 +3,25 @@
 
 const pesos = (n) => (n == null ? '—' : `$ ${Number(n).toLocaleString('es-AR', { maximumFractionDigits: 2 })}`);
 
-const ESTADO_MAQUINA = { operativo: 'Operativa', mantenimiento: 'En mantenimiento', fuera_servicio: 'Fuera de servicio' };
+/** 'AAAA-MM-DD' → '23/10/2026' */
+export const fechaCorta = (f) => (f ? String(f).slice(0, 10).split('-').reverse().join('/') : '—');
+/** Fecha y hora ISO (UTC) → hora local '08:05' */
+export const horaCorta = (f) => (f ? new Date(f).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }) : '—');
+
+export const diasHabiles = (n) => `${n} ${Number(n) === 1 ? 'día hábil' : 'días hábiles'}`;
+
+export const TIPO_LICENCIA = {
+  vacaciones: 'Vacaciones', enfermedad: 'Enfermedad', estudio: 'Examen / estudio', personal: 'Trámite personal', otro: 'Otro',
+};
+export const ESTADO_LICENCIA = {
+  pendiente: { texto: 'Pendiente del jefe', tono: 'aviso' },
+  aprobada_jefe: { texto: 'Pendiente de RRHH', tono: 'aviso' },
+  aprobada: { texto: 'Aprobada', tono: 'exito' },
+  rechazada: { texto: 'Rechazada', tono: 'error' },
+  cancelada: { texto: 'Cancelada' },
+};
+
+const ESTADO_MAQUINA ={ operativo: 'Operativa', mantenimiento: 'En mantenimiento', fuera_servicio: 'Fuera de servicio' };
 const TIPO_PRODUCTO = {
   materia_prima: 'Materia prima', insumo: 'Insumo', repuesto: 'Repuesto',
   producto_terminado: 'Producto terminado', herramienta: 'Herramienta',
@@ -69,16 +87,50 @@ export const MODULOS = [
   {
     codigo: 'RRHH', titulo: 'Recursos humanos', icono: 'people-outline',
     descripcion: 'Legajos, habilidades, asistencia y licencias',
-    recursos: [{
-      ruta: 'habilidades', titulo: 'Habilidades y certificaciones',
-      titular: (r) => r.nombre,
-      detalle: (r) => r.codigo,
-      chips: (r) => (r.requiere_certificacion ? [{ texto: 'Requiere certificación', tono: 'aviso' }] : []),
-    }],
+    // Accesos a pantallas propias del módulo (además de los listados).
+    acciones: [
+      { titulo: 'Mi legajo', icono: 'id-card-outline', ruta: (u) => `/modulos/rrhh/legajo/${u.empleadoId}`, visible: ({ usuario }) => Boolean(usuario.empleadoId) },
+      { titulo: 'Mis licencias y vacaciones', icono: 'airplane-outline', ruta: () => '/modulos/rrhh/licencias', visible: ({ usuario }) => Boolean(usuario.empleadoId) },
+      { titulo: 'Aprobar licencias', icono: 'checkmark-done-outline', ruta: () => '/modulos/rrhh/aprobaciones', visible: ({ puede }) => puede('RRHH', 'aprobar') },
+    ],
+    recursos: [
+      {
+        ruta: 'empleados', titulo: 'Legajos',
+        titular: (r) => `${r.apellido}, ${r.nombre}`,
+        detalle: (r) => [r.legajo, r.puesto_nombre ?? r.area_nombre].filter(Boolean).join(' · '),
+        chips: (r) => [{ texto: r.area_nombre }, ...(r.estado !== 'activo' ? [{ texto: r.estado === 'baja' ? 'Baja' : 'De licencia', tono: 'aviso' }] : [])],
+        abrir: (r) => `/modulos/rrhh/legajo/${r.id}`,
+      },
+      {
+        ruta: 'licencias', titulo: 'Licencias', sinBusqueda: true,
+        titular: (r) => `${r.apellido}, ${r.nombre} · ${TIPO_LICENCIA[r.tipo]}`,
+        detalle: (r) => `Del ${fechaCorta(r.fecha_desde)} al ${fechaCorta(r.fecha_hasta)} · ${diasHabiles(r.dias)}`,
+        chips: (r) => [ESTADO_LICENCIA[r.estado]],
+      },
+      {
+        ruta: 'asistencias', titulo: 'Fichajes', sinBusqueda: true,
+        titular: (r) => `${r.apellido}, ${r.nombre}`,
+        detalle: (r) => `${fechaCorta(r.fecha)} · ${horaCorta(r.entrada_at)} a ${r.salida_at ? horaCorta(r.salida_at) : '—'} · ${Number(r.horas).toFixed(1)} h`,
+        chips: (r) => [...(r.salida_at ? [] : [{ texto: 'Sin salida', tono: 'aviso' }]), ...(r.origen === 'manual' ? [{ texto: 'Corregido' }] : [])],
+      },
+      {
+        ruta: 'habilidades', titulo: 'Habilidades y certificaciones',
+        titular: (r) => r.nombre,
+        detalle: (r) => r.codigo,
+        chips: (r) => (r.requiere_certificacion ? [{ texto: 'Requiere certificación', tono: 'aviso' }] : []),
+      },
+      {
+        ruta: 'epp-entregas', titulo: 'Elementos de protección (EPP)',
+        titular: (r) => r.elemento,
+        detalle: (r) => `${r.empleado_nombre} · entregado ${fechaCorta(r.fecha_entrega)}${r.talle ? ` · talle ${r.talle}` : ''}`,
+        chips: (r) => (r.vencido ? [{ texto: 'Vencido', tono: 'error' }] : []),
+      },
+    ],
   },
   {
     codigo: 'ORG', titulo: 'Organización', icono: 'git-network-outline',
     descripcion: 'Áreas y puestos',
+    acciones: [{ titulo: 'Organigrama', icono: 'git-network-outline', ruta: () => '/modulos/rrhh/organigrama' }],
     recursos: [
       { ruta: 'areas', titulo: 'Áreas', titular: (r) => r.nombre, detalle: (r) => [r.codigo, r.jefe_nombre && `Jefe: ${r.jefe_nombre}`].filter(Boolean).join(' · ') },
       { ruta: 'puestos', titulo: 'Puestos', titular: (r) => r.nombre, detalle: (r) => r.area_nombre },

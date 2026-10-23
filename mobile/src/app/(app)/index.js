@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tarjeta, Texto, Titulo, Etiqueta, Aviso } from '../../componentes/ui';
 import { useSesion } from '../../contexto/sesion';
+import Fichaje from '../../componentes/Fichaje';
 import { api } from '../../lib/api';
 import { MODULOS, ROLES } from '../../modulos';
 import { espacio, useTema, usePantalla } from '../../tema';
@@ -22,6 +23,7 @@ export default function Inicio() {
   const t = useTema();
   const { columnas } = usePantalla();
   const [resumen, setResumen] = useState([]);
+  const [sinLeer, setSinLeer] = useState(0);
   const [error, setError] = useState(null);
   const [recargando, setRecargando] = useState(false);
 
@@ -39,6 +41,8 @@ export default function Inicio() {
         return { ...a, total: r.meta.total };
       }));
       setResumen(datos);
+      const avisos = await api('/notificaciones');
+      setSinLeer(avisos.meta.sinLeer);
     } catch (err) {
       setError(err.message);
     }
@@ -82,6 +86,18 @@ export default function Inicio() {
         ) : null}
 
         <Aviso onReintentar={cargar}>{error}</Aviso>
+
+        {usuario.empleadoId ? <Fichaje /> : null}
+
+        {sinLeer > 0 ? (
+          <Tarjeta onPress={() => router.push('/perfil/notificaciones', { withAnchor: true })} estilo={estilos.sugerencia}>
+            <View style={[estilos.fila, { marginBottom: 0 }]}>
+              <Ionicons name="notifications" size={22} color={t.acento} />
+              <Texto estilo={{ flex: 1, fontWeight: '600' }}>Tenés {sinLeer} {sinLeer === 1 ? 'aviso nuevo' : 'avisos nuevos'}</Texto>
+              <Ionicons name="chevron-forward" size={20} color={t.textoSuave} />
+            </View>
+          </Tarjeta>
+        ) : null}
 
         <Texto estilo={estilos.seccion}>Accesos rápidos</Texto>
         <View style={estilos.grilla}>
