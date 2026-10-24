@@ -17,7 +17,8 @@ const DESTACADOS = [
 /** Fondo del panel de marca (.bc-hero): degradado negro con resplandores rojos. */
 function FondoHero() {
   return (
-    <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" preserveAspectRatio="none">
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <Svg width="100%" height="100%" preserveAspectRatio="none">
       <Defs>
         <LinearGradient id="heroBase" x1="0" y1="0" x2="0.6" y2="1">
           <Stop offset="0" stopColor="#0a0a0a" />
@@ -37,6 +38,7 @@ function FondoHero() {
       <Rect width="100%" height="100%" fill="url(#heroRojo1)" />
       <Rect width="100%" height="100%" fill="url(#heroRojo2)" />
     </Svg>
+    </View>
   );
 }
 

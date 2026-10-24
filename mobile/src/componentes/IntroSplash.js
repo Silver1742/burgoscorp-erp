@@ -50,15 +50,18 @@ export default function IntroSplash() {
       transform: [{ scale: salida.interpolate({ inputRange: [0, 1], outputRange: [1.04, 1] }) }],
     }]}>
       <Pressable style={StyleSheet.absoluteFill} onPress={salir} accessibilityLabel="Cargando BurgosCorp. Tocá para continuar">
-        <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
-          <Defs>
-            <RadialGradient id="brillo" cx="50%" cy="42%" r="55%">
-              <Stop offset="0" stopColor="#c8102e" stopOpacity="0.45" />
-              <Stop offset="1" stopColor="#c8102e" stopOpacity="0" />
-            </RadialGradient>
-          </Defs>
-          <Rect width="100%" height="100%" fill="url(#brillo)" />
-        </Svg>
+        {/* El SVG va dentro de una capa absoluta: en la web, un <svg> suelto ocupa lugar en el flujo */}
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Svg width="100%" height="100%">
+            <Defs>
+              <RadialGradient id="brillo" cx="50%" cy="42%" r="55%">
+                <Stop offset="0" stopColor="#c8102e" stopOpacity="0.45" />
+                <Stop offset="1" stopColor="#c8102e" stopOpacity="0" />
+              </RadialGradient>
+            </Defs>
+            <Rect width="100%" height="100%" fill="url(#brillo)" />
+          </Svg>
+        </View>
         <View style={estilos.contenido} pointerEvents="none">
           <Escudo tamano={112} animado />
           <View style={estilos.palabra}>

@@ -292,24 +292,24 @@ pendiente, y expone las acciones `login`, `registrar`, `completar2fa`, `logout`,
   Si el token venció, lo renueva y repite el pedido sin que el usuario se entere. También
   traduce cualquier error a un mensaje en castellano: sin conexión, tiempo agotado, sin permiso…
 
-### 5.4 Identidad visual y diseño adaptable
+### 5.4 Identidad visual (igual al portal R3) y diseño adaptable
 
-**Archivos:** [`mobile/src/tema.js`](../mobile/src/tema.js) (paleta y medidas),
-[`mobile/src/componentes/ui.js`](../mobile/src/componentes/ui.js) (botones, campos, tarjetas,
-avisos), [`componentes/Logo.js`](../mobile/src/componentes/Logo.js) y
-[`componentes/SelectorTema.js`](../mobile/src/componentes/SelectorTema.js).
+La app copia la identidad del portal BurgosCorp R3 (`C:\Estanga\React\R3 V`): la misma paleta,
+el mismo logo, las mismas animaciones y la misma forma de avisar, sin alertas.
 
-- **Paleta BurgosCorp: rojo, negro y gris.**
-  - El rojo (`#C8102E`) es para la acción principal y lo destacado: botón principal, pestaña
-    activa, logo, rol.
-  - La cabecera y la barra de pestañas son negras en los dos modos.
-  - Los grises son para el texto secundario, las etiquetas y los botones secundarios, así el
-    rojo no se confunde con un error.
-- **Modo claro / oscuro:** se elige en Perfil → Apariencia (Como el sistema, Claro u Oscuro), o
-  con el botón de sol/luna en el login. La elección queda guardada en el dispositivo
-  ([`lib/preferencias.js`](../mobile/src/lib/preferencias.js)). Es un dato no sensible: los
-  tokens van aparte, en SecureStore.
-- **Logo:** isotipo "BC" en rojo con una franja negra, y el nombre con "Corp" en rojo.
+| Qué | Cómo | Archivo |
+|---|---|---|
+| Paleta | Los mismos tokens de R3: rojo `#c8102e` (`#ef3b4f` en oscuro), negro `#111` y grises zinc | [`tema.js`](../mobile/src/tema.js) |
+| Logo | El escudo negro con borde rojo y "BC" en serif (`BrandLogo` / `ShieldSeal` de R3), dibujado con SVG; "Burgos**Corp**" en Georgia | [`componentes/Marca.js`](../mobile/src/componentes/Marca.js) |
+| Intro de apertura | Pantalla negra con resplandor rojo, el escudo aparece y "BurgosCorp" se escribe letra por letra (una vez por apertura; se saltea tocando) | [`componentes/IntroSplash.js`](../mobile/src/componentes/IntroSplash.js) |
+| Login | Panel de marca (en pantallas anchas) + formulario; "Recordar mi email"; el botón pasa a "Verificando credenciales…" y, si son válidas, el escudo se sella y aparece "Acceso verificado" | [`componentes/AuthLayout.js`](../mobile/src/componentes/AuthLayout.js), [`(auth)/login.js`](../mobile/src/app/(auth)/login.js) |
+| Barra y pestañas | Negras en los dos modos; pestaña activa en blanco con línea roja; a la derecha, luna/sol y avatar | [`(app)/_layout.js`](../mobile/src/app/(app)/_layout.js) |
+| Sin alertas | Los resultados se informan con **toasts** abajo (verde, rojo, amarillo o negro), las confirmaciones usan un **diálogo propio** y los errores de un campo aparecen debajo del campo | [`contexto/toast.js`](../mobile/src/contexto/toast.js), [`componentes/ConfirmDialog.js`](../mobile/src/componentes/ConfirmDialog.js) |
+| Componentes | Botones y campos estilo Bootstrap, tarjetas con cabecera, insignias de rol (admin rojo suave, jefe negro, empleado gris), avatares con iniciales, esqueletos de carga, contadores animados, requisitos de contraseña que se tildan | [`componentes/ui.js`](../mobile/src/componentes/ui.js), [`lib/useContador.js`](../mobile/src/lib/useContador.js) |
+| Modo claro / oscuro | Sistema, Claro u Oscuro en Perfil, o luna/sol en la barra y el login; queda guardado en el dispositivo (dato no sensible) | [`componentes/SelectorTema.js`](../mobile/src/componentes/SelectorTema.js), [`lib/preferencias.js`](../mobile/src/lib/preferencias.js) |
+
+Con "reducir movimiento" activado en el sistema, las animaciones no se reproducen.
+
 - Las grillas pasan de 2 a 4 columnas según el ancho, y los listados usan 2 columnas en tablet o
   en horizontal.
 - Los formularios tienen un ancho máximo para que no queden estirados en pantallas grandes.

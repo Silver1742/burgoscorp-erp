@@ -1,19 +1,24 @@
 // Avisos del usuario (licencias aprobadas, pedidos para aprobar...). Al abrir se marcan como leídos.
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Aviso, Cargando, Tarjeta, Texto, Vacio } from '../../../componentes/ui';
+import { Pantalla, EncabezadoPagina, Tarjeta, FilaLista, EsqueletoLista, ErrorCarga, Vacio, Insignia } from '../../../componentes/ui';
 import { api } from '../../../lib/api';
 import { espacio, useTema } from '../../../tema';
 
-const ICONO = { licencia_aprobada: 'checkmark-circle-outline', licencia_rechazada: 'close-circle-outline', licencia_pendiente: 'hourglass-outline' };
+const ICONO = {
+  licencia_aprobada: ['checkmark-circle', 'exito'],
+  licencia_rechazada: ['close-circle', 'error'],
+  licencia_pendiente: ['hourglass', 'aviso'],
+};
 const DESTINO = { licencia_pendiente: '/modulos/rrhh/aprobaciones', licencia_aprobada: '/modulos/rrhh/licencias', licencia_rechazada: '/modulos/rrhh/licencias' };
 
 export default function Notificaciones() {
   const t = useTema();
   const router = useRouter();
   const [lista, setLista] = useState(null);
+  const [sinLeer, setSinLeer] = useState(0);
   const [error, setError] = useState(null);
 
   const cargar = useCallback(async () => {
@@ -21,6 +26,7 @@ export default function Notificaciones() {
     try {
       const r = await api('/notificaciones');
       setLista(r.data);
+      setSinLeer(r.meta.sinLeer);
       if (r.meta.sinLeer) await api('/notificaciones/leidas', { metodo: 'POST' });
     } catch (err) {
       setError(err.message);
@@ -28,26 +34,34 @@ export default function Notificaciones() {
   }, []);
   useEffect(() => { cargar(); }, [cargar]);
 
+  const colores = { exito: t.exito, error: t.error, aviso: t.avisoTexto };
+
   return (
-    <FlatList
-      style={{ backgroundColor: t.fondo }}
-      contentContainerStyle={{ padding: espacio.l, maxWidth: 640, width: '100%', alignSelf: 'center', flexGrow: 1 }}
-      data={lista ?? []}
-      keyExtractor={(n) => String(n.id)}
-      ListHeaderComponent={<Aviso onReintentar={cargar}>{error}</Aviso>}
-      ListEmptyComponent={lista === null && !error ? <Cargando /> : !error ? <Vacio icono="notifications-off-outline" titulo="No tenés avisos" /> : null}
-      renderItem={({ item: n }) => (
-        <Tarjeta onPress={DESTINO[n.tipo] ? () => router.push(DESTINO[n.tipo], { withAnchor: true }) : undefined}>
-          <View style={{ flexDirection: 'row' }}>
-            <Ionicons name={ICONO[n.tipo] ?? 'notifications-outline'} size={22} color={n.leida_at ? t.textoSuave : t.acento} />
-            <View style={{ flex: 1, marginLeft: espacio.m }}>
-              <Texto estilo={{ fontWeight: n.leida_at ? '400' : '700' }}>{n.titulo}</Texto>
-              {n.mensaje ? <Texto suave estilo={{ fontSize: 13, marginTop: 2 }}>{n.mensaje}</Texto> : null}
-              <Texto suave estilo={{ fontSize: 12, marginTop: espacio.xs }}>{new Date(n.created_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false })}</Texto>
-            </View>
-          </View>
-        </Tarjeta>
-      )}
-    />
+    <Pantalla>
+      <EncabezadoPagina titulo="Avisos" icono="notifications" sub="Novedades sobre tus solicitudes y lo que tenés que aprobar."
+        acciones={sinLeer ? <Insignia texto={`${sinLeer} nuevos`} tono="rojo" /> : null} />
+      <Tarjeta sinRelleno>
+        {error ? <ErrorCarga error={error} onReintentar={cargar} /> : null}
+        {lista === null && !error ? <View style={{ padding: espacio.m }}><EsqueletoLista filas={3} /></View> : null}
+        {lista?.length === 0 ? <Vacio icono="notifications-off-outline" titulo="No tenés avisos" /> : null}
+        {lista?.map((n, i) => {
+          const [icono, tono] = ICONO[n.tipo] ?? ['notifications', 'gris'];
+          return (
+            <FilaLista key={n.id} ultima={i === lista.length - 1}
+              onPress={DESTINO[n.tipo] ? () => router.push(DESTINO[n.tipo], { withAnchor: true }) : undefined}>
+              <Ionicons name={icono} size={22} color={colores[tono] ?? t.textoSuave} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: t.texto, fontWeight: n.leida_at ? '400' : '600' }}>{n.titulo}</Text>
+                {n.mensaje ? <Text style={{ color: t.textoSuave, fontSize: 13, marginTop: 2 }}>{n.mensaje}</Text> : null}
+                <Text style={{ color: t.textoTenue, fontSize: 12, marginTop: espacio.xs }}>
+                  {new Date(n.created_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false })}
+                </Text>
+              </View>
+              {!n.leida_at ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: t.primario }} /> : null}
+            </FilaLista>
+          );
+        })}
+      </Tarjeta>
+    </Pantalla>
   );
 }

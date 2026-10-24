@@ -422,15 +422,3 @@ const estilos = StyleSheet.create({
   seccion: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, marginTop: espacio.l, marginBottom: espacio.s },
 });
 
-// ---------------------------------------------------------------- compatibilidad (transitorio)
-// Pantallas que todavía no se migraron al estilo R3 (licencias, aprobaciones, legajo,
-// organigrama, perfil, 2FA y avisos). Se eliminan cuando se terminen de migrar a toasts.
-export function Etiqueta({ texto }) {
-  return <Insignia texto={texto} />;
-}
-export function Aviso({ children, tipo = 'error' }) {
-  const t = useTema();
-  if (!children) return null;
-  const color = { error: t.error, exito: t.exito, aviso: t.avisoTexto, info: t.textoSuave }[tipo];
-  return <Text style={{ color, fontSize: 14, marginBottom: espacio.m }} accessibilityLiveRegion="polite">{children}</Text>;
-}

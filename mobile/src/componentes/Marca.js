@@ -4,7 +4,7 @@
 //  - sellado: aparece el candado de "acceso verificado" (se usa al ingresar).
 // Con "reducir movimiento" activado en el sistema, se muestra sin animar.
 import { useEffect, useId, useRef } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Platform, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, G, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { fuentes, useTema } from '../tema';
 
@@ -43,6 +43,16 @@ export function Escudo({ tamano = 48, animado = false, sellado = false }) {
     Animated.spring(candado, { toValue: sellado ? 1 : 0, friction: 6, tension: 120, useNativeDriver: false }).start();
   }, [sellado, candado]);
 
+  // En la web, react-native-svg no admite animar sus piezas (pasa atributos inválidos al DOM):
+  // ahí el escudo entra con un fundido completo y el candado aparece sin animación.
+  if (Platform.OS === 'web') {
+    return (
+      <Animated.View style={{ opacity: cuerpo, transform: [{ scale: cuerpo.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }] }}>
+        <EscudoEstatico tamano={tamano} sellado={sellado} id={id} />
+      </Animated.View>
+    );
+  }
+
   return (
     <Svg width={tamano} height={tamano} viewBox="0 0 48 48" accessibilityLabel={sellado ? 'BurgosCorp · acceso verificado' : 'BurgosCorp'}>
       <Defs>
@@ -71,6 +81,29 @@ export function Escudo({ tamano = 48, animado = false, sellado = false }) {
         <Path d="M35 37v-2.2a3 3 0 0 1 6 0V37" fill="none" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" />
         <Rect x="33.5" y="36.5" width="9" height="6.5" rx="1.3" fill="#ffffff" />
       </AnimatedG>
+    </Svg>
+  );
+}
+
+function EscudoEstatico({ tamano, sellado, id }) {
+  return (
+    <Svg width={tamano} height={tamano} viewBox="0 0 48 48" accessibilityLabel={sellado ? 'BurgosCorp · acceso verificado' : 'BurgosCorp'}>
+      <Defs>
+        <LinearGradient id={`g${id}`} x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#2e2e33" />
+          <Stop offset="1" stopColor="#050505" />
+        </LinearGradient>
+      </Defs>
+      <Path d="M24 2 43 9v14c0 11.5-8 19.8-19 23C13 42.8 5 34.5 5 23V9Z" fill={`url(#g${id})`} />
+      <Path d="M24 5.5 40 11.4V23c0 9.7-6.6 16.8-16 19.8C14.6 39.8 8 32.7 8 23V11.4Z" fill="none" stroke="#e11d2e" strokeWidth="1.75" />
+      <SvgText x="24" y="30" textAnchor="middle" fontFamily={fuentes.marca} fontSize="17" fontWeight="700" fill="#ffffff">BC</SvgText>
+      {sellado ? (
+        <G>
+          <Circle cx="38" cy="38" r="9" fill="#e11d2e" stroke="#ffffff" strokeWidth="1.5" />
+          <Path d="M35 37v-2.2a3 3 0 0 1 6 0V37" fill="none" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" />
+          <Rect x="33.5" y="36.5" width="9" height="6.5" rx="1.3" fill="#ffffff" />
+        </G>
+      ) : null}
     </Svg>
   );
 }

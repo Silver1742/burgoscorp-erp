@@ -1,87 +1,93 @@
+// Perfil (como ProfilePage de R3): datos de la cuenta, seguridad, apariencia y sesión.
 import { useState } from 'react';
-import { Alert, Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pantalla, Tarjeta, Texto, Boton, Etiqueta } from '../../../componentes/ui';
-import { useSesion } from '../../../contexto/sesion';
-import { ROLES } from '../../../modulos';
+import { Pantalla, Tarjeta, FilaLista, Avatar, InsigniaRol, Insignia, Boton } from '../../../componentes/ui';
+import ConfirmDialog from '../../../componentes/ConfirmDialog';
 import SelectorTema from '../../../componentes/SelectorTema';
+import { useSesion } from '../../../contexto/sesion';
+import { useToast } from '../../../contexto/toast';
 import { espacio, useTema } from '../../../tema';
 
-/** Confirmación que funciona en el celular (Alert) y en el navegador (confirm). */
-function confirmar(titulo, mensaje, accion) {
-  if (Platform.OS === 'web') {
-    // eslint-disable-next-line no-alert
-    if (window.confirm(`${titulo}\n\n${mensaje}`)) accion();
-    return;
-  }
-  Alert.alert(titulo, mensaje, [
-    { text: 'Cancelar', style: 'cancel' },
-    { text: 'Confirmar', style: 'destructive', onPress: accion },
-  ]);
-}
-
-function Fila({ icono, etiqueta, valor }) {
+function Opcion({ icono, titulo, sub, derecha, onPress, ultima }) {
   const t = useTema();
   return (
-    <View style={estilos.fila}>
-      <Ionicons name={icono} size={20} color={t.textoSuave} style={{ width: 28 }} />
-      <Texto suave estilo={{ width: 90 }}>{etiqueta}</Texto>
-      <Texto estilo={{ flex: 1 }} numberOfLines={2}>{valor}</Texto>
-    </View>
+    <FilaLista onPress={onPress} ultima={ultima}>
+      <Ionicons name={icono} size={20} color={t.primario} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: t.texto, fontWeight: '500' }}>{titulo}</Text>
+        {sub ? <Text style={{ color: t.textoSuave, fontSize: 13 }}>{sub}</Text> : null}
+      </View>
+      {derecha}
+      {onPress ? <Ionicons name="chevron-forward" size={18} color={t.textoTenue} /> : null}
+    </FilaLista>
   );
 }
 
 export default function Perfil() {
   const { usuario, logout } = useSesion();
+  const toast = useToast();
   const router = useRouter();
   const t = useTema();
   const [saliendo, setSaliendo] = useState(false);
-
-  async function salir(todas) {
-    setSaliendo(true);
-    await logout({ todas });
-  }
+  const [confirmarTodas, setConfirmarTodas] = useState(false);
+  const nombre = `${usuario.nombre} ${usuario.apellido}`;
 
   return (
     <Pantalla>
-      <Tarjeta>
-        <Texto estilo={estilos.nombre}>{usuario.nombre} {usuario.apellido}</Texto>
-        <View style={{ flexDirection: 'row', gap: espacio.s, marginVertical: espacio.s }}>
-          <Etiqueta texto={ROLES[usuario.rol]} color={t.acento} />
-          {usuario.dosPasosActivo ? <Etiqueta texto="2FA activa" color={t.exito} /> : null}
-        </View>
-        <Fila icono="mail-outline" etiqueta="Email" valor={usuario.email} />
-        <Fila icono="business-outline" etiqueta="Área" valor={usuario.area?.nombre ?? 'Sin asignar'} />
-      </Tarjeta>
-
-      <Texto estilo={estilos.seccion}>Seguridad</Texto>
-      <Tarjeta onPress={() => router.push('/perfil/dos-pasos')}>
-        <View style={estilos.fila}>
-          <Ionicons name="shield-checkmark-outline" size={22} color={t.primario} style={{ width: 28 }} />
+      <Tarjeta acentoArriba>
+        <View style={estilos.cabecera}>
+          <Avatar nombre={nombre} tamano={64} />
           <View style={{ flex: 1 }}>
-            <Texto estilo={{ fontWeight: '600' }}>Verificación en dos pasos</Texto>
-            <Texto suave estilo={{ fontSize: 13 }}>{usuario.dosPasosActivo ? 'Activada' : 'Desactivada: recomendamos activarla'}</Texto>
+            <Text style={[estilos.nombre, { color: t.texto }]}>{nombre}</Text>
+            <Text style={{ color: t.textoSuave }}>{usuario.email}</Text>
+            <View style={estilos.insignias}>
+              <InsigniaRol rol={usuario.rol} />
+              {usuario.area ? <Insignia texto={usuario.area.nombre} icono="business-outline" /> : <Insignia texto="Sin área asignada" tono="aviso" />}
+            </View>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={t.textoSuave} />
         </View>
       </Tarjeta>
 
-      <Texto estilo={estilos.seccion}>Apariencia</Texto>
-      <SelectorTema />
+      <Tarjeta titulo="Seguridad" icono="shield-checkmark-outline" sinRelleno>
+        <Opcion icono="key-outline" titulo="Verificación en dos pasos"
+          sub={usuario.dosPasosActivo ? 'App autenticadora, email o códigos de respaldo' : 'Recomendamos activarla'}
+          derecha={<Insignia texto={usuario.dosPasosActivo ? 'Activada' : 'Desactivada'} tono={usuario.dosPasosActivo ? 'exito' : 'gris'} />}
+          onPress={() => router.push('/perfil/dos-pasos')} />
+        <Opcion icono="notifications-outline" titulo="Avisos" sub="Licencias, aprobaciones y tareas" onPress={() => router.push('/perfil/notificaciones')} ultima />
+      </Tarjeta>
 
-      <View style={{ marginTop: espacio.xl }}>
-        <Boton titulo="Cerrar sesión" variante="secundario" icono="log-out-outline" cargando={saliendo}
-          onPress={() => salir(false)} />
-        <Boton titulo="Cerrar sesión en todos los dispositivos" variante="peligro" deshabilitado={saliendo}
-          onPress={() => confirmar('Cerrar todas las sesiones', 'Vas a tener que volver a ingresar en todos tus dispositivos.', () => salir(true))} />
-      </View>
+      <Tarjeta titulo="Apariencia" icono="color-palette-outline">
+        <Text style={{ color: t.textoSuave, marginBottom: espacio.m }}>Elegí el modo de color de la app. Se recuerda en este dispositivo.</Text>
+        <SelectorTema />
+      </Tarjeta>
+
+      <Tarjeta titulo="Sesión" icono="log-out-outline">
+        <Boton titulo="Cerrar sesión" variante="oscuro" icono="log-out-outline" cargando={saliendo} textoCargando="Cerrando…"
+          onPress={async () => { setSaliendo(true); await logout(); }} />
+        <Boton titulo="Cerrar sesión en todos los dispositivos" variante="contornoPeligro" icono="phone-portrait-outline"
+          deshabilitado={saliendo} onPress={() => setConfirmarTodas(true)} estilo={{ marginBottom: 0 }} />
+      </Tarjeta>
+
+      <ConfirmDialog
+        visible={confirmarTodas}
+        titulo="Cerrar todas las sesiones"
+        mensaje="Se cerrará tu sesión en todos los celulares y navegadores, incluido este. ¿Continuar?"
+        textoConfirmar="Cerrar todas"
+        variante="aviso"
+        alCerrar={() => setConfirmarTodas(false)}
+        alConfirmar={async () => {
+          toast.exito('Se cerraron todas tus sesiones.');
+          await logout({ todas: true });
+        }}
+      />
     </Pantalla>
   );
 }
 
 const estilos = StyleSheet.create({
-  nombre: { fontSize: 20, fontWeight: '700' },
-  fila: { flexDirection: 'row', alignItems: 'center', paddingVertical: espacio.xs },
-  seccion: { fontSize: 17, fontWeight: '700', marginTop: espacio.l, marginBottom: espacio.s },
+  cabecera: { flexDirection: 'row', alignItems: 'center', gap: espacio.l },
+  nombre: { fontSize: 22, fontWeight: '600' },
+  insignias: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.xs, marginTop: espacio.s },
 });
