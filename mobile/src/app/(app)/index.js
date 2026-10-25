@@ -76,6 +76,7 @@ export default function Inicio() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
+  const columna = columnas >= 3 ? { flex: 1 } : null; // ver comentario en el legajo
   const porFila = Math.min(columnas, 4) >= 4 ? 4 : 2;
   const nombre = `${usuario.nombre} ${usuario.apellido}`;
 
@@ -110,7 +111,7 @@ export default function Inicio() {
         </View>
 
         <View style={[estilos.dosColumnas, columnas >= 3 && { flexDirection: 'row' }]}>
-          <View style={{ flex: 1 }}>
+          <View style={columna}>
             {usuario.empleadoId ? <Fichaje /> : null}
             {!usuario.dosPasosActivo ? (
               <Tarjeta titulo="Protegé tu cuenta" icono="shield-checkmark-outline">
@@ -121,7 +122,7 @@ export default function Inicio() {
             ) : null}
           </View>
 
-          <View style={{ flex: 1 }}>
+          <View style={columna}>
             <Tarjeta titulo="Avisos recientes" icono="notifications-outline" sinRelleno
               derecha={avisos?.meta.sinLeer ? <Insignia texto={`${avisos.meta.sinLeer} nuevos`} tono="rojo" /> : null}>
               {avisos === null ? (

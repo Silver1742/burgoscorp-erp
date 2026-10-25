@@ -21,7 +21,50 @@ export const ESTADO_LICENCIA = {
   cancelada: { texto: 'Cancelada' },
 };
 
-const ESTADO_MAQUINA ={ operativo: 'Operativa', mantenimiento: 'En mantenimiento', fuera_servicio: 'Fuera de servicio' };
+export const PRIORIDAD = {
+  urgente: { texto: 'Urgente', tono: 'error' },
+  alta: { texto: 'Alta', tono: 'rojo' },
+  media: { texto: 'Media', tono: 'gris' },
+  baja: { texto: 'Baja', tono: 'gris' },
+};
+export const TIPO_TRABAJO = {
+  reparacion: 'Reparación', fabricacion: 'Fabricación', mecanizado: 'Mecanizado',
+  prototipo: 'Prototipo', diseno: 'Diseño', servicio_planta: 'Servicio en planta',
+};
+export const ESTADO_OT = {
+  planificada: { texto: 'Planificada', tono: 'gris' },
+  en_proceso: { texto: 'En proceso', tono: 'negro' },
+  pausada: { texto: 'Pausada', tono: 'aviso' },
+  control_calidad: { texto: 'Control de calidad', tono: 'rojo' },
+  terminada: { texto: 'Terminada', tono: 'exito' },
+  entregada: { texto: 'Entregada', tono: 'exito' },
+  cancelada: { texto: 'Cancelada', tono: 'gris' },
+};
+// Transiciones que el jefe puede hacer a mano (las demás son automáticas o del flujo de tareas).
+export const TRANSICIONES_OT = {
+  planificada: ['pausada', 'cancelada'],
+  en_proceso: ['pausada', 'control_calidad', 'cancelada'],
+  pausada: ['en_proceso', 'cancelada'],
+  control_calidad: ['en_proceso', 'terminada', 'cancelada'],
+  terminada: ['entregada', 'control_calidad'],
+  entregada: [],
+  cancelada: [],
+};
+export const ESTADO_TAREA = {
+  pendiente: { texto: 'Pendiente', tono: 'gris' },
+  en_curso: { texto: 'En curso', tono: 'negro' },
+  pausada: { texto: 'Pausada', tono: 'aviso' },
+  en_revision: { texto: 'En revisión', tono: 'rojo' },
+  aprobada: { texto: 'Aprobada', tono: 'exito' },
+  rechazada: { texto: 'Para rehacer', tono: 'error' },
+  cancelada: { texto: 'Cancelada', tono: 'gris' },
+};
+
+/** ISO → '24/10 18:30' en hora local */
+export const fechaHoraCorta = (f) => (f ? new Date(f).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '—');
+export const horas = (h) => `${Number(h ?? 0).toLocaleString('es-AR', { maximumFractionDigits: 2 })} h`;
+
+const ESTADO_MAQUINA = { operativo: 'Operativa', mantenimiento: 'En mantenimiento', fuera_servicio: 'Fuera de servicio' };
 const TIPO_PRODUCTO = {
   materia_prima: 'Materia prima', insumo: 'Insumo', repuesto: 'Repuesto',
   producto_terminado: 'Producto terminado', herramienta: 'Herramienta',
@@ -31,6 +74,10 @@ export const MODULOS = [
   {
     codigo: 'PROD', titulo: 'Producción', icono: 'construct-outline',
     descripcion: 'Órdenes de trabajo y máquinas',
+    acciones: [
+      { titulo: 'Órdenes de trabajo', icono: 'clipboard-outline', ruta: () => '/modulos/produccion' },
+      { titulo: 'Nueva orden de trabajo', icono: 'add-circle-outline', ruta: () => '/modulos/produccion/nueva', visible: ({ puede }) => puede('PROD', 'crear') },
+    ],
     recursos: [{
       ruta: 'centros-trabajo', titulo: 'Máquinas y centros de trabajo',
       titular: (r) => r.nombre,
@@ -39,8 +86,14 @@ export const MODULOS = [
     }],
   },
   {
-    codigo: 'TAR', titulo: 'Tareas y proyectos', icono: 'checkbox-outline',
-    descripcion: 'Asignación y seguimiento', recursos: [],
+    codigo: 'TAR', titulo: 'Tareas', icono: 'checkbox-outline',
+    descripcion: 'Asignación y seguimiento',
+    acciones: [
+      { titulo: 'Mis tareas', icono: 'person-outline', ruta: () => '/tareas', visible: ({ usuario }) => Boolean(usuario.empleadoId) },
+      { titulo: 'Tareas del área', icono: 'people-outline', ruta: () => '/modulos/tareas', visible: ({ puede }) => puede('TAR', 'aprobar') },
+      { titulo: 'Nueva tarea', icono: 'add-circle-outline', ruta: () => '/modulos/tareas/nueva', visible: ({ puede }) => puede('TAR', 'crear') },
+    ],
+    recursos: [],
   },
   {
     codigo: 'VEN', titulo: 'Ventas', icono: 'briefcase-outline',

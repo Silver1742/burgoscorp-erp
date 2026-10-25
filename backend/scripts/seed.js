@@ -8,6 +8,7 @@
 import bcrypt from 'bcryptjs';
 import env from '../src/config/env.js';
 import { pool, query, queryOne, transaccion } from '../src/config/db.js';
+import { siguienteNumero } from '../src/utils/secuencias.js';
 
 if (env.esProduccion && !process.argv.includes('--forzar')) {
   console.error('No se cargan datos de prueba en producción (usá --forzar si realmente querés hacerlo).');
@@ -90,6 +91,84 @@ async function idPor(tabla, columna, valor) {
   const fila = await queryOne(`SELECT id FROM ${tabla} WHERE ${columna} = ?`, [valor]);
   if (!fila) throw new Error(`No existe ${tabla}.${columna} = ${valor}. ¿Corriste db/seed.sql?`);
   return fila.id;
+}
+
+const dias = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+const enDias = (n) => new Date(Date.now() + n * 86400000);
+
+/** Órdenes de trabajo de ejemplo. Las operaciones toman el área de su máquina. */
+async function cargarProduccion(conn, ejecutar) {
+  const [[{ id: jefeMec }]] = await conn.execute("SELECT u.id FROM usuarios u WHERE u.email = 'jorge.dominguez@burgoscorp.test'");
+  const uno = async (sql, p) => (await conn.execute(sql, p))[0][0];
+  const idCliente = async (r) => (await uno('SELECT id FROM clientes WHERE razon_social = ?', [r])).id;
+  const idArea = async (c) => (await uno('SELECT id FROM areas WHERE codigo = ?', [c])).id;
+  const idEmp = async (l) => (await uno('SELECT id FROM empleados WHERE legajo = ?', [l])).id;
+  const maquina = async (c) => uno('SELECT id, area_id, habilidad_requerida_id FROM centros_trabajo WHERE codigo = ?', [c]);
+
+  // Una máquina en mantenimiento, para mostrar que no se le asignan operaciones.
+  await ejecutar("UPDATE centros_trabajo SET estado = 'mantenimiento' WHERE codigo = 'CNC-02'");
+
+  const ORDENES = [
+    {
+      cliente: 'Agroindustrias San Jorge S.R.L.', area: 'MEC', responsable: 'L0011', tipo: 'reparacion', prioridad: 'alta',
+      titulo: 'Reparación de eje de cosechadora', descripcion: 'Eje de transmisión con desgaste en el asiento de rodamientos. Recuperar o fabricar nuevo según plano.',
+      inicio: 0, entrega: 7,
+      operaciones: [
+        { titulo: 'Relevamiento y plano del eje', maquina: 'DIS-01', horas: 3, asignado: 'L0009', estado: 'aprobada', checklist: ['Medir diámetros', 'Dibujar plano 2D'] },
+        { titulo: 'Torneado del eje en SAE 1045', maquina: 'TOR-01', horas: 6, asignado: 'L0012', checklist: ['Cilindrado', 'Roscado M30', 'Control de medidas'] },
+        { titulo: 'Fresado de chavetero', maquina: 'CNC-02', horas: 1.5 },
+      ],
+    },
+    {
+      cliente: 'Cervecería Los Andes S.A.', area: 'SOL', responsable: 'L0016', tipo: 'fabricacion', prioridad: 'urgente',
+      titulo: 'Estructura soporte para tanques fermentadores', descripcion: 'Bastidor en caño estructural 80x40 para 3 tanques de 2000 l, con pintura epoxi.',
+      inicio: 1, entrega: 10,
+      operaciones: [
+        { titulo: 'Corte de perfiles por plasma', maquina: 'COR-01', horas: 4, asignado: 'L0014' },
+        { titulo: 'Soldadura MIG del bastidor', maquina: 'SOL-01', horas: 12, asignado: 'L0017', checklist: ['Punteado', 'Cordones completos', 'Limpieza de escoria'] },
+        { titulo: 'Pintura epoxi', maquina: 'TER-01', horas: 5 },
+      ],
+    },
+    {
+      cliente: 'Estudio de Arquitectura Lumen', area: 'I3D', responsable: 'L0021', tipo: 'prototipo', prioridad: 'media',
+      titulo: 'Prototipo de carcasa para sensor', descripcion: 'Dos iteraciones en PETG para prueba de encastre.',
+      inicio: 0, entrega: 4,
+      operaciones: [
+        { titulo: 'Diseño CAD de la carcasa', maquina: 'DIS-02', horas: 4, asignado: 'L0009' },
+        { titulo: 'Impresión 3D en PETG', maquina: 'I3D-02', horas: 8, asignado: 'L0022' },
+      ],
+    },
+  ];
+
+  for (const o of ORDENES) {
+    const numero = await siguienteNumero(conn, 'OT');
+    const [r] = await conn.execute(
+      `INSERT INTO ordenes_trabajo (numero, cliente_id, titulo, descripcion, tipo_trabajo, prioridad, fecha_inicio_plan,
+         fecha_entrega_plan, area_id, responsable_id, creado_por, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [numero, await idCliente(o.cliente), o.titulo, o.descripcion, o.tipo, o.prioridad, dias(o.inicio), dias(o.entrega),
+        await idArea(o.area), await idEmp(o.responsable), jefeMec,
+        o.operaciones.some((op) => op.estado) ? 'en_proceso' : 'planificada'],
+    );
+    for (const [i, op] of o.operaciones.entries()) {
+      const m = await maquina(op.maquina);
+      const [t] = await conn.execute(
+        `INSERT INTO tareas (titulo, area_id, orden_trabajo_id, secuencia, centro_trabajo_id, habilidad_requerida_id,
+           prioridad, fecha_limite, horas_estimadas, horas_reales, estado, creado_por, iniciada_at, completada_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [op.titulo, m.area_id, r.insertId, (i + 1) * 10, m.id, m.habilidad_requerida_id, o.prioridad, enDias(o.entrega - 1),
+          op.horas, op.estado === 'aprobada' ? op.horas : 0, op.estado ?? 'pendiente', jefeMec,
+          op.estado ? enDias(-1) : null, op.estado ? enDias(-1) : null],
+      );
+      await conn.execute('INSERT INTO tarea_historial (tarea_id, usuario_id, estado_nuevo) VALUES (?, ?, ?)', [t.insertId, jefeMec, 'pendiente']);
+      for (const [j, texto] of (op.checklist ?? []).entries()) {
+        await conn.execute('INSERT INTO tarea_checklist (tarea_id, texto, orden, hecho) VALUES (?, ?, ?, ?)', [t.insertId, texto, j, op.estado === 'aprobada']);
+      }
+      if (op.asignado) {
+        await conn.execute('INSERT INTO tarea_asignaciones (tarea_id, empleado_id, asignado_por) VALUES (?, ?, ?)', [t.insertId, await idEmp(op.asignado), jefeMec]);
+      }
+    }
+  }
 }
 
 async function main() {
@@ -188,6 +267,9 @@ async function main() {
         [p.id, deposito, cantidad, p.costo_promedio, adminId],
       );
     }
+
+    // Producción: tres órdenes de trabajo con operaciones, máquinas y personas asignadas.
+    await cargarProduccion(conn, ejecutar);
   });
 
   const usuarios = await query(`

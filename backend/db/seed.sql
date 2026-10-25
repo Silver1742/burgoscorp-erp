@@ -60,7 +60,7 @@ INSERT INTO tmp_permisos VALUES
   ('JEFE','SEG', 0,0,0,0,0,'propio','no'),
   ('JEFE','ORG', 1,1,1,0,0,'todo',  'escritura'),  -- edita la estructura solo RRHH
   ('JEFE','RRHH',1,1,1,0,1,'area',  'no'),         -- aprueba licencias de su equipo
-  ('JEFE','VEN', 1,1,1,1,1,'todo',  'todo'),
+  ('JEFE','VEN', 1,1,1,1,1,'todo',  'escritura'),  -- todos los jefes consultan clientes; editan Comercial e Ingeniería
   ('JEFE','PROD',1,1,1,1,1,'area',  'escritura'),
   ('JEFE','TAR', 1,1,1,1,1,'area',  'no'),         -- crea y asigna tareas a su equipo
   ('JEFE','INV', 1,1,1,1,1,'todo',  'escritura'),

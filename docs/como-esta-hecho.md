@@ -235,7 +235,46 @@ Empleado pide ──▶ Pendiente ──(jefe de su área)──▶ Aprobada por
   tu solicitud").
 - **Organigrama:** las áreas con su jefe y la cantidad de personas.
 
-### 4.8 Validación de datos
+### 4.8 Producción y Tareas (día 6)
+
+**Archivos:** [`routes/produccion.js`](../backend/src/routes/produccion.js) (endpoints),
+[`services/ordenes.js`](../backend/src/services/ordenes.js) (órdenes de trabajo),
+[`services/tareas.js`](../backend/src/services/tareas.js) (tareas, asignación y avance),
+[`utils/secuencias.js`](../backend/src/utils/secuencias.js) (numeración) y
+[`validators/produccion.js`](../backend/src/validators/produccion.js).
+
+- **Orden de trabajo (OT):** es el pedido del cliente dentro del taller ("reparar el eje de una
+  cosechadora"). Se numera sola (`OT-2026-0001`), sin saltos ni números repetidos aunque dos
+  personas la creen a la vez. Tiene cliente, área, responsable, prioridad y fechas.
+- **Operaciones:** cada OT se divide en pasos (10 diseño, 20 torneado, 30 soldadura…). Cada
+  operación es una tarea y puede tener una máquina; si la tiene, queda en el área de esa máquina.
+- **Estados de la OT:**
+
+```
+Planificada ──▶ En proceso ──▶ Control de calidad ──▶ Terminada ──▶ Entregada
+     └────────── Pausada / Cancelada ──────────┘
+```
+
+  Pasa sola a "En proceso" cuando alguien empieza la primera operación, y a "Control de calidad"
+  cuando todas están aprobadas. No se puede saltar pasos.
+- **Asignar con reglas:** el jefe ve la lista de candidatos con su carga de trabajo. Solo aparecen
+  quienes pueden hacerla: empleados activos, de esa área, con la habilidad que pide la máquina y,
+  si hace falta certificación (soldadura MIG), con la certificación **vigente**. No se asigna
+  trabajo a una máquina en mantenimiento.
+- **Circuito de una tarea:**
+
+```
+Pendiente ──▶ En curso ⇄ Pausada ──▶ En revisión ──(jefe)──▶ Aprobada
+                                          └──▶ Rechazada (con motivo) ──▶ vuelve a En curso
+```
+
+  Cada persona tiene una sola tarea en curso a la vez, no puede terminarla con la lista de control
+  incompleta y nadie aprueba su propio trabajo. Las horas se miden solas entre iniciar y pausar o
+  terminar, y se comparan con las estimadas.
+- **Historial y comentarios:** cada cambio de estado queda registrado con quién y cuándo; cada
+  paso avisa a quien tiene que actuar.
+
+### 4.9 Validación de datos
 
 **Archivos:** [`validators/`](../backend/src/validators). Cada campo tiene reglas (tipo, largo
 igual al de la base, formato). Por ejemplo, el CUIT se valida con su dígito verificador y se
@@ -266,6 +305,11 @@ pantalla, y la carpeta determina la ruta.
 | Legajo (datos, habilidades, contacto) | [`(app)/modulos/rrhh/legajo/[id].js`](../mobile/src/app/(app)/modulos/rrhh/legajo/[id].js) |
 | Organigrama | [`(app)/modulos/rrhh/organigrama.js`](../mobile/src/app/(app)/modulos/rrhh/organigrama.js) |
 | Tarjeta de fichaje (en Inicio) | [`componentes/Fichaje.js`](../mobile/src/componentes/Fichaje.js) |
+| Órdenes de trabajo (lista, nueva, detalle con operaciones) | [`(app)/modulos/produccion/`](../mobile/src/app/(app)/modulos/produccion) |
+| Mis tareas (pestaña: iniciar, pausar, terminar) | [`(app)/tareas/`](../mobile/src/app/(app)/tareas) |
+| Tareas del área (jefes: asignar, aprobar, rechazar) | [`(app)/modulos/tareas/`](../mobile/src/app/(app)/modulos/tareas) |
+| Detalle de una tarea (lista de control, horas, comentarios, historial) | [`componentes/DetalleTarea.js`](../mobile/src/componentes/DetalleTarea.js) |
+| Selector con búsqueda (cliente, máquina, responsable) | [`componentes/Selector.js`](../mobile/src/componentes/Selector.js) |
 
 ### 5.2 Qué pantalla se muestra (rutas protegidas)
 
@@ -346,7 +390,7 @@ La skill y el agente que revisan esto durante el desarrollo están en
 
 | Qué | Cómo | Dónde |
 |---|---|---|
-| API | 65 tests automáticos: login, tokens, permisos, 2FA, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje y el circuito de licencias | [`backend/tests/`](../backend/tests) |
+| API | 80 tests automáticos: login, tokens, permisos, 2FA, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje, el circuito de licencias, órdenes de trabajo y tareas | [`backend/tests/`](../backend/tests) |
 | App | Probada en el navegador, con tamaño de celular y de escritorio, con usuarios de distintos roles | — |
 
 Para correr los tests: `cd backend && npm test` (con una base de prueba, porque modifican datos).
@@ -362,7 +406,7 @@ Para correr los tests: `cd backend && npm test` (con una base de prueba, porque 
 | 3 | 2FA, códigos por email, login social en el servidor | ✅ (faltan las credenciales de Google, GitHub y Facebook) |
 | 4 | App: sesión, login, navegación por rol | ✅ |
 | 5 | Organización y RRHH | ✅ |
-| 6 | Producción y Tareas | ⏳ |
+| 6 | Producción y Tareas | ✅ |
 | 7 | Inventario y Compras | ⏳ |
 | 8 | Ventas, Finanzas y Tablero | ⏳ |
 | 9 | Publicar la API, generar el APK, auditoría de seguridad | ⏳ |

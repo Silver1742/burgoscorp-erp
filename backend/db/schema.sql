@@ -622,7 +622,7 @@ CREATE TABLE registros_horas (
   KEY idx_rh_empleado (empleado_id, inicio_at),
   CONSTRAINT fk_rh_tarea    FOREIGN KEY (tarea_id)    REFERENCES tareas(id),
   CONSTRAINT fk_rh_empleado FOREIGN KEY (empleado_id) REFERENCES empleados(id),
-  CONSTRAINT ck_rh_fin CHECK (fin_at IS NULL OR fin_at > inicio_at)
+  CONSTRAINT ck_rh_fin CHECK (fin_at IS NULL OR fin_at >= inicio_at)
 ) ENGINE=InnoDB;
 
 -- Materiales usados en una OT (cada consumo genera un movimiento de stock).

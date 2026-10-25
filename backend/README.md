@@ -375,6 +375,47 @@ respuesta incluye `vencido`.
 | GET | `/notificaciones` | Sesión | Últimos 50 avisos del usuario; `meta.sinLeer` |
 | POST | `/notificaciones/leidas` | Sesión | `204`, marca todos como leídos |
 
+### Producción y Tareas (módulos `PROD` y `TAR`)
+
+#### Órdenes de trabajo · `/ordenes-trabajo`
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| GET | `/ordenes-trabajo` | PROD ver | Lista paginada. Filtros: `estado`, `abiertas=1`, `area_id`, `q`, `pagina`, `limite` |
+| GET | `/ordenes-trabajo/:id` | PROD ver | Detalle con sus operaciones (`tareas`) y el avance |
+| POST | `/ordenes-trabajo` | PROD crear | `titulo`\*, `tipo_trabajo`\*, `cliente_id`, `area_id`, `responsable_id`, `prioridad`, `cantidad`, `fecha_inicio_plan`, `fecha_entrega_plan`, `horas_estimadas`, `descripcion`. Devuelve `201` con el número `OT-AAAA-NNNN` |
+| PUT | `/ordenes-trabajo/:id` | PROD editar | Mismos campos y `estado`. Solo se permiten las transiciones válidas (`409` si no) |
+| POST | `/ordenes-trabajo/:id/operaciones` | PROD editar | `titulo`\*, `descripcion`, `prioridad`, `centro_trabajo_id`, `habilidad_requerida_id`, `horas_estimadas` (en cuartos de hora), `fecha_limite`, `checklist` (hasta 30 textos). Secuencia automática de 10 en 10 |
+
+Estados: `planificada` → `en_proceso` → `control_calidad` → `terminada` → `entregada`, con
+`pausada` y `cancelada`. Pasa sola a `en_proceso` al iniciarse una operación y a
+`control_calidad` cuando todas están aprobadas. Alcance: un jefe ve las de su área y un empleado,
+las que tienen alguna operación suya.
+
+#### Tareas · `/tareas`
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| GET | `/tareas` | TAR ver | Filtros: `mias`, `abiertas`, `estado`, `orden_trabajo_id`, `area_id`, `q` |
+| GET | `/tareas/:id` | TAR ver | Detalle con asignados, lista de control, comentarios, historial y horas |
+| POST | `/tareas` | TAR crear | Tarea suelta (sin OT): `titulo`\*, `area_id`, `centro_trabajo_id`, `prioridad`, `fecha_limite`, `horas_estimadas`, `checklist` |
+| PUT | `/tareas/:id` | TAR editar | Edita los datos mientras no esté aprobada ni cancelada |
+| GET | `/tareas/:id/candidatos` | TAR aprobar | Empleados que pueden hacerla, con su carga |
+| POST | `/tareas/:id/asignaciones` | TAR aprobar | `empleado_id`\*. `422` si no es del área, no tiene la habilidad, la certificación venció o la máquina está en mantenimiento |
+| DELETE | `/tareas/:id/asignaciones/:empleadoId` | TAR aprobar | `204` |
+| POST | `/tareas/:id/iniciar` · `/pausar` | TAR ver (asignado) | Una sola tarea en curso por persona (`409`) |
+| POST | `/tareas/:id/terminar` | TAR ver (asignado) | `comentario`. Exige la lista de control completa (`422` si falta algo); pasa a `en_revision` |
+| POST | `/tareas/:id/aprobar` | TAR aprobar | `comentario`. No se aprueba lo propio (`403`) |
+| POST | `/tareas/:id/rechazar` | TAR aprobar | `comentario`\* (el motivo) |
+| POST | `/tareas/:id/cancelar` | TAR aprobar | `comentario` |
+| POST | `/tareas/:id/comentarios` | TAR ver | `texto`\* |
+| POST | `/tareas/:id/checklist` | TAR editar | `texto`\*, agrega un punto |
+| PUT | `/tareas/:id/checklist/:itemId` | TAR ver (asignado) | `hecho`\* (booleano) |
+
+Estados: `pendiente` → `en_curso` ⇄ `pausada` → `en_revision` → `aprobada`, o `rechazada`
+(vuelve a empezarse) y `cancelada`. Las horas reales se calculan con los registros de inicio y
+pausa. Cada paso genera un aviso en `/notificaciones`.
+
 ## Seguridad
 
 Medidas aplicadas según OWASP Top 10:

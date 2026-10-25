@@ -82,6 +82,9 @@ export default function Legajo() {
   const [estadoTexto, estadoTono] = ESTADO[emp.estado] ?? ESTADO.activo;
   const nombre = `${emp.nombre} ${emp.apellido}`;
   const dosColumnas = columnas >= 3;
+  // flex: 1 solo lado a lado: apiladas en el celular, dentro del scroll se repartirían la altura
+  // de la pantalla en vez de crecer con su contenido (la de abajo tapaba a la de arriba).
+  const columna = dosColumnas ? { flex: 1 } : null;
 
   return (
     <Pantalla anchoMax={1140}>
@@ -102,7 +105,7 @@ export default function Legajo() {
       </Tarjeta>
 
       <View style={[{ gap: espacio.m }, dosColumnas && { flexDirection: 'row', alignItems: 'flex-start' }]}>
-        <View style={{ flex: 1 }}>
+        <View style={columna}>
           <Tarjeta titulo="Datos del legajo" icono="person-outline" sinRelleno>
             <Dato icono="person-outline" etiqueta="Supervisor" valor={emp.supervisor_nombre} />
             <Dato icono="calendar-outline" etiqueta="Ingreso" valor={fechaCorta(emp.fecha_ingreso)} />
@@ -122,7 +125,7 @@ export default function Legajo() {
           ) : null}
         </View>
 
-        <View style={{ flex: 1 }}>
+        <View style={columna}>
           <Tarjeta titulo="Habilidades y certificaciones" icono="construct-outline" sinRelleno
             derecha={<Insignia texto={String(habilidades.length)} />}>
             {habilidades.length === 0 ? <Vacio icono="construct-outline" titulo="Sin habilidades cargadas" /> : null}

@@ -49,7 +49,7 @@ export default function LayoutApp() {
       sceneStyle: { backgroundColor: t.fondo },
     }}>
       <Tabs.Screen name="index" options={{ title: 'Inicio', tabBarIcon: icono('home') }} />
-      <Tabs.Screen name="tareas" options={{ title: 'Mis tareas', tabBarIcon: icono('checkbox') }} />
+      <Tabs.Screen name="tareas" options={{ title: 'Mis tareas', headerShown: false, tabBarIcon: icono('checkbox') }} />
       <Tabs.Screen name="modulos" options={{ title: 'Módulos', headerShown: false, tabBarIcon: icono('apps') }} />
       <Tabs.Screen name="perfil" options={{ title: 'Perfil', headerShown: false, tabBarIcon: icono('person-circle') }} />
     </Tabs>

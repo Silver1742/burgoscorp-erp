@@ -2,7 +2,7 @@
 // Es un diálogo propio de la app, no el Alert del sistema. `alConfirmar` puede ser async:
 // mientras corre, el diálogo queda bloqueado para evitar doble envío.
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Boton } from './ui';
 import { espacio, radio, sombra, useTema } from '../tema';
 
@@ -31,10 +31,11 @@ export default function ConfirmDialog({
           <View style={[estilos.cabecera, { borderBottomColor: t.borde }]}>
             <Text style={[estilos.titulo, { color: t.texto }]} accessibilityRole="header">{titulo}</Text>
           </View>
-          <View style={estilos.cuerpo}>
+          {/* Con un formulario adentro puede no entrar en un celular chico: el cuerpo hace scroll */}
+          <ScrollView style={{ maxHeight: 480 }} contentContainerStyle={estilos.cuerpo} keyboardShouldPersistTaps="handled">
             {mensaje ? <Text style={{ color: t.texto, fontSize: 15, lineHeight: 22 }}>{mensaje}</Text> : null}
             {children}
-          </View>
+          </ScrollView>
           <View style={[estilos.pie, { borderTopColor: t.borde }]}>
             <Boton titulo="Cancelar" variante="secundario" onPress={alCerrar} deshabilitado={ocupado} chico estilo={{ marginBottom: 0 }} />
             <Boton titulo={textoConfirmar} variante={variante} onPress={confirmar} cargando={ocupado} chico estilo={{ marginBottom: 0 }} />

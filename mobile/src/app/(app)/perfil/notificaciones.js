@@ -11,8 +11,23 @@ const ICONO = {
   licencia_aprobada: ['checkmark-circle', 'exito'],
   licencia_rechazada: ['close-circle', 'error'],
   licencia_pendiente: ['hourglass', 'aviso'],
+  tarea_asignada: ['construct', 'gris'],
+  tarea_en_revision: ['eye', 'aviso'],
+  tarea_aprobada: ['checkmark-circle', 'exito'],
+  tarea_rechazada: ['refresh-circle', 'error'],
+  tarea_cancelada: ['close-circle', 'gris'],
 };
-const DESTINO = { licencia_pendiente: '/modulos/rrhh/aprobaciones', licencia_aprobada: '/modulos/rrhh/licencias', licencia_rechazada: '/modulos/rrhh/licencias' };
+// A dónde lleva cada aviso al tocarlo.
+const DESTINO = {
+  licencia_pendiente: () => '/modulos/rrhh/aprobaciones',
+  licencia_aprobada: () => '/modulos/rrhh/licencias',
+  licencia_rechazada: () => '/modulos/rrhh/licencias',
+  tarea_asignada: (n) => `/tareas/${n.entidad_id}`,
+  tarea_aprobada: (n) => `/tareas/${n.entidad_id}`,
+  tarea_rechazada: (n) => `/tareas/${n.entidad_id}`,
+  tarea_cancelada: (n) => `/tareas/${n.entidad_id}`,
+  tarea_en_revision: (n) => `/modulos/tareas/${n.entidad_id}`,
+};
 
 export default function Notificaciones() {
   const t = useTema();
@@ -48,7 +63,7 @@ export default function Notificaciones() {
           const [icono, tono] = ICONO[n.tipo] ?? ['notifications', 'gris'];
           return (
             <FilaLista key={n.id} ultima={i === lista.length - 1}
-              onPress={DESTINO[n.tipo] ? () => router.push(DESTINO[n.tipo], { withAnchor: true }) : undefined}>
+              onPress={DESTINO[n.tipo] ? () => router.push(DESTINO[n.tipo](n), { withAnchor: true }) : undefined}>
               <Ionicons name={icono} size={22} color={colores[tono] ?? t.textoSuave} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: t.texto, fontWeight: n.leida_at ? '400' : '600' }}>{n.titulo}</Text>

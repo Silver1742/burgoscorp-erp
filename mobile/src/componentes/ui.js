@@ -422,3 +422,30 @@ const estilos = StyleSheet.create({
   seccion: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, marginTop: espacio.l, marginBottom: espacio.s },
 });
 
+
+/** Barra de avance (.progress de Bootstrap) con el rojo de la marca, o verde al completarse. */
+export function BarraProgreso({ valor = 0, total = 0, conTexto = true }) {
+  const t = useTema();
+  const pct = total > 0 ? Math.round((valor / total) * 100) : 0;
+  return (
+    <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: pct }}>
+      <View style={{ height: 8, borderRadius: 4, backgroundColor: t.superficieSec, overflow: 'hidden' }}>
+        <View style={{ width: `${pct}%`, height: '100%', backgroundColor: pct === 100 ? t.exito : t.primario }} />
+      </View>
+      {conTexto ? <Text style={{ color: t.textoSuave, fontSize: 12, marginTop: 4 }}>{valor} de {total} operaciones aprobadas · {pct}%</Text> : null}
+    </View>
+  );
+}
+
+/** Dato con etiqueta chica arriba (para encabezados de detalle). */
+export function Dato({ etiqueta, children, estilo }) {
+  const t = useTema();
+  return (
+    <View style={[{ minWidth: 130, flexGrow: 1, flexBasis: 130, marginBottom: espacio.m }, estilo]}>
+      <Text style={{ color: t.textoSuave, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3 }}>{etiqueta}</Text>
+      {typeof children === 'string' || typeof children === 'number'
+        ? <Text style={{ color: t.texto, fontSize: 15, marginTop: 2 }}>{children}</Text>
+        : <View style={{ marginTop: 3 }}>{children ?? <Text style={{ color: t.textoTenue }}>—</Text>}</View>}
+    </View>
+  );
+}

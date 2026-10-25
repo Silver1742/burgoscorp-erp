@@ -13,6 +13,12 @@ export default function LayoutModulos() {
       <Stack.Screen name="rrhh/aprobaciones" options={{ title: 'Aprobar licencias' }} />
       <Stack.Screen name="rrhh/organigrama" options={{ title: 'Organigrama' }} />
       <Stack.Screen name="rrhh/legajo/[id]" options={{ title: 'Legajo' }} />
+      <Stack.Screen name="produccion/index" options={{ title: 'Órdenes de trabajo' }} />
+      <Stack.Screen name="produccion/nueva" options={{ title: 'Nueva orden de trabajo' }} />
+      <Stack.Screen name="produccion/[id]" options={{ title: 'Orden de trabajo' }} />
+      <Stack.Screen name="tareas/index" options={{ title: 'Tareas del área' }} />
+      <Stack.Screen name="tareas/nueva" options={{ title: 'Nueva tarea' }} />
+      <Stack.Screen name="tareas/[id]" options={{ title: 'Tarea' }} />
     </Stack>
   );
 }
