@@ -274,7 +274,24 @@ Pendiente ──▶ En curso ⇄ Pausada ──▶ En revisión ──(jefe)─�
 - **Historial y comentarios:** cada cambio de estado queda registrado con quién y cuándo; cada
   paso avisa a quien tiene que actuar.
 
-### 4.9 Validación de datos
+### 4.9 Fotos y archivos adjuntos
+
+**Archivos:** [`routes/adjuntos.js`](../backend/src/routes/adjuntos.js) y
+[`services/adjuntos.js`](../backend/src/services/adjuntos.js). Sirve a todos los módulos: hoy se
+usa en las tareas (foto del trabajo) y en las licencias (certificado médico), y en los días 7 y 8
+se suma a Mantenimiento, Compras, Ventas, Calidad y Finanzas.
+
+- **Quién puede:** ve una foto quien puede ver la tarea o la licencia. La agrega quien trabaja en
+  la tarea (o su jefe), o el empleado que pidió la licencia, y solo mientras no esté cerrada.
+- **Qué se acepta:** fotos JPG, PNG o WebP y PDF, de hasta 8 MB y 12 por registro. El tipo se
+  reconoce por el contenido del archivo, no por su nombre: un texto disfrazado de `.jpg` se rechaza.
+- **Privacidad:** las fotos de los celulares traen datos ocultos (EXIF), como la ubicación GPS donde
+  se sacaron. La app achica la foto antes de subirla (lado mayor de 1600 px, que además ahorra datos
+  móviles) y el servidor igual borra esos datos.
+- **Dónde se guardan:** en la carpeta `UPLOADS_DIR`, con un nombre aleatorio. El nombre original
+  solo se muestra, nunca se usa para buscar el archivo en el disco.
+
+### 4.10 Validación de datos
 
 **Archivos:** [`validators/`](../backend/src/validators). Cada campo tiene reglas (tipo, largo
 igual al de la base, formato). Por ejemplo, el CUIT se valida con su dígito verificador y se
@@ -310,6 +327,7 @@ pantalla, y la carpeta determina la ruta.
 | Tareas del área (jefes: asignar, aprobar, rechazar) | [`(app)/modulos/tareas/`](../mobile/src/app/(app)/modulos/tareas) |
 | Detalle de una tarea (lista de control, horas, comentarios, historial) | [`componentes/DetalleTarea.js`](../mobile/src/componentes/DetalleTarea.js) |
 | Selector con búsqueda (cliente, máquina, responsable) | [`componentes/Selector.js`](../mobile/src/componentes/Selector.js) |
+| Fotos con la cámara o la galería (tareas, certificados) | [`componentes/Fotos.js`](../mobile/src/componentes/Fotos.js) |
 
 ### 5.2 Qué pantalla se muestra (rutas protegidas)
 
@@ -365,6 +383,30 @@ Con "reducir movimiento" activado en el sistema, las animaciones no se reproduce
 muestra cada recurso: título, detalle y etiquetas como "Bajo mínimo" o "En mantenimiento". La
 pestaña Módulos muestra solo los que el rol puede ver, según lo que responde `/auth/yo`.
 
+### 5.6 Todo desde el celular: funciones del teléfono por área
+
+Todos los roles y todas las áreas tienen que poder trabajar desde el celular: cada pantalla se
+prueba con tamaño de teléfono. Además, cada área usa lo que el teléfono tiene y una PC no:
+
+| Quién | Función del teléfono | Dónde | Estado |
+|---|---|---|---|
+| Operarios (Mecanizado, Soldadura, Impresión 3D) | **Cámara:** foto del avance o del trabajo terminado | Mis tareas → detalle | ✅ |
+| Todos los empleados | **Cámara:** foto del certificado médico o de la constancia | Mis licencias | ✅ |
+| Jefes y RRHH | Ver el certificado antes de aprobar | Aprobar licencias | ✅ |
+| Jefes de producción | **QR de la OT** para imprimir y pegar en la pieza | Detalle de la OT | Día 7 |
+| Operarios | **Escanear el QR** de la pieza para abrir su operación | Mis tareas | Día 7 |
+| Mantenimiento y operarios | **Escanear el QR de la máquina** y reportar la falla con foto | Mantenimiento | Día 7 |
+| Abastecimiento | **Escanear el código** del artículo al recibir o contar stock; foto del remito | Inventario y Compras | Día 7 |
+| Comercial | **Foto de la pieza** en la solicitud del cliente; **llamar o abrir WhatsApp** con un toque | Ventas | Día 8 |
+| Ingeniería | Fotos del relevamiento con las medidas | Solicitud y OT | Día 8 |
+| Calidad | Fotos de la inspección y de la no conformidad | Calidad | Día 8 |
+| Finanzas | Foto del comprobante del proveedor | Finanzas | Día 8 |
+| Gerencia | Tablero pensado para la pantalla del celular | Tablero | Día 8 |
+
+La app solo pide permiso de **cámara**, y recién cuando se toca "Sacar foto". No pide micrófono
+(está bloqueado en [`app.json`](../mobile/app.json)) y en Android 13 o posterior la galería no
+necesita ningún permiso.
+
 ---
 
 ## 6. Seguridad (OWASP), resumen
@@ -378,7 +420,8 @@ pestaña Módulos muestra solo los que el rol puede ver, según lo que responde 
 | Abuso de recursos (A06) | Límite de pedidos y de tamaño, timeouts | `middlewares/limites.js`, `server.js` |
 | Falta de registros (A09) | Tabla `auditoria`: logins, bloqueos, accesos denegados | `services/auditoria.js` |
 | Errores que revelan datos (A10) | Mensajes genéricos al usuario; el detalle queda solo en el servidor | `middlewares/errores.js` |
-| Datos en el celular | Tokens en SecureStore, sin copias de seguridad, sin permisos de Android | `mobile/src/lib/almacen.js`, `mobile/app.json` |
+| Archivos subidos (A05/A06) | Tipo por contenido, tamaño y cantidad máximos, nombre aleatorio, sin datos de ubicación | `services/adjuntos.js` |
+| Datos en el celular | Tokens en SecureStore, sin copias de seguridad, solo el permiso de cámara | `mobile/src/lib/almacen.js`, `mobile/app.json` |
 
 La skill y el agente que revisan esto durante el desarrollo están en
 [`.claude/skills/seguridad-owasp/`](../.claude/skills/seguridad-owasp) y
@@ -390,7 +433,7 @@ La skill y el agente que revisan esto durante el desarrollo están en
 
 | Qué | Cómo | Dónde |
 |---|---|---|
-| API | 80 tests automáticos: login, tokens, permisos, 2FA, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje, el circuito de licencias, órdenes de trabajo y tareas | [`backend/tests/`](../backend/tests) |
+| API | 85 tests automáticos: login, tokens, permisos, 2FA, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje, el circuito de licencias, órdenes de trabajo, tareas y fotos adjuntas | [`backend/tests/`](../backend/tests) |
 | App | Probada en el navegador, con tamaño de celular y de escritorio, con usuarios de distintos roles | — |
 
 Para correr los tests: `cd backend && npm test` (con una base de prueba, porque modifican datos).
@@ -406,8 +449,8 @@ Para correr los tests: `cd backend && npm test` (con una base de prueba, porque 
 | 3 | 2FA, códigos por email, login social en el servidor | ✅ (faltan las credenciales de Google, GitHub y Facebook) |
 | 4 | App: sesión, login, navegación por rol | ✅ |
 | 5 | Organización y RRHH | ✅ |
-| 6 | Producción y Tareas | ✅ |
-| 7 | Inventario y Compras | ⏳ |
-| 8 | Ventas, Finanzas y Tablero | ⏳ |
+| 6 | Producción y Tareas, y fotos con la cámara (tareas y certificados) | ✅ |
+| 7 | Inventario, Compras y Mantenimiento: stock y reserva de material de la OT, orden de compra y recepción, fallas de máquina; QR de la OT y escaneo con la cámara | ⏳ |
+| 8 | Ventas, Calidad, Finanzas y Tablero: solicitud con foto → presupuesto → OT, inspección con fotos y no conformidad (retrabajo), factura y cobro, tablero | ⏳ |
 | 9 | Publicar la API, generar el APK, auditoría de seguridad | ⏳ |
 | 10 | Manual de usuario y documentación final | ⏳ |

@@ -99,6 +99,19 @@ export async function listar(usuario, filtros) {
   return { data: filas, meta: { pagina: filtros.pagina, limite: filtros.limite, total } };
 }
 
+/**
+ * Para los adjuntos (certificado médico, constancia de examen): la ve quien ve la solicitud;
+ * agrega archivos solo quien la pidió, mientras no esté resuelta.
+ */
+export async function acceso(usuario, id) {
+  const permiso = await resolverPermiso(usuario, 'RRHH', 'ver');
+  const alc = filtroAlcance(usuario, permiso.alcance, { areaCol: 'e.area_id', propioCol: 'l.empleado_id' });
+  const s = await queryOne(`${SELECT} WHERE l.id = ? AND (${alc.sql})`, [id, ...alc.params]);
+  if (!s) throw errores.noEncontrado('La solicitud no existe');
+  const propia = s.empleado_id === usuario.empleado_id;
+  return { puedeEscribir: propia && ['pendiente', 'aprobada_jefe'].includes(s.estado), puedeGestionar: false };
+}
+
 /** ¿Aprueba en nombre de RRHH (jefe de RRHH o admin)? */
 async function esRrhh(usuario) {
   const p = await resolverPermiso(usuario, 'RRHH', 'aprobar');

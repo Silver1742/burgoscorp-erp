@@ -416,6 +416,21 @@ Estados: `pendiente` → `en_curso` ⇄ `pausada` → `en_revision` → `aprobad
 (vuelve a empezarse) y `cancelada`. Las horas reales se calculan con los registros de inicio y
 pausa. Cada paso genera un aviso en `/notificaciones`.
 
+### Fotos y archivos adjuntos · `/adjuntos`
+
+Entidades: `tarea` (fotos del trabajo) y `licencia` (certificado). Ve los archivos quien ve la
+entidad; los agrega quien la puede modificar mientras esté abierta (en una tarea, los asignados y
+el jefe del área; en una licencia, quien la pidió).
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/adjuntos?entidad=&entidad_id=&nombre=` | El cuerpo es el archivo **en binario** con su `Content-Type` (`image/jpeg`, `image/png`, `image/webp` o `application/pdf`), hasta 8 MB. El tipo se verifica por la firma del archivo (`400` si no coincide, `415` si el Content-Type no es uno de esos). A los JPEG se les quita el EXIF. Máximo 12 por entidad (`422`). Devuelve `201` |
+| GET | `/adjuntos?entidad=&entidad_id=` | Lista con `subido_por_nombre` y `puede_borrar`; `meta.puede_agregar` y `meta.maximo` |
+| GET | `/adjuntos/:id` | El archivo, con su `Content-Type` y `nosniff`. `404` si no se ve la entidad |
+| DELETE | `/adjuntos/:id` | `204`. Lo borra quien lo subió o el jefe, mientras la entidad esté abierta |
+
+Límite: 40 subidas cada 15 minutos por IP.
+
 ## Seguridad
 
 Medidas aplicadas según OWASP Top 10:

@@ -19,7 +19,12 @@
       },
       "package": "com.burgoscorp.erp",
       "allowBackup": false,
-      "permissions": []
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -30,7 +35,15 @@
       "expo-status-bar",
       "expo-secure-store",
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "BurgosCorp usa la cámara para sacar fotos del trabajo, de los certificados y de los pedidos.",
+          "photosPermission": "BurgosCorp accede a tus fotos solo cuando elegís una para adjuntar.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "scheme": "burgoscorp",
     "backgroundColor": "#141416",

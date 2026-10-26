@@ -6,6 +6,7 @@ import {
   EsqueletoLista, ErrorCarga, Vacio,
 } from '../../../../componentes/ui';
 import ConfirmDialog from '../../../../componentes/ConfirmDialog';
+import Fotos from '../../../../componentes/Fotos';
 import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { TIPO_LICENCIA, ESTADO_LICENCIA, fechaCorta, diasHabiles } from '../../../../modulos';
@@ -24,6 +25,7 @@ export default function MisLicencias() {
   const [errores, setErrores] = useState({});
   const [enviando, setEnviando] = useState(false);
   const [aCancelar, setACancelar] = useState(null);
+  const [conAdjuntos, setConAdjuntos] = useState(null); // licencia a la que se le adjunta el certificado
 
   const cargar = useCallback(async () => {
     setErrorLista(null);
@@ -48,6 +50,8 @@ export default function MisLicencias() {
       const r = await api('/licencias', { metodo: 'POST', cuerpo: { ...form, motivo: form.motivo.trim() || undefined } });
       toast.exito(`Solicitud enviada (${diasHabiles(r.dias)}). Te avisamos cuando la aprueben.`);
       setForm((f) => ({ ...f, motivo: '' }));
+      // Enfermedad o examen: se abre la sección para sacarle una foto al certificado.
+      if (['enfermedad', 'estudio'].includes(r.tipo)) setConAdjuntos(r);
       cargar();
     } catch (err) {
       setErrores(err.porCampo ?? {});
@@ -99,15 +103,24 @@ export default function MisLicencias() {
                 <Text style={{ color: t.texto, fontWeight: '600' }}>{TIPO_LICENCIA[l.tipo]}</Text>
                 <Text style={{ color: t.textoSuave, fontSize: 13 }}>Del {fechaCorta(l.fecha_desde)} al {fechaCorta(l.fecha_hasta)} · {diasHabiles(l.dias)}</Text>
                 {l.comentario_resolucion ? <Text style={{ color: t.textoSuave, fontSize: 13, fontStyle: 'italic' }}>“{l.comentario_resolucion}”</Text> : null}
+                {/* Debajo del texto para que en el celular no se salgan de la tarjeta */}
+                <View style={[estilos.botones, { marginTop: espacio.s }]}>
+                  <Boton titulo="Certificado" icono="attach" variante="secundario" chico estilo={{ marginBottom: 0 }}
+                    onPress={() => setConAdjuntos(conAdjuntos?.id === l.id ? null : l)} />
+                  {cancelable ? <Boton titulo="Cancelar" variante="contornoPeligro" chico estilo={{ marginBottom: 0 }} onPress={() => setACancelar(l)} /> : null}
+                </View>
               </View>
-              <View style={{ alignItems: 'flex-end', gap: espacio.xs }}>
-                <Insignia texto={estado.texto} tono={estado.tono ?? 'gris'} />
-                {cancelable ? <Boton titulo="Cancelar" variante="contornoPeligro" chico onPress={() => setACancelar(l)} /> : null}
-              </View>
+              <Insignia texto={estado.texto} tono={estado.tono ?? 'gris'} />
             </FilaLista>
           );
         })}
       </Tarjeta>
+
+      {conAdjuntos ? (
+        <Fotos key={conAdjuntos.id} entidad="licencia" entidadId={conAdjuntos.id}
+          titulo={`Certificado · ${TIPO_LICENCIA[conAdjuntos.tipo]} del ${fechaCorta(conAdjuntos.fecha_desde)}`}
+          vacio="Sacale una foto al certificado médico o a la constancia. La ven tu jefe y RRHH." />
+      ) : null}
 
       <ConfirmDialog
         visible={Boolean(aCancelar)}
@@ -124,4 +137,5 @@ export default function MisLicencias() {
 const estilos = StyleSheet.create({
   etiqueta: { fontSize: 15, marginBottom: 6 },
   fila: { flexDirection: 'row', gap: espacio.m },
+  botones: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s },
 });

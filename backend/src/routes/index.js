@@ -5,6 +5,7 @@ import usuariosRoutes from './usuarios.js';
 import catalogosRoutes from './catalogos.js';
 import rrhhRoutes from './rrhh.js';
 import produccionRoutes from './produccion.js';
+import adjuntosRoutes from './adjuntos.js';
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.use('/usuarios', usuariosRoutes);
 // rrhh va antes que catalogos: define rutas más específicas (/empleados/:id/habilidades, /asistencias/hoy).
 router.use('/', rrhhRoutes);
 router.use('/', produccionRoutes);
+router.use('/', adjuntosRoutes);
 router.use('/', catalogosRoutes);
 
 export default router;

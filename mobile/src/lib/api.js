@@ -41,9 +41,10 @@ export const tokens = {
   alExpirar(fn) { alExpirarSesion = fn; },
 };
 
-async function llamar(ruta, { metodo = 'GET', cuerpo, consulta, conToken = true } = {}) {
+// `binario` (Blob) sube un archivo tal cual con su tipo; `comoBlob` devuelve el archivo descargado.
+async function llamar(ruta, { metodo = 'GET', cuerpo, consulta, conToken = true, binario, comoBlob = false, timeout = TIMEOUT_MS } = {}) {
   const controlador = new AbortController();
-  const temporizador = setTimeout(() => controlador.abort(), TIMEOUT_MS);
+  const temporizador = setTimeout(() => controlador.abort(), timeout);
 
   let url = `${API_URL}${ruta}`;
   if (consulta) {
@@ -55,8 +56,9 @@ async function llamar(ruta, { metodo = 'GET', cuerpo, consulta, conToken = true 
     if (qs) url += `?${qs}`;
   }
 
-  const cabeceras = { Accept: 'application/json' };
+  const cabeceras = { Accept: comoBlob ? '*/*' : 'application/json' };
   if (cuerpo !== undefined) cabeceras['Content-Type'] = 'application/json';
+  if (binario) cabeceras['Content-Type'] = binario.type;
   if (conToken && accessToken) cabeceras.Authorization = `Bearer ${accessToken}`;
 
   let res;
@@ -64,7 +66,7 @@ async function llamar(ruta, { metodo = 'GET', cuerpo, consulta, conToken = true 
     res = await fetch(url, {
       method: metodo,
       headers: cabeceras,
-      body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined,
+      body: binario ?? (cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined),
       signal: controlador.signal,
     });
   } catch (err) {
@@ -77,6 +79,7 @@ async function llamar(ruta, { metodo = 'GET', cuerpo, consulta, conToken = true 
   }
 
   if (res.status === 204) return null;
+  if (comoBlob && res.ok) return res.blob();
   const datos = await res.json().catch(() => null);
   if (!res.ok || !datos?.ok) {
     const e = datos?.error;

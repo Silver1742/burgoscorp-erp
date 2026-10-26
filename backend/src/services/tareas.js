@@ -94,6 +94,13 @@ async function cargar(usuario, id) {
   };
 }
 
+/** Para los adjuntos: si el usuario ve la tarea y si puede agregarle fotos. */
+export async function acceso(usuario, id) {
+  const { t, esAsignado, puedeGestionar } = await cargar(usuario, id);
+  const abierta = !['aprobada', 'cancelada'].includes(t.estado);
+  return { puedeEscribir: abierta && (esAsignado || puedeGestionar), puedeGestionar };
+}
+
 export async function obtener(usuario, id) {
   const { t, asignados, esAsignado, puedeGestionar } = await cargar(usuario, id);
   const [checklist, comentarios, historial, horas] = await Promise.all([

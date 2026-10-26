@@ -7,6 +7,7 @@ import {
   EsqueletoLista, ErrorCarga, Vacio,
 } from '../../../../componentes/ui';
 import ConfirmDialog from '../../../../componentes/ConfirmDialog';
+import Fotos from '../../../../componentes/Fotos';
 import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { ESTADO_LICENCIA, TIPO_LICENCIA, fechaCorta, diasHabiles } from '../../../../modulos';
@@ -22,6 +23,7 @@ export default function Aprobaciones() {
   const [accion, setAccion] = useState(null); // { tipo: 'aprobar' | 'rechazar', l }
   const [comentario, setComentario] = useState('');
   const [errorComentario, setErrorComentario] = useState(null);
+  const [viendo, setViendo] = useState(null); // solicitud de la que se ve el certificado
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -85,6 +87,7 @@ export default function Aprobaciones() {
                 </View>
               </View>
               <View style={estilos.botones}>
+                <Boton titulo="Certificado" icono="attach" variante="secundario" chico onPress={() => setViendo(viendo?.id === l.id ? null : l)} />
                 <Boton titulo="Rechazar" icono="close" variante="contornoPeligro" chico onPress={() => abrir('rechazar', l)} />
                 <Boton titulo="Aprobar" icono="checkmark" variante="exito" chico onPress={() => abrir('aprobar', l)} />
               </View>
@@ -92,6 +95,11 @@ export default function Aprobaciones() {
           </FilaLista>
         ))}
       </Tarjeta>
+
+      {viendo ? (
+        <Fotos key={viendo.id} entidad="licencia" entidadId={viendo.id}
+          titulo={`Certificado de ${viendo.nombre} ${viendo.apellido}`} vacio="No adjuntó ningún certificado." />
+      ) : null}
 
       <ConfirmDialog
         visible={Boolean(accion)}
@@ -115,5 +123,5 @@ export default function Aprobaciones() {
 const estilos = StyleSheet.create({
   item: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: espacio.m },
   persona: { flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: espacio.m },
-  botones: { flexDirection: 'row', gap: espacio.s, justifyContent: 'flex-end' },
+  botones: { flexDirection: 'row', flexWrap: 'wrap', gap: espacio.s, justifyContent: 'flex-end' },
 });

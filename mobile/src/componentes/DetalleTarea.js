@@ -11,6 +11,7 @@ import {
   Pantalla, Tarjeta, FilaLista, Insignia, Dato, Avatar, Boton, Campo, Casilla, Esqueleto, ErrorCarga, Vacio, Cargando,
 } from './ui';
 import ConfirmDialog from './ConfirmDialog';
+import Fotos from './Fotos';
 import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
 import { ESTADO_TAREA, PRIORIDAD, fechaHoraCorta, horas } from '../modulos';
@@ -232,6 +233,9 @@ export default function DetalleTarea({ id }) {
               </View>
             ))}
           </Tarjeta>
+
+          <Fotos entidad="tarea" entidadId={tarea.id} titulo="Fotos del trabajo"
+            vacio={tarea.es_asignado ? 'Sacá una foto del avance o del trabajo terminado para que la vea tu jefe.' : 'Todavía no hay fotos.'} />
 
           <Tarjeta titulo="Horas registradas" icono="time-outline" sinRelleno>
             {tarea.horas.length === 0 ? <Vacio icono="time-outline" titulo="Todavía no se trabajó" /> : null}

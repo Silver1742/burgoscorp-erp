@@ -33,6 +33,8 @@ const esquema = z.object({
   TOTP_ENC_KEY: z.string().refine((v) => Buffer.from(v, 'base64').length === 32,
     'TOTP_ENC_KEY debe ser 32 bytes en base64'),
   APP_NOMBRE: z.string().max(40).default('BurgosCorp ERP'),
+  // Carpeta de las fotos y archivos subidos (fuera de cualquier carpeta pública).
+  UPLOADS_DIR: z.string().default('uploads'),
 
   // Correo saliente. Sin SMTP_HOST, en desarrollo los correos se muestran en la consola.
   SMTP_HOST: z.string().default(''),
