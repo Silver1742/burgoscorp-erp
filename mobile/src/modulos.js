@@ -64,10 +64,41 @@ export const ESTADO_TAREA = {
 export const fechaHoraCorta = (f) => (f ? new Date(f).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }) : '—');
 export const horas = (h) => `${Number(h ?? 0).toLocaleString('es-AR', { maximumFractionDigits: 2 })} h`;
 
-const ESTADO_MAQUINA = { operativo: 'Operativa', mantenimiento: 'En mantenimiento', fuera_servicio: 'Fuera de servicio' };
-const TIPO_PRODUCTO = {
+export const ESTADO_MAQUINA = { operativo: 'Operativa', mantenimiento: 'En mantenimiento', fuera_servicio: 'Fuera de servicio' };
+export const TIPO_PRODUCTO = {
   materia_prima: 'Materia prima', insumo: 'Insumo', repuesto: 'Repuesto',
   producto_terminado: 'Producto terminado', herramienta: 'Herramienta',
+};
+
+export const pesosAr = pesos;
+/** 12.5 → '12,5' (cantidades de stock con hasta 3 decimales) */
+export const cantidad = (n, unidad) => `${Number(n ?? 0).toLocaleString('es-AR', { maximumFractionDigits: 3 })}${unidad ? ` ${unidad}` : ''}`;
+
+export const TIPO_MOVIMIENTO = {
+  ingreso_compra: { texto: 'Ingreso por compra', signo: '+' },
+  consumo_ot: { texto: 'Consumo en OT', signo: '−' },
+  consumo_mantenimiento: { texto: 'Repuesto de mantenimiento', signo: '−' },
+  ajuste_positivo: { texto: 'Ajuste (+)', signo: '+' },
+  ajuste_negativo: { texto: 'Ajuste (−)', signo: '−' },
+  transferencia_salida: { texto: 'Transferencia (sale)', signo: '−' },
+  transferencia_entrada: { texto: 'Transferencia (entra)', signo: '+' },
+  devolucion: { texto: 'Devolución', signo: '+' },
+};
+export const ESTADO_OC = {
+  borrador: { texto: 'Borrador', tono: 'gris' },
+  pendiente_aprobacion: { texto: 'Para aprobar', tono: 'aviso' },
+  aprobada: { texto: 'Aprobada', tono: 'negro' },
+  enviada: { texto: 'Enviada al proveedor', tono: 'negro' },
+  recibida_parcial: { texto: 'Recibida en parte', tono: 'rojo' },
+  recibida: { texto: 'Recibida', tono: 'exito' },
+  cancelada: { texto: 'Cancelada', tono: 'gris' },
+};
+export const ESTADO_OM = {
+  abierta: { texto: 'Abierta', tono: 'error' },
+  en_curso: { texto: 'En reparación', tono: 'negro' },
+  esperando_repuesto: { texto: 'Esperando repuesto', tono: 'aviso' },
+  cerrada: { texto: 'Reparada', tono: 'exito' },
+  cancelada: { texto: 'Cancelada', tono: 'gris' },
 };
 
 export const MODULOS = [
@@ -83,6 +114,7 @@ export const MODULOS = [
       titular: (r) => r.nombre,
       detalle: (r) => [r.codigo, r.area_nombre, [r.marca, r.modelo].filter(Boolean).join(' ')].filter(Boolean).join(' · '),
       chips: (r) => [{ texto: ESTADO_MAQUINA[r.estado], tono: r.estado === 'operativo' ? 'exito' : 'aviso' }],
+      abrir: (r) => `/modulos/mantenimiento/maquina/${r.id}`,
     }],
   },
   {
@@ -116,12 +148,17 @@ export const MODULOS = [
   {
     codigo: 'INV', titulo: 'Inventario', icono: 'cube-outline',
     descripcion: 'Materiales, insumos y stock',
+    acciones: [
+      { titulo: 'Stock: disponible y reservado', icono: 'cube-outline', ruta: () => '/modulos/inventario' },
+      { titulo: 'Escanear un material', icono: 'qr-code-outline', ruta: () => '/modulos/escanear' },
+    ],
     recursos: [
       {
         ruta: 'productos', titulo: 'Productos y stock',
         titular: (r) => r.nombre,
         detalle: (r) => `${r.codigo} · ${TIPO_PRODUCTO[r.tipo]} · Stock: ${Number(r.stock_total)} ${r.unidad}`,
         chips: (r) => (Number(r.stock_total) < Number(r.stock_minimo) ? [{ texto: 'Bajo mínimo', tono: 'error' }] : []),
+        abrir: (r) => `/modulos/inventario/${r.id}`,
       },
       { ruta: 'depositos', titulo: 'Depósitos', titular: (r) => r.nombre, detalle: (r) => [r.codigo, r.ubicacion].filter(Boolean).join(' · ') },
       { ruta: 'categorias-producto', titulo: 'Categorías', titular: (r) => r.nombre },
@@ -130,6 +167,11 @@ export const MODULOS = [
   {
     codigo: 'COM', titulo: 'Compras', icono: 'cart-outline',
     descripcion: 'Proveedores y órdenes de compra',
+    acciones: [
+      { titulo: 'Órdenes de compra', icono: 'cart-outline', ruta: () => '/modulos/compras' },
+      { titulo: 'Nueva orden de compra', icono: 'add-circle-outline', ruta: () => '/modulos/compras/nueva', visible: ({ puede }) => puede('COM', 'crear') },
+      { titulo: 'Recibir mercadería (escanear)', icono: 'qr-code-outline', ruta: () => '/modulos/escanear', visible: ({ puede }) => puede('COM', 'editar') },
+    ],
     recursos: [{
       ruta: 'proveedores', titulo: 'Proveedores',
       titular: (r) => r.razon_social,
@@ -189,7 +231,22 @@ export const MODULOS = [
       { ruta: 'puestos', titulo: 'Puestos', titular: (r) => r.nombre, detalle: (r) => r.area_nombre },
     ],
   },
-  { codigo: 'MANT', titulo: 'Mantenimiento', icono: 'build-outline', descripcion: 'Preventivo y correctivo de máquinas', recursos: [] },
+  {
+    codigo: 'MANT', titulo: 'Mantenimiento', icono: 'build-outline',
+    descripcion: 'Fallas de máquinas y preventivos',
+    acciones: [
+      { titulo: 'Reportar una falla', icono: 'warning-outline', ruta: () => '/modulos/mantenimiento/nueva', visible: ({ puede }) => puede('MANT', 'crear') },
+      { titulo: 'Escanear una máquina', icono: 'qr-code-outline', ruta: () => '/modulos/escanear' },
+      { titulo: 'Órdenes de mantenimiento', icono: 'build-outline', ruta: () => '/modulos/mantenimiento' },
+    ],
+    recursos: [{
+      ruta: 'planes-mantenimiento', titulo: 'Planes preventivos', sinBusqueda: true,
+      titular: (r) => r.nombre,
+      detalle: (r) => `${r.centro_codigo} ${r.centro_nombre} · cada ${r.frecuencia_dias} días · próximo ${fechaCorta(r.proxima_fecha)}`,
+      chips: (r) => (r.proxima_fecha && r.proxima_fecha <= new Date().toISOString().slice(0, 10) ? [{ texto: 'Vencido', tono: 'error' }] : []),
+      abrir: (r) => `/modulos/mantenimiento/maquina/${r.centro_trabajo_id}`,
+    }],
+  },
   { codigo: 'CAL', titulo: 'Calidad', icono: 'ribbon-outline', descripcion: 'Inspecciones y mediciones', recursos: [] },
   { codigo: 'FIN', titulo: 'Finanzas', icono: 'cash-outline', descripcion: 'Facturas, cobros y pagos', recursos: [] },
   {

@@ -39,9 +39,18 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "BurgosCorp usa la cámara para sacar fotos del trabajo, de los certificados y de los pedidos.",
+          "cameraPermission": "BurgosCorp usa la cámara para sacar fotos del trabajo y escanear los códigos QR de piezas, máquinas y materiales.",
           "photosPermission": "BurgosCorp accede a tus fotos solo cuando elegís una para adjuntar.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "BurgosCorp usa la cámara para sacar fotos del trabajo y escanear los códigos QR de piezas, máquinas y materiales.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
         }
       ]
     ],

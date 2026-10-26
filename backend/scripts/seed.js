@@ -171,6 +171,69 @@ async function cargarProduccion(conn, ejecutar) {
   }
 }
 
+/** Reservas de material de las OT, una orden de compra en curso, planes preventivos y una máquina parada. */
+async function cargarAbastecimiento(conn) {
+  const uno = async (sql, p) => (await conn.execute(sql, p))[0][0];
+  const usuario = async (email) => (await uno('SELECT id, empleado_id FROM usuarios WHERE email = ?', [email]));
+  const producto = async (c) => uno('SELECT id, nombre, costo_promedio FROM productos WHERE codigo = ?', [c]);
+  const ot = async (titulo) => (await uno('SELECT id FROM ordenes_trabajo WHERE titulo = ?', [titulo])).id;
+  const maquina = async (c) => (await uno('SELECT id FROM centros_trabajo WHERE codigo = ?', [c])).id;
+  const jorge = await usuario('jorge.dominguez@burgoscorp.test');
+  const marcelo = await usuario('marcelo.ibanez@burgoscorp.test');
+  const gabriel = await usuario('gabriel.ponce@burgoscorp.test');
+  const matias = await usuario('matias.peralta@burgoscorp.test');
+  const daniel = await usuario('daniel.correa@burgoscorp.test');
+
+  // Material reservado para las OT (el eje de la cosechadora y la estructura de la cervecería).
+  const RESERVAS = [
+    ['Reparación de eje de cosechadora', 'MP-1045-50', 1.2, jorge],
+    ['Estructura soporte para tanques fermentadores', 'MP-CE-80', 6, marcelo],
+    ['Estructura soporte para tanques fermentadores', 'IN-MIG-10', 8, marcelo],
+    ['Estructura soporte para tanques fermentadores', 'IN-PINT-EPX', 12, marcelo],
+  ];
+  for (const [titulo, codigo, cantidad, u] of RESERVAS) {
+    await conn.execute('INSERT INTO reservas_material (orden_trabajo_id, producto_id, cantidad, creado_por) VALUES (?, ?, ?, ?)',
+      [await ot(titulo), (await producto(codigo)).id, cantidad, u.id]);
+  }
+
+  // Una compra para reponer lo que está bajo el mínimo, esperando la aprobación de la jefa de Abastecimiento.
+  const proveedor = (await uno("SELECT id FROM proveedores WHERE razon_social = 'Aceros del Litoral S.A.'")).id;
+  const items = [['MP-1045-25', 30, 9600], ['MP-1045-50', 6, 37500]];
+  let subtotal = 0;
+  const numero = await siguienteNumero(conn, 'OC');
+  const [oc] = await conn.execute(
+    `INSERT INTO ordenes_compra (numero, proveedor_id, fecha, fecha_entrega_esperada, estado, solicitado_por, observaciones)
+     VALUES (?, ?, ?, ?, 'pendiente_aprobacion', ?, 'Reposición de barras bajo el mínimo')`, [numero, proveedor, dias(0), dias(5), gabriel.id]);
+  for (const [codigo, cantidad, precio] of items) {
+    const p = await producto(codigo);
+    subtotal += cantidad * precio;
+    await conn.execute(
+      'INSERT INTO orden_compra_items (orden_compra_id, producto_id, descripcion, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)',
+      [oc.insertId, p.id, p.nombre, cantidad, precio, cantidad * precio]);
+  }
+  await conn.execute('UPDATE ordenes_compra SET subtotal = ?, iva_monto = ?, total = ? WHERE id = ?',
+    [subtotal, subtotal * 0.21, subtotal * 1.21, oc.insertId]);
+
+  // Planes preventivos (uno vencido para que aparezca el aviso).
+  const PLANES = [
+    ['CNC-01', 'Lubricación de guías y husillo', 30, -2],
+    ['TOR-01', 'Cambio de aceite de la caja', 180, 20],
+    ['I3D-01', 'Limpieza y cambio de boquilla', 15, 3],
+    ['PLE-01', 'Revisión del circuito hidráulico', 90, 40],
+    ['SOL-01', 'Limpieza de torcha y rodillos de arrastre', 30, 10],
+  ];
+  for (const [codigo, nombre, frecuencia, proxima] of PLANES) {
+    await conn.execute('INSERT INTO planes_mantenimiento (centro_trabajo_id, nombre, frecuencia_dias, proxima_fecha) VALUES (?, ?, ?, ?)',
+      [await maquina(codigo), nombre, frecuencia, dias(proxima)]);
+  }
+
+  // El router CNC está parado: falla reportada por el operador, esperando el repuesto.
+  await conn.execute(
+    `INSERT INTO ordenes_mantenimiento (numero, centro_trabajo_id, tipo, descripcion, prioridad, estado, detiene_maquina, reportado_por, responsable_id)
+     VALUES (?, ?, 'correctivo', 'Se cortó la correa de transmisión: el eje Y no avanza.', 'alta', 'esperando_repuesto', 1, ?, ?)`,
+    [await siguienteNumero(conn, 'OM'), await maquina('CNC-02'), matias.id, daniel.empleado_id]);
+}
+
 async function main() {
   if (await queryOne("SELECT id FROM usuarios WHERE email = 'admin@burgoscorp.test'")) {
     console.log('Los datos de prueba ya estaban cargados. Para empezar de cero, volvé a correr schema.sql y seed.sql.');
@@ -270,6 +333,9 @@ async function main() {
 
     // Producción: tres órdenes de trabajo con operaciones, máquinas y personas asignadas.
     await cargarProduccion(conn, ejecutar);
+
+    // Abastecimiento y Mantenimiento: reservas, una compra en curso, planes preventivos y una falla.
+    await cargarAbastecimiento(conn);
   });
 
   const usuarios = await query(`

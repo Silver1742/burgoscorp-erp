@@ -16,6 +16,8 @@ import { errores } from '../utils/errores.js';
 import { auditar } from './auditoria.js';
 import * as tareas from './tareas.js';
 import * as licencias from './licencias.js';
+import * as compras from './compras.js';
+import * as mantenimiento from './mantenimiento.js';
 
 export const MAX_BYTES = 8 * 1024 * 1024;
 export const MAX_POR_ENTIDAD = 12;
@@ -27,6 +29,8 @@ const CARPETA = path.resolve(env.UPLOADS_DIR);
 const ENTIDADES = {
   tarea: tareas.acceso,
   licencia: licencias.acceso,
+  orden_compra: compras.acceso,              // foto del remito o de la factura del proveedor
+  orden_mantenimiento: mantenimiento.acceso, // foto de la falla y de la reparación
 };
 export const NOMBRES_ENTIDAD = Object.keys(ENTIDADES);
 

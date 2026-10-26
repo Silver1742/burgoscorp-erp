@@ -625,11 +625,34 @@ CREATE TABLE registros_horas (
   CONSTRAINT ck_rh_fin CHECK (fin_at IS NULL OR fin_at >= inicio_at)
 ) ENGINE=InnoDB;
 
+-- Material reservado para una OT. Lo disponible de un producto es su stock menos lo
+-- reservado y todavía no consumido. Si al reservar no alcanza, la reserva queda igual
+-- (con faltante) y se avisa a Abastecimiento para que compre.
+-- Flujo: activa -> consumida (se usó todo) | liberada (OT cerrada o el jefe la anuló)
+CREATE TABLE reservas_material (
+  id                 BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  orden_trabajo_id   INT UNSIGNED NOT NULL,
+  producto_id        INT UNSIGNED NOT NULL,
+  cantidad           DECIMAL(12,3) NOT NULL,
+  cantidad_consumida DECIMAL(12,3) NOT NULL DEFAULT 0,
+  estado             ENUM('activa','consumida','liberada') NOT NULL DEFAULT 'activa',
+  creado_por         INT UNSIGNED NOT NULL,
+  created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_res_producto (producto_id, estado),
+  KEY idx_res_ot (orden_trabajo_id, estado),
+  CONSTRAINT fk_res_ot       FOREIGN KEY (orden_trabajo_id) REFERENCES ordenes_trabajo(id),
+  CONSTRAINT fk_res_producto FOREIGN KEY (producto_id)      REFERENCES productos(id),
+  CONSTRAINT fk_res_usuario  FOREIGN KEY (creado_por)       REFERENCES usuarios(id),
+  CONSTRAINT ck_res_cant CHECK (cantidad > 0 AND cantidad_consumida >= 0 AND cantidad_consumida <= cantidad)
+) ENGINE=InnoDB;
+
 -- Materiales usados en una OT (cada consumo genera un movimiento de stock).
 CREATE TABLE consumos_material (
   id               BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   orden_trabajo_id INT UNSIGNED NOT NULL,
   tarea_id         INT UNSIGNED NULL,
+  reserva_id       BIGINT UNSIGNED NULL,
   producto_id      INT UNSIGNED NOT NULL,
   deposito_id      SMALLINT UNSIGNED NOT NULL,
   cantidad         DECIMAL(12,3) NOT NULL,
@@ -638,6 +661,7 @@ CREATE TABLE consumos_material (
   created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_cm_ot       FOREIGN KEY (orden_trabajo_id) REFERENCES ordenes_trabajo(id),
   CONSTRAINT fk_cm_tarea    FOREIGN KEY (tarea_id)         REFERENCES tareas(id),
+  CONSTRAINT fk_cm_reserva  FOREIGN KEY (reserva_id)       REFERENCES reservas_material(id),
   CONSTRAINT fk_cm_producto FOREIGN KEY (producto_id)      REFERENCES productos(id),
   CONSTRAINT fk_cm_deposito FOREIGN KEY (deposito_id)      REFERENCES depositos(id),
   CONSTRAINT fk_cm_usuario  FOREIGN KEY (registrado_por)   REFERENCES usuarios(id),
@@ -713,7 +737,7 @@ CREATE TABLE movimientos_stock (
   id              BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   producto_id     INT UNSIGNED NOT NULL,
   deposito_id     SMALLINT UNSIGNED NOT NULL,
-  tipo            ENUM('ingreso_compra','consumo_ot','ajuste_positivo','ajuste_negativo',
+  tipo            ENUM('ingreso_compra','consumo_ot','consumo_mantenimiento','ajuste_positivo','ajuste_negativo',
                        'transferencia_salida','transferencia_entrada','devolucion') NOT NULL,
   cantidad        DECIMAL(12,3) NOT NULL,          -- siempre positiva; el tipo define el signo
   costo_unitario  DECIMAL(14,2) NULL,

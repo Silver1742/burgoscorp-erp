@@ -12,6 +12,7 @@ import {
 } from './ui';
 import ConfirmDialog from './ConfirmDialog';
 import Fotos from './Fotos';
+import MaterialesOt from './MaterialesOt';
 import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
 import { ESTADO_TAREA, PRIORIDAD, fechaHoraCorta, horas } from '../modulos';
@@ -236,6 +237,8 @@ export default function DetalleTarea({ id }) {
 
           <Fotos entidad="tarea" entidadId={tarea.id} titulo="Fotos del trabajo"
             vacio={tarea.es_asignado ? 'Sacá una foto del avance o del trabajo terminado para que la vea tu jefe.' : 'Todavía no hay fotos.'} />
+          {/* El operario registra el material que usa sin salir de su tarea. */}
+          {tarea.orden_trabajo_id ? <MaterialesOt otId={tarea.orden_trabajo_id} tareaId={tarea.id} /> : null}
 
           <Tarjeta titulo="Horas registradas" icono="time-outline" sinRelleno>
             {tarea.horas.length === 0 ? <Vacio icono="time-outline" titulo="Todavía no se trabajó" /> : null}

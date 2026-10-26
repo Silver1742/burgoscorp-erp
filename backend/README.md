@@ -416,11 +416,75 @@ Estados: `pendiente` → `en_curso` ⇄ `pausada` → `en_revision` → `aprobad
 (vuelve a empezarse) y `cancelada`. Las horas reales se calculan con los registros de inicio y
 pausa. Cada paso genera un aviso en `/notificaciones`.
 
+#### Materiales de una OT · `/ordenes-trabajo/:id/materiales`
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| GET | `/ordenes-trabajo/:id/materiales` | PROD ver (quien ve la OT) | Reservas con `cantidad`, `cantidad_consumida`, `pendiente` y `faltante`; `meta.puede_reservar` y `meta.puede_consumir` |
+| POST | `/ordenes-trabajo/:id/materiales` | PROD editar (jefe del área) | `producto_id`\*, `cantidad`\*. Si ya hay una reserva activa del producto, se suma. Si no alcanza, se reserva igual, `meta.faltante` dice cuánto falta y se avisa a Abastecimiento. `201` |
+| POST | `/ordenes-trabajo/:id/materiales/:reservaId/consumir` | Asignados a la OT o el jefe | `cantidad`\*, `deposito_id`, `tarea_id`, `observacion`. Baja el stock (`422` si no hay o si supera lo reservado) y suma el costo al de la OT |
+| DELETE | `/ordenes-trabajo/:id/materiales/:reservaId` | Jefe del área | Libera lo que quedaba reservado |
+
+Al pasar la OT a `entregada` o `cancelada`, lo reservado que no se usó se libera solo.
+
+### Inventario · `/inventario` (módulo `INV`)
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| GET | `/inventario/stock` | INV ver | Por producto: `stock_total`, `reservado`, `disponible`, `en_camino` (compras aprobadas sin recibir) y `bajo_minimo`. Filtros: `q`, `tipo`, `categoria_id`, `bajo_minimo=1`. Lo bajo el mínimo primero |
+| GET | `/inventario/stock/:id` | INV ver | Ficha: stock por depósito, reservas por OT, compras en curso y últimos movimientos |
+| GET | `/inventario/movimientos` | INV ver | Filtros: `producto_id`, `deposito_id`, `tipo`. Cada movimiento trae el número del documento de origen (`ref_numero`) |
+| POST | `/inventario/ajustes` | INV editar (Abastecimiento) | `producto_id`\*, `deposito_id`\*, `tipo`\* (`ajuste_positivo` o `ajuste_negativo`), `cantidad`\*, `observacion`\* (el motivo). No deja bajar de lo reservado (`422`) |
+| POST | `/inventario/transferencias` | INV editar | `producto_id`\*, `desde_deposito_id`\*, `hacia_deposito_id`\*, `cantidad`\* |
+
+### Compras · `/ordenes-compra` (módulo `COM`)
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| GET | `/ordenes-compra` | COM ver | Filtros: `estado`, `abiertas=1`, `proveedor_id`, `orden_trabajo_id`, `q` |
+| GET | `/ordenes-compra/:id` | COM ver | Detalle con ítems, recepciones y qué puede hacer el usuario (`puede_aprobar`, `puede_recibir`…) |
+| POST | `/ordenes-compra` | COM crear | `proveedor_id`\*, `items`\* (1 a 50: `producto_id` o `descripcion`, `cantidad`\*, `precio_unitario`\*, `iva_alicuota`), `orden_trabajo_id`, `fecha_entrega_esperada`, `observaciones`. Los importes los calcula el servidor. Queda en `borrador` |
+| PUT | `/ordenes-compra/:id` | COM editar | Mismos campos, solo en borrador (`409` si no) |
+| POST | `/ordenes-compra/:id/enviar-aprobacion` | COM editar | Borrador → para aprobar; avisa a la jefa de Abastecimiento |
+| POST | `/ordenes-compra/:id/aprobar` | COM aprobar | La aprueba alguien distinto de quien la pidió (`403`), salvo un admin |
+| POST | `/ordenes-compra/:id/rechazar` | COM aprobar | `comentario`\*. Vuelve a borrador |
+| POST | `/ordenes-compra/:id/enviar` | COM editar | Aprobada → enviada al proveedor |
+| POST | `/ordenes-compra/:id/recibir` | COM editar | `deposito_id`\*, `items`\* (`item_id`, `cantidad`), `remito`. Recepción total o parcial: entra al stock y recalcula el costo promedio. Si era para una OT, avisa al responsable |
+| POST | `/ordenes-compra/:id/cancelar` | COM editar | `comentario`. Solo antes de recibir |
+
+Estados: `borrador` → `pendiente_aprobacion` → `aprobada` → `enviada` → `recibida_parcial` →
+`recibida`, y `cancelada`.
+
+### Mantenimiento · `/ordenes-mantenimiento` y `/maquinas` (módulo `MANT`)
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| GET | `/ordenes-mantenimiento` | MANT ver | Filtros: `estado`, `abiertas=1`, `mias=1`, `tipo`, `centro_trabajo_id`, `q`. Primero las máquinas paradas |
+| GET | `/ordenes-mantenimiento/:id` | MANT ver | Detalle con repuestos y `transiciones` posibles para el usuario |
+| POST | `/ordenes-mantenimiento` | MANT crear | Reportar falla: `centro_trabajo_id`\*, `descripcion`\*, `prioridad`, `detiene_maquina`. Con `detiene_maquina` la máquina pasa a mantenimiento. `tipo: "preventivo"` y `plan_id` solo para el jefe de Mantenimiento |
+| PUT | `/ordenes-mantenimiento/:id` | Jefe de Mantenimiento | `responsable_id` (alguien del área), `prioridad`, `detiene_maquina` |
+| POST | `/ordenes-mantenimiento/:id/estado` | Técnico a cargo o jefe | `estado`\* (`en_curso`, `esperando_repuesto`, `cerrada`, `cancelada`), `solucion` (obligatoria para cerrar), `costo`. Un técnico que inicia una orden sin responsable queda a cargo. Al cerrar la última que la detenía, la máquina vuelve a operar |
+| POST | `/ordenes-mantenimiento/:id/repuestos` | Técnico a cargo o jefe | `producto_id`\*, `cantidad`\*, `deposito_id`. Sale del stock y suma al costo |
+| GET | `/ordenes-mantenimiento/tecnicos` | MANT aprobar | Técnicos del área con sus órdenes abiertas |
+| GET | `/ordenes-mantenimiento/planes-proximos` | MANT ver | Preventivos vencidos o que vencen en 7 días |
+| GET | `/maquinas` · `/maquinas/:id` | MANT ver | Todas las máquinas; la ficha trae fallas abiertas, planes y últimas reparaciones |
+
+Planes preventivos: CRUD en `/planes-mantenimiento` (solo los modifica Mantenimiento). Al cerrar
+una orden preventiva, el plan se reprograma (`proxima_fecha` = hoy + frecuencia).
+
+### Escaneo de códigos · `/escaneo`
+
+`GET /escaneo?codigo=` resuelve lo leído con la cámara: `BC:OT:OT-2026-0001` (pieza),
+`BC:MAQ:CNC-02` (máquina), `BC:PRD:MP-1045-25` (producto) o `BC:OC:OC-2026-0001`; también el
+código solo. Devuelve `{ tipo, id, titulo }` y, para una OT, `tarea_id` con la operación abierta
+del usuario. Solo letras, números y `: . _ - /` (`400`); `404` si no existe o el usuario no lo ve.
+
 ### Fotos y archivos adjuntos · `/adjuntos`
 
-Entidades: `tarea` (fotos del trabajo) y `licencia` (certificado). Ve los archivos quien ve la
-entidad; los agrega quien la puede modificar mientras esté abierta (en una tarea, los asignados y
-el jefe del área; en una licencia, quien la pidió).
+Entidades: `tarea` (fotos del trabajo), `licencia` (certificado), `orden_compra` (remito y
+factura) y `orden_mantenimiento` (falla y reparación). Ve los archivos quien ve la entidad; los
+agrega quien la puede modificar mientras esté abierta (en una tarea, los asignados y el jefe del
+área; en una licencia, quien la pidió; en una falla, quien la reportó y Mantenimiento).
 
 | Método | Ruta | Descripción |
 |---|---|---|

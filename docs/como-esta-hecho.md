@@ -63,7 +63,7 @@ Ideas clave:
 | RRHH | `empleados`, `habilidades`, `empleado_habilidades`, `asistencias`, `solicitudes_licencia`, `epp_entregas` |
 | Ventas | `clientes`, `servicios`, `solicitudes`, `presupuestos`, `presupuesto_items` |
 | Producción y Tareas | `centros_trabajo` (máquinas), `ordenes_trabajo`, `tareas`, `tarea_asignaciones`, `registros_horas`, `consumos_material` |
-| Inventario y Compras | `productos`, `depositos`, `stock`, `movimientos_stock`, `proveedores`, `ordenes_compra` |
+| Inventario y Compras | `productos`, `depositos`, `stock`, `movimientos_stock`, `reservas_material`, `proveedores`, `ordenes_compra`, `orden_compra_items` |
 | Mantenimiento y Calidad | `planes_mantenimiento`, `ordenes_mantenimiento`, `inspecciones`, `inspeccion_mediciones` |
 | Finanzas | `comprobantes`, `comprobante_items`, `pagos` |
 
@@ -274,12 +274,64 @@ Pendiente ──▶ En curso ⇄ Pausada ──▶ En revisión ──(jefe)─�
 - **Historial y comentarios:** cada cambio de estado queda registrado con quién y cuándo; cada
   paso avisa a quien tiene que actuar.
 
-### 4.9 Fotos y archivos adjuntos
+### 4.9 Inventario, Compras y Mantenimiento (día 7)
+
+**Archivos:** [`services/stock.js`](../backend/src/services/stock.js) (todo movimiento de stock pasa por acá),
+[`services/inventario.js`](../backend/src/services/inventario.js),
+[`services/materiales.js`](../backend/src/services/materiales.js) (material de la OT),
+[`services/compras.js`](../backend/src/services/compras.js),
+[`services/mantenimiento.js`](../backend/src/services/mantenimiento.js),
+[`services/escaneo.js`](../backend/src/services/escaneo.js) y sus rutas en
+[`routes/inventario.js`](../backend/src/routes/inventario.js), [`routes/compras.js`](../backend/src/routes/compras.js)
+y [`routes/mantenimiento.js`](../backend/src/routes/mantenimiento.js).
+
+- **Stock disponible:** de cada producto se sabe cuánto **hay**, cuánto está **reservado** para
+  órdenes de trabajo y cuánto queda **disponible** (lo que hay menos lo reservado). Cada entrada o
+  salida queda en `movimientos_stock` con quién, cuándo y por qué documento (OC, OT u OM). Nunca
+  queda negativo: la fila se bloquea mientras se descuenta.
+- **¿Hay material para la OT?** El jefe reserva lo que necesita el trabajo. Si no alcanza, la
+  reserva queda igual, se muestra cuánto falta y le llega el aviso a Abastecimiento. El operario,
+  desde su tarea, registra lo que usa: baja del stock y el costo se suma al de la OT. Al entregar o
+  cancelar la OT, lo que sobró de la reserva vuelve a estar disponible.
+
+```
+Jefe reserva ──▶ ¿alcanza? ── sí ──▶ queda apartado ──▶ operario usa ──▶ baja el stock y suma costo
+                    └── no ──▶ aviso a Abastecimiento ──▶ orden de compra ──▶ llega ──▶ aviso al jefe
+```
+
+- **Orden de compra:** el comprador la arma (para stock o para una OT) y los importes con IVA los
+  calcula el servidor. La aprueba **otra persona** (la jefa de Abastecimiento): quien pide no se
+  aprueba a sí mismo. Al llegar la mercadería se recibe total o en partes, en el depósito elegido,
+  con el número de remito y la foto del remito. El costo promedio del producto se recalcula.
+
+```
+Borrador ──▶ Para aprobar ──(jefa)──▶ Aprobada ──▶ Enviada ──▶ Recibida en parte ──▶ Recibida
+                 └── Devolver a borrador (con motivo)
+```
+
+- **Falla de máquina:** cualquiera la reporta desde la ficha de la máquina (se llega escaneando su
+  QR), con foto. Si "la máquina quedó parada", pasa a mantenimiento y Producción no puede asignarle
+  ni iniciar operaciones. Un técnico la toma, carga los repuestos (salen del stock) y la cierra
+  contando qué hizo; entonces la máquina vuelve a operar y se le avisa a quien la reportó.
+
+```
+Abierta ──▶ En reparación ⇄ Esperando repuesto ──▶ Reparada (con la solución)
+   └──────── (jefe de Mantenimiento) ──▶ Cancelada
+```
+
+- **Preventivos:** cada máquina tiene planes ("lubricar guías cada 30 días"). El jefe de
+  Mantenimiento ve los que vencen en la semana y genera la orden; al cerrarla, el plan se reprograma.
+- **Códigos QR:** la app imprime etiquetas para la pieza (`BC:OT:OT-2026-0001`), la máquina
+  (`BC:MAQ:CNC-02`), el estante (`BC:PRD:MP-1045-25`) y la orden de compra. Al escanear, la API dice
+  qué es y si el usuario lo puede ver; al operario le abre directamente su operación en esa pieza.
+  Lo leído nunca se abre como enlace.
+
+### 4.10 Fotos y archivos adjuntos
 
 **Archivos:** [`routes/adjuntos.js`](../backend/src/routes/adjuntos.js) y
 [`services/adjuntos.js`](../backend/src/services/adjuntos.js). Sirve a todos los módulos: hoy se
-usa en las tareas (foto del trabajo) y en las licencias (certificado médico), y en los días 7 y 8
-se suma a Mantenimiento, Compras, Ventas, Calidad y Finanzas.
+usa en las tareas (foto del trabajo), las licencias (certificado médico), las órdenes de compra
+(remito y factura) y las fallas de máquina, y en el día 8 se suma a Ventas, Calidad y Finanzas.
 
 - **Quién puede:** ve una foto quien puede ver la tarea o la licencia. La agrega quien trabaja en
   la tarea (o su jefe), o el empleado que pidió la licencia, y solo mientras no esté cerrada.
@@ -291,7 +343,7 @@ se suma a Mantenimiento, Compras, Ventas, Calidad y Finanzas.
 - **Dónde se guardan:** en la carpeta `UPLOADS_DIR`, con un nombre aleatorio. El nombre original
   solo se muestra, nunca se usa para buscar el archivo en el disco.
 
-### 4.10 Validación de datos
+### 4.11 Validación de datos
 
 **Archivos:** [`validators/`](../backend/src/validators). Cada campo tiene reglas (tipo, largo
 igual al de la base, formato). Por ejemplo, el CUIT se valida con su dígito verificador y se
@@ -327,7 +379,13 @@ pantalla, y la carpeta determina la ruta.
 | Tareas del área (jefes: asignar, aprobar, rechazar) | [`(app)/modulos/tareas/`](../mobile/src/app/(app)/modulos/tareas) |
 | Detalle de una tarea (lista de control, horas, comentarios, historial) | [`componentes/DetalleTarea.js`](../mobile/src/componentes/DetalleTarea.js) |
 | Selector con búsqueda (cliente, máquina, responsable) | [`componentes/Selector.js`](../mobile/src/componentes/Selector.js) |
-| Fotos con la cámara o la galería (tareas, certificados) | [`componentes/Fotos.js`](../mobile/src/componentes/Fotos.js) |
+| Fotos con la cámara o la galería (tareas, certificados, remitos, fallas) | [`componentes/Fotos.js`](../mobile/src/componentes/Fotos.js) |
+| Escanear QR (ícono de la barra) | [`(app)/modulos/escanear.js`](../mobile/src/app/(app)/modulos/escanear.js), [`componentes/Escaner.js`](../mobile/src/componentes/Escaner.js) |
+| Etiqueta QR para imprimir (pieza, máquina, estante, OC) | [`componentes/EtiquetaQR.js`](../mobile/src/componentes/EtiquetaQR.js) |
+| Material de la OT (reservar, usar, liberar) | [`componentes/MaterialesOt.js`](../mobile/src/componentes/MaterialesOt.js) |
+| Stock (lista y ficha con ajuste y transferencia) | [`(app)/modulos/inventario/`](../mobile/src/app/(app)/modulos/inventario) |
+| Órdenes de compra (lista, nueva, detalle con aprobación y recepción) | [`(app)/modulos/compras/`](../mobile/src/app/(app)/modulos/compras) |
+| Mantenimiento (fallas, reportar, detalle, ficha de la máquina) | [`(app)/modulos/mantenimiento/`](../mobile/src/app/(app)/modulos/mantenimiento) |
 
 ### 5.2 Qué pantalla se muestra (rutas protegidas)
 
@@ -393,10 +451,10 @@ prueba con tamaño de teléfono. Además, cada área usa lo que el teléfono tie
 | Operarios (Mecanizado, Soldadura, Impresión 3D) | **Cámara:** foto del avance o del trabajo terminado | Mis tareas → detalle | ✅ |
 | Todos los empleados | **Cámara:** foto del certificado médico o de la constancia | Mis licencias | ✅ |
 | Jefes y RRHH | Ver el certificado antes de aprobar | Aprobar licencias | ✅ |
-| Jefes de producción | **QR de la OT** para imprimir y pegar en la pieza | Detalle de la OT | Día 7 |
-| Operarios | **Escanear el QR** de la pieza para abrir su operación | Mis tareas | Día 7 |
-| Mantenimiento y operarios | **Escanear el QR de la máquina** y reportar la falla con foto | Mantenimiento | Día 7 |
-| Abastecimiento | **Escanear el código** del artículo al recibir o contar stock; foto del remito | Inventario y Compras | Día 7 |
+| Jefes de producción | **QR de la OT** para imprimir y pegar en la pieza | Detalle de la OT | ✅ |
+| Operarios | **Escanear el QR** de la pieza para abrir su operación; registrar el material usado | Ícono QR de la barra · Mis tareas | ✅ |
+| Mantenimiento y operarios | **Escanear el QR de la máquina** y reportar la falla con foto | Ficha de la máquina · Mantenimiento | ✅ |
+| Abastecimiento | **Escanear el código** del estante o de la OC; **foto del remito**; **llamar** al proveedor | Inventario y Compras | ✅ |
 | Comercial | **Foto de la pieza** en la solicitud del cliente; **llamar o abrir WhatsApp** con un toque | Ventas | Día 8 |
 | Ingeniería | Fotos del relevamiento con las medidas | Solicitud y OT | Día 8 |
 | Calidad | Fotos de la inspección y de la no conformidad | Calidad | Día 8 |
@@ -420,6 +478,8 @@ necesita ningún permiso.
 | Abuso de recursos (A06) | Límite de pedidos y de tamaño, timeouts | `middlewares/limites.js`, `server.js` |
 | Falta de registros (A09) | Tabla `auditoria`: logins, bloqueos, accesos denegados | `services/auditoria.js` |
 | Errores que revelan datos (A10) | Mensajes genéricos al usuario; el detalle queda solo en el servidor | `middlewares/errores.js` |
+| Códigos QR leídos con la cámara (A01/A05) | Formato validado, búsqueda por código exacto, nunca se abren como enlace, `404` si no se puede ver | `services/escaneo.js`, `componentes/Escaner.js` |
+| Compras (A01/A04) | La aprueba alguien distinto de quien la pidió; importes calculados en el servidor | `services/compras.js` |
 | Archivos subidos (A05/A06) | Tipo por contenido, tamaño y cantidad máximos, nombre aleatorio, sin datos de ubicación | `services/adjuntos.js` |
 | Datos en el celular | Tokens en SecureStore, sin copias de seguridad, solo el permiso de cámara | `mobile/src/lib/almacen.js`, `mobile/app.json` |
 
@@ -433,7 +493,7 @@ La skill y el agente que revisan esto durante el desarrollo están en
 
 | Qué | Cómo | Dónde |
 |---|---|---|
-| API | 85 tests automáticos: login, tokens, permisos, 2FA, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje, el circuito de licencias, órdenes de trabajo, tareas y fotos adjuntas | [`backend/tests/`](../backend/tests) |
+| API | 110 tests automáticos: login, tokens, permisos, 2FA, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje, el circuito de licencias, órdenes de trabajo, tareas, fotos adjuntas, stock y reservas, órdenes de compra, mantenimiento y escaneo | [`backend/tests/`](../backend/tests) |
 | App | Probada en el navegador, con tamaño de celular y de escritorio, con usuarios de distintos roles | — |
 
 Para correr los tests: `cd backend && npm test` (con una base de prueba, porque modifican datos).
@@ -450,7 +510,7 @@ Para correr los tests: `cd backend && npm test` (con una base de prueba, porque 
 | 4 | App: sesión, login, navegación por rol | ✅ |
 | 5 | Organización y RRHH | ✅ |
 | 6 | Producción y Tareas, y fotos con la cámara (tareas y certificados) | ✅ |
-| 7 | Inventario, Compras y Mantenimiento: stock y reserva de material de la OT, orden de compra y recepción, fallas de máquina; QR de la OT y escaneo con la cámara | ⏳ |
+| 7 | Inventario, Compras y Mantenimiento: stock y reserva de material de la OT, orden de compra y recepción, fallas de máquina; QR de la OT y escaneo con la cámara | ✅ |
 | 8 | Ventas, Calidad, Finanzas y Tablero: solicitud con foto → presupuesto → OT, inspección con fotos y no conformidad (retrabajo), factura y cobro, tablero | ⏳ |
 | 9 | Publicar la API, generar el APK, auditoría de seguridad | ⏳ |
 | 10 | Manual de usuario y documentación final | ⏳ |

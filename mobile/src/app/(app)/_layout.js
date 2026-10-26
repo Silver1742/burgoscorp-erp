@@ -1,5 +1,5 @@
 // Pestañas principales. Barra negra en los dos modos; la pestaña activa en blanco con línea roja
-// (como .bc-navbar .nav-link.active del portal R3). A la derecha: modo claro/oscuro y avatar.
+// (como .bc-navbar .nav-link.active del portal R3). A la derecha: escanear QR, modo claro/oscuro y avatar.
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -23,6 +23,9 @@ function AccionesCabecera() {
   const router = useRouter();
   return (
     <View style={estilos.acciones}>
+      <Pressable onPress={() => router.push('/modulos/escanear', { withAnchor: true })} accessibilityRole="button" accessibilityLabel="Escanear un código QR" hitSlop={6} style={{ paddingHorizontal: 6 }}>
+        <Ionicons name="qr-code-outline" size={22} color="#ffffff" />
+      </Pressable>
       <SelectorTema compacto barra />
       <Pressable onPress={() => router.navigate('/perfil')} accessibilityRole="button" accessibilityLabel="Mi perfil" hitSlop={6} style={{ marginRight: 12 }}>
         <Avatar nombre={`${usuario?.nombre ?? ''} ${usuario?.apellido ?? ''}`} tamano={30} />

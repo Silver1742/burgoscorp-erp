@@ -7,6 +7,8 @@
 //        │              ▼  │
 //        └──────────▶ pausada            (cualquiera, salvo entregada) ─▶ cancelada
 //
+// Al pasar a entregada o cancelada se libera el material reservado que no se consumió.
+//
 // Pasa sola a en_proceso cuando alguien inicia la primera operación, y a control_calidad
 // cuando se aprueban todas.
 import { query, queryOne, transaccion } from '../config/db.js';
@@ -31,7 +33,8 @@ const SELECT = `
          (SELECT COUNT(*) FROM tareas t WHERE t.orden_trabajo_id = o.id AND t.estado <> 'cancelada') AS operaciones,
          (SELECT COUNT(*) FROM tareas t WHERE t.orden_trabajo_id = o.id AND t.estado = 'aprobada') AS operaciones_aprobadas,
          (SELECT COALESCE(SUM(t.horas_estimadas), 0) FROM tareas t WHERE t.orden_trabajo_id = o.id AND t.estado <> 'cancelada') AS horas_estimadas,
-         (SELECT COALESCE(SUM(t.horas_reales), 0) FROM tareas t WHERE t.orden_trabajo_id = o.id) AS horas_reales
+         (SELECT COALESCE(SUM(t.horas_reales), 0) FROM tareas t WHERE t.orden_trabajo_id = o.id) AS horas_reales,
+         (SELECT COALESCE(SUM(cm.cantidad * cm.costo_unitario), 0) FROM consumos_material cm WHERE cm.orden_trabajo_id = o.id) AS costo_material
   FROM ordenes_trabajo o
   LEFT JOIN clientes c ON c.id = o.cliente_id
   JOIN areas a ON a.id = o.area_id
@@ -142,6 +145,11 @@ export async function editar(usuario, permiso, id, datos, req) {
   if (columnas.length) {
     await query(`UPDATE ordenes_trabajo SET ${columnas.map((c) => `\`${c}\` = ?`).join(', ')} WHERE id = ?`,
       [...columnas.map((c) => cambios[c] ?? null), id]);
+  }
+  // Al cerrar la OT, el material reservado que no se usó vuelve a estar disponible.
+  if (['entregada', 'cancelada'].includes(cambios.estado)) {
+    await query("UPDATE reservas_material SET cantidad = cantidad_consumida, estado = 'consumida' WHERE orden_trabajo_id = ? AND estado = 'activa' AND cantidad_consumida > 0", [id]);
+    await query("UPDATE reservas_material SET estado = 'liberada' WHERE orden_trabajo_id = ? AND estado = 'activa'", [id]);
   }
   await auditar(req, { accion: 'editar', entidad: 'orden_trabajo', entidadId: id, detalle: { campos: columnas } });
   return obtener(usuario, id);

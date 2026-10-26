@@ -33,3 +33,14 @@ export async function usuarioJefeDeArea(areaId) {
     WHERE a.id = ? AND u.activo = 1`, [areaId]);
   return filas[0]?.id ?? null;
 }
+
+/** Usuarios activos de un área por su código (ej. 'ABA' para avisar a Abastecimiento). */
+export async function usuariosDeArea(codigoArea, { soloJefe = false } = {}) {
+  const filas = await query(`
+    SELECT u.id FROM usuarios u
+    JOIN roles r ON r.id = u.rol_id
+    JOIN empleados e ON e.id = u.empleado_id
+    JOIN areas a ON a.id = e.area_id
+    WHERE u.activo = 1 AND a.codigo = ? AND (? = 0 OR r.codigo = 'JEFE')`, [codigoArea, soloJefe ? 1 : 0]);
+  return filas.map((f) => f.id);
+}

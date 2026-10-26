@@ -4,6 +4,9 @@ import { z } from 'zod';
 import { crearRecursoCrud } from '../utils/crud.js';
 import { id, booleano } from '../validators/comunes.js';
 import * as v from '../validators/catalogos.js';
+import { plan } from '../validators/mantenimiento.js';
+import { errores } from '../utils/errores.js';
+import { hoy, sumarDias } from '../utils/fechas.js';
 
 const router = Router();
 const filtroActivo = { activo: { col: 't.activo', esquema: booleano.or(z.enum(['true', 'false']).transform((x) => x === 'true')) } };
@@ -127,6 +130,25 @@ router.use('/centros-trabajo', crearRecursoCrud({
   esquemaCrear: v.centroTrabajo,
   bajaLogica: true,
   alcance: { areaCol: 't.area_id', areaCampo: 'area_id' },
+}));
+
+// ---------------------------------------------------------------- Mantenimiento
+// Los planes preventivos los arma el área de Mantenimiento; los demás los consultan.
+router.use('/planes-mantenimiento', crearRecursoCrud({
+  modulo: 'MANT', tabla: 'planes_mantenimiento', entidad: 'plan_mantenimiento',
+  select: 't.*, ct.codigo AS centro_codigo, ct.nombre AS centro_nombre',
+  joins: 'JOIN centros_trabajo ct ON ct.id = t.centro_trabajo_id',
+  busqueda: ['t.nombre', 'ct.codigo', 'ct.nombre'],
+  filtros: { ...filtroActivo, centro_trabajo_id: { col: 't.centro_trabajo_id', esquema: id } },
+  ordenables: { proxima: 't.proxima_fecha', nombre: 't.nombre' },
+  ordenDefecto: 't.proxima_fecha',
+  esquemaCrear: plan,
+  bajaLogica: true,
+  antesDeGuardar: async (datos, { req, id: existente }) => {
+    if (req.usuario.rol !== 'ADMIN' && !req.permiso.esDuenia) throw errores.prohibido('Los planes preventivos los administra Mantenimiento');
+    if (!existente && !datos.proxima_fecha) return { ...datos, proxima_fecha: sumarDias(hoy(), datos.frecuencia_dias) };
+    return datos;
+  },
 }));
 
 export default router;

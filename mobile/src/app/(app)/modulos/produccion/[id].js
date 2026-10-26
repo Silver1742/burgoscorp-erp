@@ -7,11 +7,13 @@ import {
   Pantalla, Tarjeta, FilaLista, Insignia, Dato, BarraProgreso, Boton, Campo, Esqueleto, ErrorCarga, Vacio,
 } from '../../../../componentes/ui';
 import ConfirmDialog from '../../../../componentes/ConfirmDialog';
+import EtiquetaQR from '../../../../componentes/EtiquetaQR';
+import MaterialesOt from '../../../../componentes/MaterialesOt';
 import Selector from '../../../../componentes/Selector';
 import { usePuede } from '../../../../contexto/sesion';
 import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
-import { ESTADO_OT, ESTADO_TAREA, PRIORIDAD, TIPO_TRABAJO, TRANSICIONES_OT, fechaCorta, horas } from '../../../../modulos';
+import { ESTADO_OT, ESTADO_TAREA, PRIORIDAD, TIPO_TRABAJO, TRANSICIONES_OT, fechaCorta, horas, pesosAr } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
 
 const VERBO = { en_proceso: 'Reanudar', pausada: 'Pausar', control_calidad: 'Enviar a calidad', terminada: 'Marcar terminada', entregada: 'Marcar entregada', cancelada: 'Cancelar orden' };
@@ -126,15 +128,16 @@ export default function DetalleOt() {
           <Dato etiqueta="Inicio">{fechaCorta(ot.fecha_inicio_plan)}</Dato>
           <Dato etiqueta="Entrega">{fechaCorta(ot.fecha_entrega_plan)}</Dato>
           <Dato etiqueta="Horas (real / est.)">{`${horas(ot.horas_reales)} / ${horas(ot.horas_estimadas)}${desvio !== null ? ` · ${desvio}%` : ''}`}</Dato>
+          <Dato etiqueta="Material usado">{pesosAr(ot.costo_material)}</Dato>
         </View>
         <BarraProgreso valor={ot.operaciones_aprobadas} total={ot.operaciones} />
-        {transiciones.length ? (
-          <View style={[estilos.fila, { marginTop: espacio.l }]}>
-            {transiciones.map((e) => (
-              <Boton key={e} titulo={VERBO[e]} icono={ICONO[e]} chico variante={VARIANTE[e] ?? 'secundario'} onPress={() => setNuevoEstado(e)} />
-            ))}
-          </View>
-        ) : null}
+        <View style={[estilos.fila, { marginTop: espacio.l }]}>
+          {transiciones.map((e) => (
+            <Boton key={e} titulo={VERBO[e]} icono={ICONO[e]} chico variante={VARIANTE[e] ?? 'secundario'} onPress={() => setNuevoEstado(e)} estilo={{ marginBottom: 0 }} />
+          ))}
+          {/* Para pegar en la pieza: el operario la escanea y le abre su operación. */}
+          <EtiquetaQR codigo={`BC:OT:${ot.numero}`} titulo={ot.titulo} sub={`${ot.numero} · ${ot.cliente_nombre ?? 'Trabajo interno'}`} textoBoton="QR de la pieza" />
+        </View>
       </Tarjeta>
 
       <Tarjeta titulo="Operaciones" icono="list-outline" sinRelleno
@@ -162,6 +165,8 @@ export default function DetalleOt() {
           </FilaLista>
         ))}
       </Tarjeta>
+
+      <MaterialesOt otId={ot.id} alCambiar={cargar} />
 
       <ConfirmDialog
         visible={Boolean(nuevoEstado)}

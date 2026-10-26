@@ -19,6 +19,16 @@ export default function LayoutModulos() {
       <Stack.Screen name="tareas/index" options={{ title: 'Tareas del área' }} />
       <Stack.Screen name="tareas/nueva" options={{ title: 'Nueva tarea' }} />
       <Stack.Screen name="tareas/[id]" options={{ title: 'Tarea' }} />
+      <Stack.Screen name="escanear" options={{ title: 'Escanear' }} />
+      <Stack.Screen name="inventario/index" options={{ title: 'Stock' }} />
+      <Stack.Screen name="inventario/[id]" options={{ title: 'Producto' }} />
+      <Stack.Screen name="compras/index" options={{ title: 'Órdenes de compra' }} />
+      <Stack.Screen name="compras/nueva" options={{ title: 'Nueva orden de compra' }} />
+      <Stack.Screen name="compras/[id]" options={{ title: 'Orden de compra' }} />
+      <Stack.Screen name="mantenimiento/index" options={{ title: 'Mantenimiento' }} />
+      <Stack.Screen name="mantenimiento/nueva" options={{ title: 'Reportar una falla' }} />
+      <Stack.Screen name="mantenimiento/[id]" options={{ title: 'Orden de mantenimiento' }} />
+      <Stack.Screen name="mantenimiento/maquina/[id]" options={{ title: 'Máquina' }} />
     </Stack>
   );
 }
