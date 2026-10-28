@@ -11,7 +11,7 @@ import { query, queryOne, transaccion } from '../config/db.js';
 import { AppError, errores } from '../utils/errores.js';
 import { auditar } from './auditoria.js';
 import { buscarUsuarioPorId } from './usuarios.js';
-import { firmarTemporal } from './tokens.js';
+import { firmarTemporal, revocarTodas } from './tokens.js';
 import { emitirSesion } from './auth.js';
 
 const TIMEOUT_MS = 8000;
@@ -187,8 +187,19 @@ export async function loginSocial(proveedor, datos, req) {
         if (yaVinculada.length) {
           throw errores.conflicto(`Tu usuario ya tiene otra cuenta de ${p.nombre} vinculada. Ingresá con esa o con tu contraseña.`);
         }
+        // Si la cuenta existente nunca confirmó el email, pudo crearla otra persona con el email de la
+        // víctima: se le saca la contraseña y se cierran sus sesiones antes de vincularla.
+        const [[previa]] = await conn.execute('SELECT email_verificado_at FROM usuarios WHERE id = ?', [id]);
+        if (!previa.email_verificado_at) {
+          await conn.execute(`UPDATE usuarios SET password_hash = NULL, totp_habilitado = 0, totp_secret_cifrado = NULL,
+            totp_ultimo_paso = NULL WHERE id = ?`, [id]);
+          await conn.execute('DELETE FROM codigos_respaldo_2fa WHERE usuario_id = ?', [id]);
+          await conn.execute('UPDATE codigos_verificacion SET usado_at = UTC_TIMESTAMP() WHERE usuario_id = ? AND usado_at IS NULL', [id]);
+          await revocarTodas(id, conn);
+        }
         await conn.execute('UPDATE usuarios SET email_verificado_at = COALESCE(email_verificado_at, UTC_TIMESTAMP()) WHERE id = ?', [id]);
       } else {
+        if (!env.registroAbierto) throw errores.prohibido('No hay una cuenta con ese email. Pedile la cuenta a un administrador.');
         const [r] = await conn.execute(
           `INSERT INTO usuarios (email, nombre, apellido, rol_id, email_verificado_at)
            VALUES (?, ?, ?, (SELECT id FROM roles WHERE codigo = 'EMPLEADO'), UTC_TIMESTAMP())`,
@@ -205,7 +216,7 @@ export async function loginSocial(proveedor, datos, req) {
 
   const usuario = await buscarUsuarioPorId(usuarioId);
   if (!usuario.activo) throw errores.prohibido('Tu cuenta está desactivada. Contactá a un administrador.');
-  if (usuario.totp_habilitado) return { requiere2fa: true, tokenTemporal: firmarTemporal(usuario.id, '2fa') };
+  if (usuario.totp_habilitado) return { requiere2fa: true, tokenTemporal: await firmarTemporal(usuario.id, '2fa') };
 
   await auditar(req, { accion: 'login_ok', usuarioId, detalle: { metodo: proveedor } });
   return emitirSesion(usuario, req);

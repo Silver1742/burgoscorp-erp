@@ -83,12 +83,12 @@ router.post('/2fa/activar', autenticar, limiteAuth, validar({ body: v.totpActiva
 });
 
 router.post('/2fa/desactivar', autenticar, limiteAuth, validar({ body: v.segundoFactor }), async (req, res) => {
-  await dosPasos.desactivar(req.usuario, req.validado.body.codigo, req);
+  await dosPasos.desactivar(req.usuario, req.validado.body, req);
   res.json({ ok: true, data: { mensaje: 'Verificación en dos pasos desactivada' } });
 });
 
 router.post('/2fa/codigos-respaldo', autenticar, limiteAuth, validar({ body: v.segundoFactor }), async (req, res) => {
-  res.json({ ok: true, data: await dosPasos.regenerarRespaldo(req.usuario, req.validado.body.codigo, req) });
+  res.json({ ok: true, data: await dosPasos.regenerarRespaldo(req.usuario, req.validado.body, req) });
 });
 
 // Segundo paso del login (sin sesión todavía: se usa el tokenTemporal que devolvió /login).

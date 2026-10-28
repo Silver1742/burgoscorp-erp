@@ -106,6 +106,20 @@ describe('Google', () => {
     assert.equal(otra.status, 409);
   });
 
+  test('una cuenta registrada con el email de otro y sin verificar no se le queda al atacante', async () => {
+    // El atacante registra el email de la víctima con su contraseña y nunca lo confirma.
+    const email = `victima.${Date.now()}@correo.test`;
+    const atacante = await api().post('/api/v1/auth/registro').send({ email, password: 'ClaveDelAtacante1', nombre: 'Eva', apellido: 'Mala' });
+    assert.equal(atacante.status, 201, JSON.stringify(atacante.body));
+    // La víctima entra con Google (email verificado por Google): se vincula a esa cuenta.
+    const victima = await api().post('/api/v1/auth/social/google').send({ idToken: idTokenGoogle({ sub: `g-victima-${Date.now()}`, email }) });
+    assert.equal(victima.status, 200, JSON.stringify(victima.body));
+    // La contraseña y la sesión del atacante ya no sirven.
+    assert.equal((await api().post('/api/v1/auth/login').send({ email, password: 'ClaveDelAtacante1' })).status, 401);
+    assert.equal((await api().post('/api/v1/auth/refresh').send({ refreshToken: atacante.body.data.refreshToken })).status, 401);
+    await query('DELETE FROM intentos_login WHERE created_at > UTC_TIMESTAMP() - INTERVAL 1 HOUR AND tipo = ?', ['password']);
+  });
+
   test('rechaza firma de otra clave, otra audiencia, email no verificado o vencido', async () => {
     const otraClave = idTokenGoogle({ sub: 'x1', email: 'x1@gmail.test' }, { clave: claveFalsa.privateKey });
     assert.equal((await api().post('/api/v1/auth/social/google').send({ idToken: otraClave })).status, 401);

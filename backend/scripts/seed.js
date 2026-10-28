@@ -10,11 +10,19 @@ import env from '../src/config/env.js';
 import { pool, query, queryOne, transaccion } from '../src/config/db.js';
 import { siguienteNumero } from '../src/utils/secuencias.js';
 
+// --opcional: si no corresponde cargar datos, termina sin error (lo usa el arranque en la nube).
+const opcional = process.argv.includes('--opcional');
+const salir = (mensaje) => {
+  console[opcional ? 'log' : 'error'](mensaje);
+  process.exit(opcional ? 0 : 1);
+};
 if (env.esProduccion && !process.argv.includes('--forzar')) {
-  console.error('No se cargan datos de prueba en producción (usá --forzar si realmente querés hacerlo).');
-  process.exit(1);
+  salir('No se cargan datos de prueba en producción (usá --forzar si realmente querés hacerlo).');
 }
-
+// En producción no se acepta la contraseña de desarrollo (está publicada en la guía).
+if (env.esProduccion && (!process.env.SEED_PASSWORD || process.env.SEED_PASSWORD.length < 12)) {
+  salir('Datos de prueba: no se cargan (en producción hace falta SEED_PASSWORD de 12 caracteres o más).');
+}
 const PASSWORD = process.env.SEED_PASSWORD || 'BurgosCorp2026';
 
 // legajo, nombre, apellido, área, puesto, rol (null = sin usuario), habilidades [codigo, nivel, vence?], costo/hora

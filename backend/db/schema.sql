@@ -259,6 +259,7 @@ CREATE TABLE refresh_tokens (
   token_hash         CHAR(64)  NOT NULL UNIQUE,
   familia_id         CHAR(36)  NOT NULL,
   expira_at          DATETIME  NOT NULL,
+  familia_expira_at  DATETIME  NOT NULL,      -- vida máxima de la sesión (no se estira al rotar)
   revocado_at        DATETIME  NULL,
   reemplazado_por_id BIGINT UNSIGNED NULL,
   ip                 VARCHAR(45)  NULL,
@@ -267,6 +268,28 @@ CREATE TABLE refresh_tokens (
   KEY idx_rt_familia (familia_id),
   KEY idx_rt_usuario (usuario_id),
   CONSTRAINT fk_rt_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Intentos fallidos de login (contraseña o segundo paso), por email (su SHA-256, exista o no
+-- la cuenta) e IP. Ver services/intentos.js: bloqueo por IP y por email en una ventana de 15 min.
+CREATE TABLE intentos_login (
+  id         BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  clave      CHAR(64)    NOT NULL,
+  ip         VARCHAR(45) NULL,
+  tipo       ENUM('password','2fa') NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_il_clave (clave, created_at)
+) ENGINE=InnoDB;
+
+-- Segundo paso del login pendiente: el token temporal lleva este id y sirve una sola vez,
+-- con 3 intentos como máximo.
+CREATE TABLE pasos_2fa (
+  jti        CHAR(36) PRIMARY KEY,
+  usuario_id INT UNSIGNED NOT NULL,
+  intentos   TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  usado_at   DATETIME NULL,
+  expira_at  DATETIME NOT NULL,
+  CONSTRAINT fk_p2_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- Códigos de 6 dígitos enviados por email (HMAC con secreto del servidor, un solo uso, 10 min).

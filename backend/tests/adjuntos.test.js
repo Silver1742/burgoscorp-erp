@@ -17,6 +17,7 @@ const EMAILS = {
   diego: 'diego.acosta@burgoscorp.test',      // jefe Comercial (otra área)
   jorge: 'jorge.dominguez@burgoscorp.test',   // jefe de Mecanizado
   matias: 'matias.peralta@burgoscorp.test',   // operador CNC (Mecanizado)
+  carolina: 'carolina.mendez@burgoscorp.test', // jefa de RRHH
 };
 const s = {};
 const como = (q) => ({ Authorization: `Bearer ${s[q].accessToken}` });
@@ -111,7 +112,7 @@ describe('fotos en una tarea', () => {
 });
 
 describe('certificado en una licencia', () => {
-  test('el empleado adjunta un PDF y lo ve su jefe, no otra área', async () => {
+  test('el empleado adjunta el certificado médico y lo ve RRHH, no su jefe ni otra área', async () => {
     let f = sumarDias(hoy(), 1);
     while ([0, 6].includes(new Date(`${f}T00:00:00Z`).getUTCDay())) f = sumarDias(f, 1);
     const l = await api().post('/api/v1/licencias').set(como('matias')).send({ tipo: 'enfermedad', fecha_desde: f, fecha_hasta: f });
@@ -121,10 +122,12 @@ describe('certificado en una licencia', () => {
     assert.equal(r.status, 201, JSON.stringify(r.body));
     assert.equal(r.body.data.mime, 'application/pdf');
 
-    const jefe = await api().get('/api/v1/adjuntos').query({ entidad: 'licencia', entidad_id: l.body.data.id }).set(como('jorge'));
-    assert.equal(jefe.status, 200);
-    assert.equal(jefe.body.data.length, 1);
-    assert.equal(jefe.body.meta.puede_agregar, false, 'el jefe ve, no agrega');
+    // Es un dato de salud: el jefe aprueba la licencia sin ver el certificado.
+    assert.equal((await api().get('/api/v1/adjuntos').query({ entidad: 'licencia', entidad_id: l.body.data.id }).set(como('jorge'))).status, 404);
+    const rrhh = await api().get('/api/v1/adjuntos').query({ entidad: 'licencia', entidad_id: l.body.data.id }).set(como('carolina'));
+    assert.equal(rrhh.status, 200);
+    assert.equal(rrhh.body.data.length, 1);
+    assert.equal(rrhh.body.meta.puede_agregar, false, 'RRHH ve, no agrega');
     assert.equal((await api().get('/api/v1/adjuntos').query({ entidad: 'licencia', entidad_id: l.body.data.id }).set(como('claudio'))).status, 404);
   });
 });

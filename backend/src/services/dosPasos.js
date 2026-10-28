@@ -1,21 +1,24 @@
 // Verificación en dos pasos: app autenticadora (TOTP), código por email o código de respaldo.
 import crypto from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import { query, queryOne, transaccion } from '../config/db.js';
-import { errores, AppError } from '../utils/errores.js';
-import { sha256 } from '../utils/seguridad.js';
+import { errores } from '../utils/errores.js';
 import * as totp from './totp.js';
-import { generarCodigo, verificarCodigo } from './codigos.js';
+import { generarCodigo, verificarCodigo, hmac } from './codigos.js';
 import { enviarCodigo } from './email.js';
 import { auditar } from './auditoria.js';
-import { verificarTemporal } from './tokens.js';
+import { verificarTemporal, fallarPaso2, consumirPaso2 } from './tokens.js';
 import { buscarUsuarioPorId } from './usuarios.js';
-import { emitirSesion, registrarIntentoFallido } from './auth.js';
+import { emitirSesion } from './auth.js';
+import * as intentos from './intentos.js';
 
 const CANTIDAD_RESPALDO = 10;
 const codigoInvalido = () => errores.validacion([{ campo: 'body.codigo', mensaje: 'Código incorrecto' }]);
 
-// Códigos de respaldo tipo "7F3A-92C1": se muestran una sola vez y se guardan hasheados.
+// Códigos de respaldo tipo "7F3A-92C1": se muestran una sola vez y se guardan con HMAC (clave del
+// servidor): con solo 32 bits, un hash sin clave se rompería en segundos si se filtrara la base.
 const normalizarRespaldo = (c) => c.toUpperCase().replace(/[^0-9A-F]/g, '');
+const hashRespaldo = (usuarioId, c) => hmac(usuarioId, 'respaldo', normalizarRespaldo(c));
 
 async function crearCodigosRespaldo(usuarioId, conn) {
   const codigos = Array.from({ length: CANTIDAD_RESPALDO }, () => {
@@ -25,7 +28,7 @@ async function crearCodigosRespaldo(usuarioId, conn) {
   await conn.execute('DELETE FROM codigos_respaldo_2fa WHERE usuario_id = ?', [usuarioId]);
   for (const c of codigos) {
     await conn.execute('INSERT INTO codigos_respaldo_2fa (usuario_id, codigo_hash) VALUES (?, ?)',
-      [usuarioId, sha256(normalizarRespaldo(c))]);
+      [usuarioId, hashRespaldo(usuarioId, c)]);
   }
   return codigos;
 }
@@ -34,7 +37,7 @@ async function usarCodigoRespaldo(usuarioId, codigo) {
   const r = await query(
     `UPDATE codigos_respaldo_2fa SET usado_at = UTC_TIMESTAMP()
      WHERE usuario_id = ? AND codigo_hash = ? AND usado_at IS NULL LIMIT 1`,
-    [usuarioId, sha256(normalizarRespaldo(codigo))],
+    [usuarioId, hashRespaldo(usuarioId, codigo)],
   );
   return r.affectedRows === 1;
 }
@@ -79,18 +82,33 @@ export async function activar(usuario, codigo, req) {
   return { codigosRespaldo };
 }
 
-/** Para desactivar o regenerar códigos hay que probar que se tiene el segundo factor. */
-async function exigirSegundoFactor(usuario, codigo, req) {
+/**
+ * Para desactivar o regenerar códigos hay que probar las dos cosas: la contraseña (si la cuenta
+ * tiene) y el segundo factor. Los fallos cuentan para el mismo bloqueo que el login, así que con
+ * un token de acceso robado no se pueden probar códigos sin límite.
+ */
+async function exigirSegundoFactor(usuario, { codigo, password }, req) {
   if (!usuario.totp_habilitado) throw errores.conflicto('La verificación en dos pasos no está activa');
+  const clave = intentos.claveDe(usuario.email);
+  await intentos.exigirNoBloqueado(clave, req);
+  if (usuario.tiene_password) {
+    const { password_hash: hash } = await queryOne('SELECT password_hash FROM usuarios WHERE id = ?', [usuario.id]);
+    if (!password || !(await bcrypt.compare(password, hash))) {
+      await intentos.registrarFallo(clave, req, 'password');
+      await auditar(req, { accion: '2fa_verificacion_fallida', detalle: { motivo: 'password' } });
+      throw errores.validacion([{ campo: 'body.password', mensaje: 'La contraseña no es correcta' }]);
+    }
+  }
   const ok = (await usarCodigoTotp(usuario.id, codigo)) || (await usarCodigoRespaldo(usuario.id, codigo));
   if (!ok) {
+    await intentos.registrarFallo(clave, req, '2fa');
     await auditar(req, { accion: '2fa_verificacion_fallida' });
     throw codigoInvalido();
   }
 }
 
-export async function desactivar(usuario, codigo, req) {
-  await exigirSegundoFactor(usuario, codigo, req);
+export async function desactivar(usuario, datos, req) {
+  await exigirSegundoFactor(usuario, datos, req);
   await transaccion(async (conn) => {
     await conn.execute(
       'UPDATE usuarios SET totp_habilitado = 0, totp_secret_cifrado = NULL, totp_ultimo_paso = NULL WHERE id = ?',
@@ -100,8 +118,8 @@ export async function desactivar(usuario, codigo, req) {
   await auditar(req, { accion: '2fa_desactivada' });
 }
 
-export async function regenerarRespaldo(usuario, codigo, req) {
-  await exigirSegundoFactor(usuario, codigo, req);
+export async function regenerarRespaldo(usuario, datos, req) {
+  await exigirSegundoFactor(usuario, datos, req);
   const codigosRespaldo = await transaccion((conn) => crearCodigosRespaldo(usuario.id, conn));
   await auditar(req, { accion: '2fa_respaldo_regenerado' });
   return { codigosRespaldo };
@@ -111,7 +129,8 @@ export async function regenerarRespaldo(usuario, codigo, req) {
 
 /** Envía un código por email como alternativa a la app autenticadora. */
 export async function enviarCodigoLogin(tokenTemporal) {
-  const usuario = await buscarUsuarioPorId(verificarTemporal(tokenTemporal, '2fa'));
+  const { usuarioId } = await verificarTemporal(tokenTemporal, '2fa');
+  const usuario = await buscarUsuarioPorId(usuarioId);
   if (!usuario?.activo) throw errores.noAutenticado();
   const codigo = await generarCodigo(usuario.id, 'login_email');
   await enviarCodigo({ para: usuario.email, nombre: usuario.nombre, tipo: 'login_email', codigo });
@@ -119,13 +138,11 @@ export async function enviarCodigoLogin(tokenTemporal) {
 
 /** Completa el login: valida el segundo factor y entrega la sesión. */
 export async function completarLogin({ tokenTemporal, metodo, codigo }, req) {
-  const usuarioId = verificarTemporal(tokenTemporal, '2fa');
-  const fila = await queryOne(
-    'SELECT id, activo, totp_habilitado, intentos_fallidos, bloqueado_hasta FROM usuarios WHERE id = ?', [usuarioId]);
+  const { usuarioId, jti } = await verificarTemporal(tokenTemporal, '2fa');
+  const fila = await queryOne('SELECT id, email, activo, totp_habilitado FROM usuarios WHERE id = ?', [usuarioId]);
   if (!fila?.activo || !fila.totp_habilitado) throw errores.noAutenticado();
-  if (fila.bloqueado_hasta && new Date(fila.bloqueado_hasta) > new Date()) {
-    throw new AppError(423, 'CUENTA_BLOQUEADA', 'Demasiados intentos fallidos. Probá de nuevo en 15 minutos.');
-  }
+  const clave = intentos.claveDe(fila.email);
+  await intentos.exigirNoBloqueado(clave, req);
 
   const verificadores = {
     totp: () => usarCodigoTotp(usuarioId, codigo),
@@ -133,13 +150,16 @@ export async function completarLogin({ tokenTemporal, metodo, codigo }, req) {
     respaldo: () => usarCodigoRespaldo(usuarioId, codigo),
   };
   if (!(await verificadores[metodo]())) {
-    // Los fallos del segundo paso cuentan para el mismo bloqueo que la contraseña.
-    await registrarIntentoFallido(fila);
+    // Los fallos del segundo paso cuentan para el mismo bloqueo que la contraseña, y el token
+    // temporal deja de servir al tercero (hay que volver a poner la contraseña).
+    await fallarPaso2(jti);
+    await intentos.registrarFallo(clave, req, '2fa');
     await auditar(req, { accion: 'login_fallido', usuarioId, detalle: { metodo: `2fa_${metodo}` } });
     throw codigoInvalido();
   }
 
-  await query('UPDATE usuarios SET intentos_fallidos = 0, bloqueado_hasta = NULL WHERE id = ?', [usuarioId]);
+  await consumirPaso2(jti);
+  await intentos.limpiar(clave, req);
   await auditar(req, { accion: 'login_ok', usuarioId, detalle: { metodo: `2fa_${metodo}` } });
   return emitirSesion(await buscarUsuarioPorId(usuarioId), req);
 }

@@ -524,7 +524,10 @@ necesita ningún permiso.
 |---|---|---|
 | Acceso indebido (A01) | Permisos por rol, módulo, acción y área en cada pedido | `services/permisos.js` |
 | Mala configuración (A02) | Cabeceras de seguridad, CORS cerrado, `.env` fuera del repo | `middlewares/seguridad.js`, `.gitignore` |
-| Robo de contraseñas o sesión (A07) | bcrypt, bloqueo por intentos, tokens cortos y rotativos, 2FA | `services/auth.js`, `tokens.js`, `dosPasos.js` |
+| Robo de contraseñas o sesión (A07) | bcrypt; bloqueo por email e IP (5 fallos por IP o 20 en total en 15 min, igual exista o no la cuenta); el segundo paso no reinicia el contador y su token sirve una vez con 3 intentos; sesiones de 30 días como máximo; reusar un refresh token cierra todas las sesiones; desactivar el 2FA pide la contraseña | `services/intentos.js`, `auth.js`, `tokens.js`, `dosPasos.js` |
+| Cuentas sin legajo (A01) | Registro cerrado en producción; una cuenta sin legajo no ve ningún módulo; el login social no se queda con cuentas creadas por otro sin verificar | `services/permisos.js`, `auth.js`, `social.js` |
+| Datos personales y de salud | DNI, CUIL, nacimiento, domicilio y costo solo para RRHH y el propio empleado; el certificado y el motivo de una licencia por enfermedad, solo para RRHH | `routes/rrhh.js`, `services/licencias.js` |
+| Claves (A04) | Códigos por email y de respaldo con HMAC y una clave propia (`CODIGOS_HMAC_KEY`); duración del JWT validada (máx. 60 min) | `services/codigos.js`, `config/env.js` |
 | Inyección SQL (A05) | Consultas con parámetros y columnas en lista blanca | `utils/crud.js` |
 | Abuso de recursos (A06) | Límite de pedidos y de tamaño, timeouts | `middlewares/limites.js`, `server.js` |
 | Falta de registros (A09) | Tabla `auditoria`: logins, bloqueos, accesos denegados | `services/auditoria.js` |
@@ -533,8 +536,16 @@ necesita ningún permiso.
 | Ventas, Calidad y Finanzas (A01/A04) | Importes calculados en el servidor; no se aprueba una pieza fuera de tolerancia; una factura por OT; Finanzas solo para Administración | `services/ventas.js`, `calidad.js`, `finanzas.js` |
 | WhatsApp y llamadas | El número sale de la base y se reduce a dígitos antes de armar el enlace; nunca se abre un enlace escaneado | `componentes/Contacto.js` |
 | Compras (A01/A04) | La aprueba alguien distinto de quien la pidió; importes calculados en el servidor | `services/compras.js` |
-| Archivos subidos (A05/A06) | Tipo por contenido, tamaño y cantidad máximos, nombre aleatorio, sin datos de ubicación | `services/adjuntos.js` |
+| Archivos subidos (A05/A06) | Tipo por contenido, tamaño y cantidad máximos (con bloqueo para que no se pase el tope), cuota diaria por usuario, control de espacio libre, nombre aleatorio, sin datos de ubicación | `services/adjuntos.js` |
 | Datos en el celular | Tokens en SecureStore, sin copias de seguridad, solo el permiso de cámara | `mobile/src/lib/almacen.js`, `mobile/app.json` |
+
+**Auditoría del día 9.** El agente `revisor-owasp` (solo lectura) revisó todo el proyecto y
+encontró 15 problemas: 2 altos (cualquiera que se registrara solo podía leer datos y parar
+máquinas; robo de cuenta a través del login con Google), 3 medios (adivinar el 2FA sin límite,
+facturar una OT salteando Calidad, datos personales y de salud a la vista de más) y 10 bajos.
+Se corrigieron todos, con un test por cada uno en [`tests/seguridad.test.js`](../backend/tests/seguridad.test.js),
+y una segunda revisión confirmó las correcciones y marcó 3 detalles más (proxy de Railway, DNI
+buscable, motivo de las licencias por enfermedad), que también se corrigieron.
 
 La skill y el agente que revisan esto durante el desarrollo están en
 [`.claude/skills/seguridad-owasp/`](../.claude/skills/seguridad-owasp) y
@@ -546,7 +557,7 @@ La skill y el agente que revisan esto durante el desarrollo están en
 
 | Qué | Cómo | Dónde |
 |---|---|---|
-| API | 122 tests automáticos: login, tokens, permisos, 2FA, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje, el circuito de licencias, órdenes de trabajo, tareas, fotos adjuntas, stock y reservas, órdenes de compra, mantenimiento, escaneo y el recorrido completo de un pedido (solicitud → presupuesto → OT → calidad con retrabajo → factura y cobro) | [`backend/tests/`](../backend/tests) |
+| API | 134 tests automáticos: login, tokens, permisos, 2FA, las correcciones de la auditoría de seguridad, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje, el circuito de licencias, órdenes de trabajo, tareas, fotos adjuntas, stock y reservas, órdenes de compra, mantenimiento, escaneo y el recorrido completo de un pedido (solicitud → presupuesto → OT → calidad con retrabajo → factura y cobro) | [`backend/tests/`](../backend/tests) |
 | App | Probada en el navegador, con tamaño de celular y de escritorio, con usuarios de distintos roles | — |
 
 Para correr los tests: `cd backend && npm test` (con una base de prueba, porque modifican datos).
@@ -565,5 +576,5 @@ Para correr los tests: `cd backend && npm test` (con una base de prueba, porque 
 | 6 | Producción y Tareas, y fotos con la cámara (tareas y certificados) | ✅ |
 | 7 | Inventario, Compras y Mantenimiento: stock y reserva de material de la OT, orden de compra y recepción, fallas de máquina; QR de la OT y escaneo con la cámara | ✅ |
 | 8 | Ventas, Calidad, Finanzas y Tablero: solicitud con foto → presupuesto → OT, inspección con fotos y no conformidad (retrabajo), factura y cobro, tablero | ✅ |
-| 9 | Publicar la API, generar el APK, auditoría de seguridad | ⏳ |
+| 9 | Publicar la API, generar el APK, auditoría de seguridad | 🔶 Auditoría y correcciones listas; publicación preparada ([guía](publicar.md)), falta subir a GitHub, Railway y el APK |
 | 10 | Manual de usuario y documentación final | ⏳ |

@@ -45,7 +45,7 @@ export const TRANSICIONES_OT = {
   planificada: ['pausada', 'cancelada'],
   en_proceso: ['pausada', 'control_calidad', 'cancelada'],
   pausada: ['en_proceso', 'cancelada'],
-  control_calidad: ['en_proceso', 'terminada', 'cancelada'],
+  control_calidad: ['en_proceso', 'cancelada'], // la aprueba Calidad con una inspección
   terminada: ['entregada', 'control_calidad'],
   entregada: [],
   cancelada: [],

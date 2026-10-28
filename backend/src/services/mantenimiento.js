@@ -118,7 +118,7 @@ export async function acceso(usuario, id) {
 }
 
 async function centroActivo(conn, centroId) {
-  const [[ct]] = await conn.execute('SELECT id, codigo, nombre, estado, activo FROM centros_trabajo WHERE id = ? FOR UPDATE', [centroId]);
+  const [[ct]] = await conn.execute('SELECT id, codigo, nombre, estado, area_id, activo FROM centros_trabajo WHERE id = ? FOR UPDATE', [centroId]);
   if (!ct || !ct.activo) throw errores.validacion([{ campo: 'body.centro_trabajo_id', mensaje: 'La máquina no existe' }]);
   return ct;
 }
@@ -131,11 +131,16 @@ async function liberarMaquina(conn, centroId) {
 }
 
 export async function crear(usuario, d, req) {
-  const { gestor } = await rolMant(usuario);
+  const { gestor, tecnico } = await rolMant(usuario);
   if (d.tipo === 'preventivo' && !gestor) throw errores.prohibido('Las órdenes preventivas las genera el jefe de Mantenimiento');
 
   const r = await transaccion(async (conn) => {
     const ct = await centroActivo(conn, d.centro_trabajo_id);
+    // Parar una máquina frena la producción: lo puede marcar quien trabaja en el área de la
+    // máquina o Mantenimiento. Los demás reportan la falla y Mantenimiento decide.
+    if (d.detiene_maquina && !tecnico && usuario.area_id !== ct.area_id) {
+      throw errores.prohibido('Solo el área de la máquina o Mantenimiento puede marcarla como parada');
+    }
     if (d.plan_id) {
       const [[pl]] = await conn.execute('SELECT centro_trabajo_id FROM planes_mantenimiento WHERE id = ? AND activo = 1', [d.plan_id]);
       if (!pl || pl.centro_trabajo_id !== ct.id) throw errores.validacion([{ campo: 'body.plan_id', mensaje: 'El plan no es de esta máquina' }]);

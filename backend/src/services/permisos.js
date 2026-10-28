@@ -41,6 +41,9 @@ export function invalidarCachePermisos() {
  */
 export async function resolverPermiso(usuario, modulo, accion) {
   const { permisos, duenias } = await cargar();
+  // Una cuenta sin legajo (recién registrada, o creada por login social) no accede a ningún
+  // módulo hasta que RRHH o un admin la vincula a un empleado. El admin no necesita legajo.
+  if (!usuario.empleado_id && usuario.rol !== 'ADMIN') return { permitido: false, alcance: null, esDuenia: false };
   const p = permisos.get(`${usuario.rol}:${modulo}`);
   const esDuenia = Boolean(usuario.area_id) && duenias.has(`${usuario.area_id}:${modulo}`);
   const denegado = { permitido: false, alcance: null, esDuenia };

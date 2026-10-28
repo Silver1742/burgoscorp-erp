@@ -21,7 +21,7 @@ const TRANSICIONES = {
   planificada: ['en_proceso', 'pausada', 'cancelada'],
   en_proceso: ['pausada', 'control_calidad', 'cancelada'],
   pausada: ['en_proceso', 'cancelada'],
-  control_calidad: ['en_proceso', 'terminada', 'cancelada'],
+  control_calidad: ['en_proceso', 'cancelada'], // a "terminada" la pasa solo Calidad (services/calidad.js)
   terminada: ['entregada', 'control_calidad'],
   entregada: [],
   cancelada: [],

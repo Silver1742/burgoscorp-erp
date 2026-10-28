@@ -30,9 +30,11 @@ export const restablecer = z.object({
   nueva: password,
 }).strict();
 
-// Acepta un código TOTP (6 dígitos) o uno de respaldo (XXXX-XXXX).
+// Acepta un código TOTP (6 dígitos) o uno de respaldo (XXXX-XXXX), más la contraseña actual
+// (obligatoria si la cuenta tiene; la exige el servicio).
 export const segundoFactor = z.object({
   codigo: z.string().trim().min(6).max(12),
+  password: z.string().max(200).optional(),
 }).strict();
 
 export const totpActivar = z.object({ codigo: codigoSeisDigitos }).strict();

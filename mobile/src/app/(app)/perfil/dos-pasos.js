@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { Pantalla, EncabezadoPagina, Tarjeta, Campo, Boton, Insignia } from '../../../componentes/ui';
+import { Pantalla, EncabezadoPagina, Tarjeta, Campo, CampoContrasena, Boton, Insignia } from '../../../componentes/ui';
 import ConfirmDialog from '../../../componentes/ConfirmDialog';
 import { useSesion } from '../../../contexto/sesion';
 import { useToast } from '../../../contexto/toast';
@@ -18,17 +18,29 @@ export default function ConfigurarDosPasos() {
   const [config, setConfig] = useState(null);          // { secreto, otpauthUri }
   const [respaldo, setRespaldo] = useState(null);      // códigos a mostrar una sola vez
   const [codigo, setCodigo] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+  const [errorPassword, setErrorPassword] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [confirmarDesactivar, setConfirmarDesactivar] = useState(false);
 
+  // Para cambiar la configuración se pide el código y, si la cuenta tiene, la contraseña.
+  const confirmacion = () => ({ codigo: codigo.trim(), password: usuario.tienePassword ? password : undefined });
+  const faltaConfirmacion = () => {
+    if (codigo.trim().length < 6) { setError('Ingresá un código de la app o uno de respaldo'); return true; }
+    if (usuario.tienePassword && !password) { setErrorPassword('Ingresá tu contraseña'); return true; }
+    return false;
+  };
+
   async function ejecutar(fn) {
     setError(null);
+    setErrorPassword(null);
     setEnviando(true);
     try {
       await fn();
     } catch (err) {
       if (err.porCampo?.codigo) setError(err.porCampo.codigo);
+      if (err.porCampo?.password) setErrorPassword(err.porCampo.password);
       toast.error(err.message);
     } finally {
       setEnviando(false);
@@ -52,23 +64,26 @@ export default function ConfigurarDosPasos() {
   };
 
   const regenerar = () => {
-    if (codigo.trim().length < 6) { setError('Ingresá un código de la app o uno de respaldo'); return; }
+    if (faltaConfirmacion()) return;
     ejecutar(async () => {
-      const r = await api('/auth/2fa/codigos-respaldo', { metodo: 'POST', cuerpo: { codigo: codigo.trim() } });
+      const r = await api('/auth/2fa/codigos-respaldo', { metodo: 'POST', cuerpo: confirmacion() });
       setRespaldo(r.codigosRespaldo);
       setCodigo('');
+      setPassword('');
       toast.exito('Se generaron códigos de respaldo nuevos. Los anteriores dejaron de servir.');
     });
   };
 
   async function desactivar() {
     try {
-      await api('/auth/2fa/desactivar', { metodo: 'POST', cuerpo: { codigo: codigo.trim() } });
+      await api('/auth/2fa/desactivar', { metodo: 'POST', cuerpo: confirmacion() });
       setCodigo('');
+      setPassword('');
       toast.exito('La verificación en dos pasos quedó desactivada.');
       await refrescarPerfil();
     } catch (err) {
       if (err.porCampo?.codigo) setError(err.porCampo.codigo);
+      if (err.porCampo?.password) setErrorPassword(err.porCampo.password);
       toast.error(err.message);
       throw err;
     }
@@ -99,10 +114,13 @@ export default function ConfigurarDosPasos() {
         <Tarjeta titulo="Confirmá que sos vos" icono="lock-closed-outline">
           <Campo etiqueta="Código de la app o de respaldo" value={codigo} onChangeText={setCodigo} error={error}
             autoCapitalize="characters" maxLength={9} ayuda="Lo necesitás para cambiar esta configuración." />
+          {usuario.tienePassword ? (
+            <CampoContrasena etiqueta="Tu contraseña" value={password} onChangeText={setPassword} error={errorPassword} maxLength={200} />
+          ) : null}
           <View style={estilos.botones}>
             <Boton titulo="Generar códigos nuevos" variante="secundario" icono="refresh" onPress={regenerar} cargando={enviando} chico />
             <Boton titulo="Desactivar" variante="contornoPeligro" icono="close-circle-outline" chico deshabilitado={enviando}
-              onPress={() => { if (codigo.trim().length < 6) setError('Ingresá un código de la app o uno de respaldo'); else setConfirmarDesactivar(true); }} />
+              onPress={() => { if (!faltaConfirmacion()) setConfirmarDesactivar(true); }} />
           </View>
         </Tarjeta>
         <ConfirmDialog

@@ -37,12 +37,18 @@ router.use('/puestos', crearRecursoCrud({
 }));
 
 // ---------------------------------------------------------------- RRHH
+// El catálogo lo ven todos (para asignar tareas), pero lo modifica solo RRHH: cambiar si una
+// habilidad pide certificación cambia a quién se le puede asignar trabajo.
 router.use('/habilidades', crearRecursoCrud({
   modulo: 'RRHH', tabla: 'habilidades', entidad: 'habilidad',
   busqueda: ['t.codigo', 't.nombre'],
   ordenables: { codigo: 't.codigo', nombre: 't.nombre' },
   ordenDefecto: 't.nombre',
   esquemaCrear: v.habilidad,
+  antesDeGuardar: async (datos, { req }) => {
+    if (req.permiso.alcance !== 'todo') throw errores.prohibido('El catálogo de habilidades lo administra RRHH');
+    return datos;
+  },
 }));
 
 // ---------------------------------------------------------------- Ventas

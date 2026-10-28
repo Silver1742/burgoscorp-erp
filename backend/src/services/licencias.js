@@ -92,8 +92,11 @@ export async function listar(usuario, filtros) {
 
   const condicion = where.join(' AND ');
   const offset = (filtros.pagina - 1) * filtros.limite;
-  const filas = await query(`${SELECT} WHERE ${condicion} ORDER BY l.created_at DESC, l.id DESC
+  const rrhh = await esRrhh(usuario);
+  const filasCompletas = await query(`${SELECT} WHERE ${condicion} ORDER BY l.created_at DESC, l.id DESC
     LIMIT ${Number(filtros.limite)} OFFSET ${Number(offset)}`, params);
+  const filas = filasCompletas.map((l) => (l.tipo === 'enfermedad' && !rrhh && l.empleado_id !== usuario.empleado_id
+    ? { ...l, motivo: null } : l));
   const [{ total }] = await query(`SELECT COUNT(*) AS total FROM solicitudes_licencia l
     JOIN empleados e ON e.id = l.empleado_id JOIN areas a ON a.id = e.area_id WHERE ${condicion}`, params);
   return { data: filas, meta: { pagina: filtros.pagina, limite: filtros.limite, total } };
@@ -101,7 +104,8 @@ export async function listar(usuario, filtros) {
 
 /**
  * Para los adjuntos (certificado médico, constancia de examen): la ve quien ve la solicitud;
- * agrega archivos solo quien la pidió, mientras no esté resuelta.
+ * agrega archivos solo quien la pidió, mientras no esté resuelta. El certificado médico es un
+ * dato de salud: lo ven solo el empleado y RRHH (el jefe aprueba sin verlo).
  */
 export async function acceso(usuario, id) {
   const permiso = await resolverPermiso(usuario, 'RRHH', 'ver');
@@ -109,6 +113,7 @@ export async function acceso(usuario, id) {
   const s = await queryOne(`${SELECT} WHERE l.id = ? AND (${alc.sql})`, [id, ...alc.params]);
   if (!s) throw errores.noEncontrado('La solicitud no existe');
   const propia = s.empleado_id === usuario.empleado_id;
+  if (s.tipo === 'enfermedad' && !propia && !(await esRrhh(usuario))) throw errores.noEncontrado('La solicitud no existe');
   return { puedeEscribir: propia && ['pendiente', 'aprobada_jefe'].includes(s.estado), puedeGestionar: false };
 }
 

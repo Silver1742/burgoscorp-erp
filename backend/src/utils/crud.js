@@ -36,7 +36,7 @@ import { errores } from './errores.js';
  * @param {boolean} [cfg.bajaLogica] DELETE pone activo = 0
  * @param {boolean} [cfg.sinBorrar]  no expone DELETE (ej. legajos: la baja es un cambio de estado)
  * @param {object} [cfg.alcance]     { areaCol, areaCampo, propioCol, propioDe }; sin esto es catálogo compartido
- * @param {string[]} [cfg.ocultar]   columnas que nunca se devuelven
+ * @param {string[]|Function} [cfg.ocultar] columnas que no se devuelven (o (req, fila) => columnas)
  * @param {Function} [cfg.antesDeGuardar] async (datos, { req, id }) => datos  reglas de negocio
  */
 export function crearRecursoCrud(cfg) {
@@ -48,10 +48,12 @@ export function crearRecursoCrud(cfg) {
   const filtros = cfg.filtros ?? {};
   const ordenables = cfg.ordenables ?? {};
 
-  const limpiar = (fila) => {
-    if (!fila || !cfg.ocultar) return fila;
+  // `ocultar` puede ser una lista fija o una función (req, fila) → lista, para esconder datos según quién pide.
+  const limpiar = (fila, req) => {
+    const ocultos = typeof cfg.ocultar === 'function' ? cfg.ocultar(req, fila ?? {}) : cfg.ocultar;
+    if (!fila || !ocultos?.length) return fila;
     const copia = { ...fila };
-    for (const c of cfg.ocultar) delete copia[c];
+    for (const c of ocultos) delete copia[c];
     return copia;
   };
 
@@ -115,14 +117,14 @@ export function crearRecursoCrud(cfg) {
     );
     const [{ total }] = await query(`SELECT COUNT(*) AS total FROM ${cfg.tabla} t ${joins} WHERE ${condicion}`, params);
 
-    res.json({ ok: true, data: filas.map(limpiar), meta: { pagina, limite, total } });
+    res.json({ ok: true, data: filas.map((f) => limpiar(f, req)), meta: { pagina, limite, total } });
   });
 
   // ------------------------------------------------------------ detalle
   router.get('/:id', autenticado, requierePermiso(cfg.modulo, 'ver'), validar({ params: paramsId }), async (req, res) => {
     const fila = await obtener(req, req.validado.params.id);
     if (!fila) throw errores.noEncontrado();
-    res.json({ ok: true, data: limpiar(fila) });
+    res.json({ ok: true, data: limpiar(fila, req) });
   });
 
   // ------------------------------------------------------------ alta
@@ -139,7 +141,7 @@ export function crearRecursoCrud(cfg) {
     await auditar(req, { accion: 'crear', entidad: cfg.entidad, entidadId: resultado.insertId });
 
     const creado = await queryOne(`SELECT ${select} FROM ${cfg.tabla} t ${joins} WHERE t.id = ?`, [resultado.insertId]);
-    res.status(201).json({ ok: true, data: limpiar(creado) });
+    res.status(201).json({ ok: true, data: limpiar(creado, req) });
   });
 
   // ------------------------------------------------------------ modificación
@@ -159,7 +161,7 @@ export function crearRecursoCrud(cfg) {
       );
     }
     await auditar(req, { accion: 'editar', entidad: cfg.entidad, entidadId: id, detalle: { campos: columnas } });
-    res.json({ ok: true, data: limpiar(await obtener(req, id)) });
+    res.json({ ok: true, data: limpiar(await obtener(req, id), req) });
   });
 
   // ------------------------------------------------------------ baja

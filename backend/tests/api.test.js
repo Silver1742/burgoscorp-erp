@@ -8,6 +8,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { crearApp } from '../src/app.js';
 import { pool, query } from '../src/config/db.js';
+import { claveDe } from '../src/services/intentos.js';
 
 const app = crearApp();
 const PASSWORD = process.env.SEED_PASSWORD || 'BurgosCorp2026';
@@ -79,14 +80,15 @@ describe('login', () => {
     assert.equal(fila.length, 0, 'el refresh token no debe guardarse en claro');
   });
 
-  test('bloqueo temporal después de 5 intentos fallidos', async () => {
-    const email = 'gabriel.ponce@burgoscorp.test';
-    for (let i = 0; i < 5; i++) {
-      await api().post('/api/v1/auth/login').send({ email, password: 'incorrecta' });
+  test('bloqueo temporal después de 5 intentos fallidos, igual exista o no la cuenta', async () => {
+    for (const email of ['gabriel.ponce@burgoscorp.test', 'nadie.existe@burgoscorp.test']) {
+      for (let i = 0; i < 5; i++) {
+        await api().post('/api/v1/auth/login').send({ email, password: 'incorrecta' });
+      }
+      const res = await api().post('/api/v1/auth/login').send({ email, password: PASSWORD });
+      assert.equal(res.status, 423, email);
+      await query('DELETE FROM intentos_login WHERE clave = ?', [claveDe(email)]);
     }
-    const res = await api().post('/api/v1/auth/login').send({ email, password: PASSWORD });
-    assert.equal(res.status, 423);
-    await query('UPDATE usuarios SET bloqueado_hasta = NULL, intentos_fallidos = 0 WHERE email = ?', [email]);
   });
 });
 

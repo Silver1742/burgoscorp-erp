@@ -22,16 +22,27 @@ const esquema = z.object({
   // Secretos de firma: mínimo 32 caracteres. Generar con:
   // node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET debe tener al menos 32 caracteres'),
-  JWT_ACCESS_EXPIRES: z.string().default('15m'),
+  // Duración del token de acceso en minutos ("15m"), como máximo una hora.
+  JWT_ACCESS_EXPIRES: z.string().regex(/^\d{1,2}m$/, 'JWT_ACCESS_EXPIRES va en minutos, por ejemplo 15m')
+    .refine((v) => Number.parseInt(v, 10) >= 1 && Number.parseInt(v, 10) <= 60, 'JWT_ACCESS_EXPIRES: entre 1m y 60m')
+    .default('15m'),
   JWT_TEMP_SECRET: z.string().min(32, 'JWT_TEMP_SECRET debe tener al menos 32 caracteres'),
-  REFRESH_TOKEN_DAYS: z.coerce.number().int().min(1).max(60).default(7),
+  REFRESH_TOKEN_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+  // Clave propia para el HMAC de los códigos por email y de respaldo (no se reutiliza la de los JWT).
+  CODIGOS_HMAC_KEY: z.string().min(32, 'CODIGOS_HMAC_KEY debe tener al menos 32 caracteres'),
+  // Registro libre de cuentas. Por defecto, cerrado en producción (las cuentas las crea un admin).
+  REGISTRO_ABIERTO: z.enum(['true', 'false']).optional(),
+  // Zona horaria de la empresa (fechas de "hoy", vencimientos, fichaje).
+  TZ_EMPRESA: z.string().default('America/Argentina/Buenos_Aires')
+    .refine((v) => { try { new Intl.DateTimeFormat('es-AR', { timeZone: v }); return true; } catch { return false; } }, 'TZ_EMPRESA no es una zona horaria válida'),
 
   // Orígenes web permitidos por CORS (la app nativa no envía Origin). Separados por coma.
   CORS_ORIGINS: z.string().default(''),
 
   // Clave AES-256 (32 bytes en base64) para cifrar los secretos 2FA en la base.
-  TOTP_ENC_KEY: z.string().refine((v) => Buffer.from(v, 'base64').length === 32,
-    'TOTP_ENC_KEY debe ser 32 bytes en base64'),
+  // Clave AES-256: 32 bytes en base64, o 64 caracteres hexadecimales.
+  TOTP_ENC_KEY: z.string().refine((v) => /^[0-9a-fA-F]{64}$/.test(v) || Buffer.from(v, 'base64').length === 32,
+    'TOTP_ENC_KEY debe ser 32 bytes en base64 o 64 caracteres hexadecimales'),
   APP_NOMBRE: z.string().max(40).default('BurgosCorp ERP'),
   // Carpeta de las fotos y archivos subidos (fuera de cualquier carpeta pública).
   UPLOADS_DIR: z.string().default('uploads'),
@@ -63,8 +74,14 @@ if (!resultado.success) {
 
 const env = resultado.data;
 
-if (env.JWT_ACCESS_SECRET === env.JWT_TEMP_SECRET) {
-  console.error('JWT_ACCESS_SECRET y JWT_TEMP_SECRET deben ser distintos.');
+if (new Set([env.JWT_ACCESS_SECRET, env.JWT_TEMP_SECRET, env.CODIGOS_HMAC_KEY]).size !== 3) {
+  console.error('JWT_ACCESS_SECRET, JWT_TEMP_SECRET y CODIGOS_HMAC_KEY deben ser distintos.');
+  process.exit(1);
+}
+
+if (env.NODE_ENV === 'production' && env.TRUST_PROXY === 0 && process.env.SIN_PROXY !== 'true') {
+  console.error('En producción definí TRUST_PROXY (1 en Railway o Render): si no, todos los usuarios cuentan como una sola IP'
+    + ' para los límites de intentos. Si de verdad no hay proxy delante, definí SIN_PROXY=true.');
   process.exit(1);
 }
 
@@ -78,6 +95,7 @@ const lista = (v) => v.split(',').map((o) => o.trim()).filter(Boolean);
 export default {
   ...env,
   esProduccion: env.NODE_ENV === 'production',
+  registroAbierto: env.REGISTRO_ABIERTO ? env.REGISTRO_ABIERTO === 'true' : env.NODE_ENV !== 'production',
   corsOrigins: lista(env.CORS_ORIGINS),
   googleClientIds: lista(env.GOOGLE_CLIENT_IDS),
   oauthRedirectUris: lista(env.OAUTH_REDIRECT_URIS),

@@ -1,5 +1,5 @@
 // Fechas en la zona horaria de la empresa (el servidor trabaja en UTC).
-const ZONA = process.env.TZ_EMPRESA || 'America/Argentina/Buenos_Aires';
+const ZONA = process.env.TZ_EMPRESA || 'America/Argentina/Buenos_Aires'; // validada en config/env.js
 const formato = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA, year: 'numeric', month: '2-digit', day: '2-digit' });
 
 /** Fecha de hoy en la empresa, como 'AAAA-MM-DD'. */

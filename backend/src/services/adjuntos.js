@@ -11,7 +11,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import env from '../config/env.js';
-import { query, queryOne } from '../config/db.js';
+import { query, queryOne, transaccion } from '../config/db.js';
 import { errores } from '../utils/errores.js';
 import { auditar } from './auditoria.js';
 import * as tareas from './tareas.js';
@@ -24,6 +24,10 @@ import * as finanzas from './finanzas.js';
 
 export const MAX_BYTES = 8 * 1024 * 1024;
 export const MAX_POR_ENTIDAD = 12;
+// Cuota por usuario en 24 h y espacio libre mínimo en el disco (evita llenarlo a propósito).
+const MAX_ARCHIVOS_DIA = 100;
+const MAX_BYTES_DIA = 300 * 1024 * 1024;
+const MIN_LIBRE = 500 * 1024 * 1024;
 export const TIPOS_ACEPTADOS = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
 const CARPETA = path.resolve(env.UPLOADS_DIR);
@@ -108,20 +112,36 @@ export async function subir(usuario, entidad, entidadId, nombre, cuerpo, req) {
     if (!datos) throw errores.validacion([], 'La imagen está dañada');
   }
 
-  const [{ total }] = await query('SELECT COUNT(*) AS total FROM adjuntos WHERE entidad = ? AND entidad_id = ?', [entidad, entidadId]);
-  if (total >= MAX_POR_ENTIDAD) throw errores.negocio(`Se pueden adjuntar hasta ${MAX_POR_ENTIDAD} archivos`);
+  await fs.mkdir(CARPETA, { recursive: true });
+  const libre = await fs.statfs(CARPETA).then((s) => s.bavail * s.bsize).catch(() => Infinity);
+  if (libre - datos.length < MIN_LIBRE) {
+    console.error('[adjuntos] poco espacio libre en UPLOADS_DIR');
+    throw errores.negocio('No hay espacio para guardar archivos. Avisá a un administrador.');
+  }
 
   const archivo = randomUUID();
-  await fs.mkdir(CARPETA, { recursive: true });
-  await fs.writeFile(path.join(CARPETA, archivo), datos, { flag: 'wx' });
   try {
-    const r = await query(
-      `INSERT INTO adjuntos (entidad, entidad_id, nombre_original, nombre_archivo, extension, mime, tamano_bytes, subido_por)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [entidad, entidadId, nombreSeguro(nombre, tipo.extension), archivo, tipo.extension, tipo.mime, datos.length, usuario.id],
-    );
-    await auditar(req, { accion: 'adjunto_subido', entidad, entidadId, detalle: { adjunto: r.insertId, bytes: datos.length } });
-    return queryOne(`${SELECT} WHERE a.id = ?`, [r.insertId]);
+    const id = await transaccion(async (conn) => {
+      // FOR UPDATE bloquea el rango: dos subidas simultáneas no pueden pasar las dos el tope.
+      const [[{ total }]] = await conn.execute(
+        'SELECT COUNT(*) AS total FROM adjuntos WHERE entidad = ? AND entidad_id = ? FOR UPDATE', [entidad, entidadId]);
+      if (total >= MAX_POR_ENTIDAD) throw errores.negocio(`Se pueden adjuntar hasta ${MAX_POR_ENTIDAD} archivos`);
+      const [[dia]] = await conn.execute(
+        `SELECT COUNT(*) AS archivos, COALESCE(SUM(tamano_bytes), 0) AS bytes FROM adjuntos
+         WHERE subido_por = ? AND created_at > UTC_TIMESTAMP() - INTERVAL 1 DAY`, [usuario.id]);
+      if (dia.archivos >= MAX_ARCHIVOS_DIA || Number(dia.bytes) + datos.length > MAX_BYTES_DIA) {
+        throw errores.negocio('Llegaste al límite de archivos por día. Probá mañana o avisá a un administrador.');
+      }
+      await fs.writeFile(path.join(CARPETA, archivo), datos, { flag: 'wx' });
+      const [r] = await conn.execute(
+        `INSERT INTO adjuntos (entidad, entidad_id, nombre_original, nombre_archivo, extension, mime, tamano_bytes, subido_por)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [entidad, entidadId, nombreSeguro(nombre, tipo.extension), archivo, tipo.extension, tipo.mime, datos.length, usuario.id],
+      );
+      return r.insertId;
+    });
+    await auditar(req, { accion: 'adjunto_subido', entidad, entidadId, detalle: { adjunto: id, bytes: datos.length } });
+    return queryOne(`${SELECT} WHERE a.id = ?`, [id]);
   } catch (err) {
     await fs.rm(path.join(CARPETA, archivo), { force: true });
     throw err;

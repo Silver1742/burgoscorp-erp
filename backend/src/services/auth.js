@@ -1,15 +1,15 @@
 // Registro, login con email y contraseña, sesiones y cambio de contraseña.
 import bcrypt from 'bcryptjs';
+import env from '../config/env.js';
 import { query, queryOne, transaccion } from '../config/db.js';
-import { errores, AppError } from '../utils/errores.js';
+import { errores } from '../utils/errores.js';
 import { auditar } from './auditoria.js';
 import { buscarUsuarioPorId, perfilPublico } from './usuarios.js';
 import { firmarAcceso, firmarTemporal, emitirRefresh, rotarRefresh, revocarFamilia, revocarTodas } from './tokens.js';
 import { enviarCodigoVerificacion } from './verificacion.js';
+import * as intentos from './intentos.js';
 
 const COSTO_BCRYPT = 12;
-const MAX_INTENTOS = 5;
-const MINUTOS_BLOQUEO = 15;
 // Hash de relleno: si el email no existe se compara igual, para que el tiempo
 // de respuesta no revele qué emails están registrados.
 const HASH_FALSO = bcrypt.hashSync('contraseña-que-no-existe', COSTO_BCRYPT);
@@ -28,6 +28,9 @@ export async function emitirSesion(usuario, req) {
 }
 
 export async function registrar({ email, password, nombre, apellido }, req) {
+  // En producción las cuentas las crea un administrador (REGISTRO_ABIERTO=false). Se responde
+  // igual exista o no el email, para no revelar quién tiene cuenta.
+  if (!env.registroAbierto) throw errores.prohibido('El registro está cerrado. Pedile la cuenta a un administrador.');
   const existe = await queryOne('SELECT id FROM usuarios WHERE email = ?', [email]);
   if (existe) throw errores.conflicto('No se pudo registrar con ese email. Si ya tenés cuenta, iniciá sesión.');
 
@@ -55,20 +58,19 @@ export async function registrar({ email, password, nombre, apellido }, req) {
  * sesión: se devuelve un token temporal para completar el segundo paso.
  */
 export async function login({ email, password }, req) {
-  const fila = await queryOne(
-    'SELECT id, password_hash, activo, intentos_fallidos, bloqueado_hasta, totp_habilitado FROM usuarios WHERE email = ?',
-    [email],
-  );
-
-  if (fila?.bloqueado_hasta && new Date(fila.bloqueado_hasta) > new Date()) {
-    await auditar(req, { accion: 'login_bloqueado', usuarioId: fila.id });
-    throw new AppError(423, 'CUENTA_BLOQUEADA',
-      `Demasiados intentos fallidos. Probá de nuevo en ${MINUTOS_BLOQUEO} minutos.`);
+  const clave = intentos.claveDe(email);
+  // El bloqueo se decide por email (exista o no) e IP: la respuesta no revela si la cuenta existe.
+  try {
+    await intentos.exigirNoBloqueado(clave, req);
+  } catch (err) {
+    await auditar(req, { accion: 'login_bloqueado', detalle: { metodo: 'password' } });
+    throw err;
   }
+  const fila = await queryOne('SELECT id, password_hash, activo, totp_habilitado FROM usuarios WHERE email = ?', [email]);
 
   const passwordOk = await bcrypt.compare(password, fila?.password_hash ?? HASH_FALSO);
   if (!fila || !fila.password_hash || !passwordOk) {
-    if (fila) await registrarIntentoFallido(fila);
+    await intentos.registrarFallo(clave, req, 'password');
     await auditar(req, { accion: 'login_fallido', usuarioId: fila?.id ?? null, detalle: { metodo: 'password' } });
     throw credencialesInvalidas();
   }
@@ -78,25 +80,14 @@ export async function login({ email, password }, req) {
     throw errores.prohibido('Tu cuenta está desactivada. Contactá a un administrador.');
   }
 
-  await query('UPDATE usuarios SET intentos_fallidos = 0, bloqueado_hasta = NULL WHERE id = ?', [fila.id]);
-
+  // Con 2FA, los fallos acumulados NO se borran todavía: recién al completar el segundo paso.
   if (fila.totp_habilitado) {
-    return { requiere2fa: true, tokenTemporal: firmarTemporal(fila.id, '2fa') };
+    return { requiere2fa: true, tokenTemporal: await firmarTemporal(fila.id, '2fa') };
   }
 
+  await intentos.limpiar(clave, req);
   await auditar(req, { accion: 'login_ok', usuarioId: fila.id, detalle: { metodo: 'password' } });
   return emitirSesion(await buscarUsuarioPorId(fila.id), req);
-}
-
-/** Suma un intento fallido (contraseña o segundo paso); al quinto bloquea 15 minutos. */
-export async function registrarIntentoFallido(fila) {
-  const intentos = fila.intentos_fallidos + 1;
-  if (intentos >= MAX_INTENTOS) {
-    await query('UPDATE usuarios SET intentos_fallidos = 0, bloqueado_hasta = ? WHERE id = ?',
-      [new Date(Date.now() + MINUTOS_BLOQUEO * 60 * 1000), fila.id]);
-  } else {
-    await query('UPDATE usuarios SET intentos_fallidos = ? WHERE id = ?', [intentos, fila.id]);
-  }
 }
 
 /** Renueva la sesión. Vuelve a leer el usuario: si lo desactivaron, no renueva. */

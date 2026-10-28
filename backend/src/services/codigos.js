@@ -1,6 +1,6 @@
 // Códigos de 6 dígitos de un solo uso (verificar email, recuperar contraseña, login por email).
-// Se guarda un HMAC con un secreto del servidor: aunque se filtre la base, no se pueden
-// recuperar los códigos probando el millón de combinaciones.
+// Se guarda un HMAC con un secreto del servidor (CODIGOS_HMAC_KEY, distinto de los de JWT): aunque
+// se filtre la base, no se pueden recuperar los códigos probando el millón de combinaciones.
 import crypto from 'node:crypto';
 import env from '../config/env.js';
 import { query, queryOne } from '../config/db.js';
@@ -10,8 +10,8 @@ const MINUTOS_VALIDEZ = 10;
 const MAX_INTENTOS = 5;
 const SEGUNDOS_ENTRE_ENVIOS = 60;
 
-function hmac(usuarioId, tipo, codigo) {
-  return crypto.createHmac('sha256', env.JWT_TEMP_SECRET).update(`${tipo}:${usuarioId}:${codigo}`).digest('hex');
+export function hmac(usuarioId, tipo, codigo) {
+  return crypto.createHmac('sha256', env.CODIGOS_HMAC_KEY).update(`${tipo}:${usuarioId}:${codigo}`).digest('hex');
 }
 
 /** Genera un código nuevo (invalida los anteriores del mismo tipo) y lo devuelve para enviarlo. */

@@ -8,6 +8,7 @@ import {
 } from '../../../../componentes/ui';
 import ConfirmDialog from '../../../../componentes/ConfirmDialog';
 import Fotos from '../../../../componentes/Fotos';
+import { usePuede, useSesion } from '../../../../contexto/sesion';
 import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { ESTADO_LICENCIA, TIPO_LICENCIA, fechaCorta, diasHabiles } from '../../../../modulos';
@@ -16,6 +17,10 @@ import { espacio, useTema, usePantalla } from '../../../../tema';
 export default function Aprobaciones() {
   const t = useTema();
   const toast = useToast();
+  const puede = usePuede();
+  const { permisos } = useSesion();
+  // El certificado médico lo ve solo RRHH (el jefe aprueba sin ver datos de salud).
+  const esRrhh = puede('RRHH', 'aprobar') && permisos.RRHH?.alcance === 'todo';
   const { ancho } = usePantalla();
   const [lista, setLista] = useState(null);
   const [error, setError] = useState(null);
@@ -87,7 +92,9 @@ export default function Aprobaciones() {
                 </View>
               </View>
               <View style={estilos.botones}>
-                <Boton titulo="Certificado" icono="attach" variante="secundario" chico onPress={() => setViendo(viendo?.id === l.id ? null : l)} />
+                {l.tipo !== 'enfermedad' || esRrhh ? (
+                  <Boton titulo="Certificado" icono="attach" variante="secundario" chico onPress={() => setViendo(viendo?.id === l.id ? null : l)} />
+                ) : null}
                 <Boton titulo="Rechazar" icono="close" variante="contornoPeligro" chico onPress={() => abrir('rechazar', l)} />
                 <Boton titulo="Aprobar" icono="checkmark" variante="exito" chico onPress={() => abrir('aprobar', l)} />
               </View>

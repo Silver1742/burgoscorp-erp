@@ -16,6 +16,11 @@ import { errores } from '../utils/errores.js';
 
 const router = Router();
 
+// Datos personales que solo ven RRHH, el admin y el propio empleado (minimización, Ley 25.326).
+// Un jefe ve a su equipo y Gerencia a todos, pero sin DNI, CUIL, nacimiento, domicilio ni costo.
+const DATOS_PERSONALES = ['dni', 'cuil', 'fecha_nacimiento', 'direccion', 'costo_hora'];
+const esRrhhOAdmin = (req) => req.usuario.rol === 'ADMIN' || (req.permiso.esDuenia && req.permiso.alcance === 'todo');
+
 /** Altas y cambios de datos de RRHH: solo con alcance de toda la empresa (área RRHH o admin). */
 function exigirRrhh(req, mensaje = 'Solo RRHH puede hacer este cambio') {
   if (req.permiso.alcance !== 'todo') throw errores.prohibido(mensaje);
@@ -31,7 +36,7 @@ router.use('/empleados', crearRecursoCrud({
               FROM empleado_habilidades eh JOIN habilidades h ON h.id = eh.habilidad_id
              WHERE eh.empleado_id = t.id) AS habilidades`,
   joins: 'JOIN areas a ON a.id = t.area_id LEFT JOIN puestos p ON p.id = t.puesto_id LEFT JOIN empleados s ON s.id = t.supervisor_id',
-  busqueda: ['t.legajo', 't.nombre', 't.apellido', 't.dni', "CONCAT(t.nombre, ' ', t.apellido)"],
+  busqueda: ['t.legajo', 't.nombre', 't.apellido', "CONCAT(t.nombre, ' ', t.apellido)"], // sin DNI: no se puede deducir
   filtros: {
     area_id: { col: 't.area_id', esquema: id },
     estado: { col: 't.estado', esquema: z.enum(['activo', 'licencia', 'baja']) },
@@ -42,13 +47,15 @@ router.use('/empleados', crearRecursoCrud({
   esquemaEditar: v.empleadoEditar,
   sinBorrar: true, // la baja es estado = 'baja' + fecha_egreso, para conservar la historia
   alcance: { areaCol: 't.area_id', areaCampo: 'area_id', propioCol: 't.id' },
+  ocultar: (req, fila) => (esRrhhOAdmin(req) || fila.id === req.usuario.empleado_id ? [] : DATOS_PERSONALES),
   async antesDeGuardar(datos, { req, id: empleadoId }) {
-    if (req.permiso.alcance === 'todo') return datos;
-    // Fuera de RRHH: un empleado o jefe solo puede actualizar sus datos de contacto.
+    if (esRrhhOAdmin(req)) return datos;
+    // Fuera de RRHH: cada uno actualiza solo sus propios datos de contacto (ni el jefe los de su equipo).
     const ajenos = Object.keys(datos).filter((c) => !v.CAMPOS_CONTACTO.includes(c));
     if (!empleadoId || ajenos.length) {
       throw errores.prohibido('Solo RRHH puede dar de alta legajos o cambiar área, puesto, estado o costo');
     }
+    if (empleadoId !== req.usuario.empleado_id) throw errores.prohibido('Solo podés cambiar tus propios datos de contacto');
     return datos;
   },
 }));

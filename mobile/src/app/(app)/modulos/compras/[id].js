@@ -1,12 +1,13 @@
 // Detalle de una orden de compra: ítems, aprobación, envío, recepción en el depósito y la foto
 // del remito o la factura del proveedor.
 import { useCallback, useEffect, useState } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   Pantalla, Tarjeta, FilaLista, Insignia, Dato, Boton, Campo, Opciones, BarraProgreso, Esqueleto, ErrorCarga,
 } from '../../../../componentes/ui';
 import ConfirmDialog from '../../../../componentes/ConfirmDialog';
+import Contacto from '../../../../componentes/Contacto';
 import EtiquetaQR from '../../../../componentes/EtiquetaQR';
 import Fotos from '../../../../componentes/Fotos';
 import { useToast } from '../../../../contexto/toast';
@@ -125,7 +126,6 @@ export default function DetalleOrdenCompra() {
   if (error) return <Pantalla><Tarjeta><ErrorCarga error={error} onReintentar={cargar} /></Tarjeta></Pantalla>;
   if (!oc) return <Pantalla><Tarjeta><Esqueleto ancho="40%" /><Esqueleto alto={20} estilo={{ marginTop: 10 }} /></Tarjeta></Pantalla>;
 
-  const telefono = oc.proveedor_telefono?.replace(/[^\d+]/g, '');
   const recibido = oc.items.reduce((a, i) => a + Math.min(Number(i.cantidad_recibida), Number(i.cantidad)), 0);
   const pedido = oc.items.reduce((a, i) => a + Number(i.cantidad), 0);
   const a = accion ? ACCIONES[accion] : null;
@@ -148,6 +148,7 @@ export default function DetalleOrdenCompra() {
           {oc.ot_numero ? <Dato etiqueta="Para la OT">{`${oc.ot_numero} · ${oc.ot_titulo}`}</Dato> : null}
         </View>
         {oc.observaciones ? <Text style={{ color: t.textoSuave, marginBottom: espacio.s }}>{oc.observaciones}</Text> : null}
+        <Contacto telefono={oc.proveedor_telefono} mensaje={`Hola, te escribimos de BurgosCorp por la orden de compra ${oc.numero}.`} />
         {['recibida_parcial', 'recibida'].includes(oc.estado) ? (
           <>
             <BarraProgreso valor={recibido} total={pedido} conTexto={false} />
@@ -160,7 +161,6 @@ export default function DetalleOrdenCompra() {
           {oc.puede_aprobar ? <Boton titulo="Devolver" icono="arrow-undo-outline" chico variante="secundario" onPress={() => setAccion('rechazar')} estilo={{ marginBottom: 0 }} /> : null}
           {oc.puede_enviar ? <Boton titulo="Marcar enviada" icono="paper-plane-outline" chico onPress={() => setAccion('enviar')} estilo={{ marginBottom: 0 }} /> : null}
           {oc.puede_recibir ? <Boton titulo="Recibir" icono="download-outline" chico variante="exito" onPress={() => setRecibiendo(true)} estilo={{ marginBottom: 0 }} /> : null}
-          {telefono ? <Boton titulo="Llamar" icono="call-outline" chico variante="secundario" onPress={() => Linking.openURL(`tel:${telefono}`)} estilo={{ marginBottom: 0 }} /> : null}
           <EtiquetaQR codigo={`BC:OC:${oc.numero}`} titulo={oc.numero} sub={oc.proveedor_nombre} textoBoton="QR" />
           {oc.ot_numero ? <Boton titulo="Ver OT" icono="clipboard-outline" chico variante="texto" onPress={() => router.push(`/modulos/produccion/${oc.orden_trabajo_id}`)} estilo={{ marginBottom: 0 }} /> : null}
           {oc.puede_cancelar ? <Boton titulo="Cancelar" chico variante="contornoPeligro" onPress={() => setAccion('cancelar')} estilo={{ marginBottom: 0 }} /> : null}

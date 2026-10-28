@@ -84,7 +84,7 @@ export function verificarTotp(secretoBase32, codigo, ultimoPaso = null, ahora = 
 
 // ---------------------------------------------------------------- cifrado del secreto
 
-const clave = () => Buffer.from(env.TOTP_ENC_KEY, 'base64');
+const clave = () => Buffer.from(env.TOTP_ENC_KEY, /^[0-9a-fA-F]{64}$/.test(env.TOTP_ENC_KEY) ? 'hex' : 'base64');
 
 export function cifrar(texto) {
   const iv = crypto.randomBytes(12);
