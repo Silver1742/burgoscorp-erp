@@ -117,7 +117,7 @@ export async function obtener(usuario, id) {
 
 // ---------------------------------------------------------------- alta
 
-async function insertarTarea(conn, datos) {
+export async function insertarTarea(conn, datos) {
   const [r] = await conn.execute(
     `INSERT INTO tareas (titulo, descripcion, area_id, orden_trabajo_id, secuencia, centro_trabajo_id,
        habilidad_requerida_id, prioridad, fecha_limite, horas_estimadas, creado_por)
@@ -134,7 +134,7 @@ async function insertarTarea(conn, datos) {
 }
 
 /** Si se elige una máquina, la habilidad requerida por defecto es la de la máquina. */
-async function completarConMaquina(datos) {
+export async function completarConMaquina(datos) {
   if (!datos.centro_trabajo_id) return datos;
   const ct = await queryOne('SELECT id, area_id, habilidad_requerida_id, activo FROM centros_trabajo WHERE id = ?', [datos.centro_trabajo_id]);
   if (!ct || !ct.activo) throw errores.validacion([{ campo: 'body.centro_trabajo_id', mensaje: 'La máquina no existe' }]);

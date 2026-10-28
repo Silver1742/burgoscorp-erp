@@ -18,6 +18,9 @@ import * as tareas from './tareas.js';
 import * as licencias from './licencias.js';
 import * as compras from './compras.js';
 import * as mantenimiento from './mantenimiento.js';
+import * as ventas from './ventas.js';
+import * as calidad from './calidad.js';
+import * as finanzas from './finanzas.js';
 
 export const MAX_BYTES = 8 * 1024 * 1024;
 export const MAX_POR_ENTIDAD = 12;
@@ -31,6 +34,9 @@ const ENTIDADES = {
   licencia: licencias.acceso,
   orden_compra: compras.acceso,              // foto del remito o de la factura del proveedor
   orden_mantenimiento: mantenimiento.acceso, // foto de la falla y de la reparación
+  solicitud: ventas.accesoSolicitud,         // foto de la pieza que trae o manda el cliente
+  inspeccion: calidad.acceso,                // foto de la pieza inspeccionada y de la falla
+  comprobante: finanzas.acceso,              // foto o PDF de la factura del proveedor
 };
 export const NOMBRES_ENTIDAD = Object.keys(ENTIDADES);
 

@@ -472,17 +472,63 @@ Estados: `borrador` → `pendiente_aprobacion` → `aprobada` → `enviada` → 
 Planes preventivos: CRUD en `/planes-mantenimiento` (solo los modifica Mantenimiento). Al cerrar
 una orden preventiva, el plan se reprograma (`proxima_fecha` = hoy + frecuencia).
 
+### Ventas · `/solicitudes` y `/presupuestos` (módulo `VEN`)
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| GET | `/solicitudes` | VEN ver | Filtros: `estado`, `abiertas=1`, `mias=1` (asignadas a mí), `cliente_id`, `q`. Trae `fotos` (cantidad) y el teléfono del cliente |
+| GET | `/solicitudes/:id` | VEN ver | Detalle con sus presupuestos, `puede_editar` y `puede_presupuestar` |
+| GET | `/solicitudes/analistas` | VEN editar | Empleados de Ingeniería y Comercial con sus solicitudes abiertas |
+| POST | `/solicitudes` | VEN crear | `cliente_id`\*, `titulo`\*, `tipo_trabajo`\*, `descripcion`, `cantidad`, `fecha_requerida`. Número `SOL-AAAA-NNNN` |
+| PUT | `/solicitudes/:id` | VEN editar | `titulo`, `descripcion`, `cantidad`, `fecha_requerida`, `asignada_a` (pasa a `en_analisis` y avisa) o `estado: "cancelada"` |
+| GET | `/presupuestos` | VEN ver | Filtros: `estado`, `abiertos=1`, `q` |
+| GET | `/presupuestos/:id` | VEN ver | Detalle con líneas, `vence`, la OT generada (`puede_ver_ot`) y, si se puede aprobar, `areas_produccion` |
+| POST | `/presupuestos` | VEN crear | `solicitud_id` o `cliente_id`, `items`\* (`tipo`: `maquina`, `material`, `mano_obra`, `tercerizado` u `otro`; `descripcion`\*, `cantidad`\*, `unidad`, `precio_unitario`\*, `centro_trabajo_id`, `producto_id`), `plazo_entrega_dias`, `validez_dias`, `observaciones`. Una solicitud tiene un solo presupuesto en curso (`409`) |
+| PUT | `/presupuestos/:id` | VEN editar | Solo en borrador |
+| POST | `/presupuestos/:id/enviar` | VEN editar | Borrador → enviado |
+| POST | `/presupuestos/:id/aprobar` | VEN aprobar | El cliente aceptó: `area_id`\* (un área de producción), `prioridad`. Crea la OT: una operación por cada línea con máquina (con sus horas) y una reserva por cada material; devuelve `faltantes` y avisa al jefe del área y, si falta material, a Abastecimiento |
+| POST | `/presupuestos/:id/rechazar` | VEN aprobar | `comentario`\* |
+
+### Calidad · `/calidad` e `/inspecciones` (módulo `CAL`)
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| GET | `/calidad/pendientes` | CAL ver | OT en `control_calidad` con sus operaciones (para elegir cuál rehacer) |
+| GET | `/inspecciones` · `/inspecciones/:id` | CAL ver | Calidad ve todas; los demás, las de las OT de su área. El detalle trae las mediciones |
+| POST | `/ordenes-trabajo/:id/inspecciones` | CAL crear (área Calidad) | `resultado`\* (`aprobada`, `aprobada_con_obs`, `rechazada`), `mediciones` (`caracteristica`, `valor_nominal`, `tolerancia_mas`, `tolerancia_menos`, `valor_medido`, `unidad`), `cantidad_inspeccionada`, `cantidad_rechazada`, `observaciones`, `retrabajo_tarea_id`. La API calcula si cada medición es conforme y no deja aprobar con algo fuera de tolerancia (`422`). Aprobada: la OT pasa a `terminada` y se avisa a Comercial y Finanzas. Rechazada: la operación elegida vuelve a "para rehacer" y la OT a `en_proceso` |
+
+### Finanzas · `/comprobantes` (módulo `FIN`, solo Administración y Finanzas)
+
+| Método | Ruta | Permiso | Descripción |
+|---|---|---|---|
+| GET | `/comprobantes` | FIN ver | Filtros: `lado` (`venta` o `compra`), `estado`, `pendientes=1`, `vencidos=1`, `q` |
+| GET | `/comprobantes/resumen` | FIN ver | A cobrar y a pagar, con lo vencido |
+| GET | `/comprobantes/pendientes` | FIN ver | OT terminadas sin facturar y OC recibidas sin la factura del proveedor |
+| GET | `/comprobantes/:id` | FIN ver | Detalle con ítems y cobros o pagos |
+| POST | `/comprobantes/factura-venta` | FIN crear | `orden_trabajo_id`\*. Solo de una OT terminada o entregada; los ítems salen del presupuesto (o de `items` si no tiene). Letra A para Responsables Inscriptos, B para el resto; numeración correlativa. Una por OT (`409`) |
+| POST | `/comprobantes/factura-compra` | FIN crear | `orden_compra_id`\*, `letra`\*, `punto_venta`\*, `numero`\*, `fecha`, `fecha_vencimiento`. Solo de una OC recibida; el mismo comprobante no se carga dos veces (`409`) |
+| POST | `/comprobantes/:id/pagos` | FIN editar | `monto`\*, `medio`\* (`efectivo`, `transferencia`, `cheque`, `tarjeta`, `otro`), `referencia`, `fecha`. Cobro o pago, total o parcial; no más que el saldo (`422`) |
+| POST | `/comprobantes/:id/anular` | FIN aprobar | Solo pendiente y sin pagos (`409`) |
+
+### Tablero · `/tablero` (módulo `TAB`)
+
+`GET /tablero` devuelve los indicadores de Producción, Ventas, Calidad, Mantenimiento, Inventario y
+Finanzas; cada bloque aparece solo si el usuario puede ver ese módulo. Con alcance de área,
+Producción se limita a las OT de su área.
+
 ### Escaneo de códigos · `/escaneo`
 
 `GET /escaneo?codigo=` resuelve lo leído con la cámara: `BC:OT:OT-2026-0001` (pieza),
 `BC:MAQ:CNC-02` (máquina), `BC:PRD:MP-1045-25` (producto) o `BC:OC:OC-2026-0001`; también el
 código solo. Devuelve `{ tipo, id, titulo }` y, para una OT, `tarea_id` con la operación abierta
-del usuario. Solo letras, números y `: . _ - /` (`400`); `404` si no existe o el usuario no lo ve.
+del usuario; a alguien de Calidad, si la OT espera inspección, `tipo: "inspeccion"`. Solo letras,
+números y `: . _ - /` (`400`); `404` si no existe o el usuario no lo ve.
 
 ### Fotos y archivos adjuntos · `/adjuntos`
 
-Entidades: `tarea` (fotos del trabajo), `licencia` (certificado), `orden_compra` (remito y
-factura) y `orden_mantenimiento` (falla y reparación). Ve los archivos quien ve la entidad; los
+Entidades: `tarea` (fotos del trabajo), `licencia` (certificado), `orden_compra` (remito),
+`orden_mantenimiento` (falla y reparación), `solicitud` (la pieza del cliente), `inspeccion` y
+`comprobante` (la factura del proveedor). Ve los archivos quien ve la entidad; los
 agrega quien la puede modificar mientras esté abierta (en una tarea, los asignados y el jefe del
 área; en una licencia, quien la pidió; en una falla, quien la reportó y Mantenimiento).
 

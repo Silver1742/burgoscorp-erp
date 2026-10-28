@@ -139,8 +139,9 @@ describe('verificación en dos pasos', () => {
   const email = 'julian.cabrera@burgoscorp.test';
   let secreto;
   let respaldo;
+  let pasoActivacion; // intervalo de 30 s del código usado al activar
 
-  const codigoTotp = (desfase = 0) => hotp(base32Decodificar(secreto), pasoActual() + desfase);
+  const codigoDelPaso = (paso) => hotp(base32Decodificar(secreto), paso);
 
   test('configurar y activar con la app autenticadora', async () => {
     const { accessToken } = (await api().post('/api/v1/auth/login').send({ email, password: PASSWORD })).body.data;
@@ -153,7 +154,8 @@ describe('verificación en dos pasos', () => {
     assert.ok(!fila.totp_secret_cifrado.includes(secreto), 'el secreto se guarda cifrado');
     assert.equal(fila.totp_habilitado, 0, 'no se activa hasta confirmar un código');
 
-    const act = await api().post('/api/v1/auth/2fa/activar').set(conToken(accessToken)).send({ codigo: codigoTotp() });
+    pasoActivacion = pasoActual();
+    const act = await api().post('/api/v1/auth/2fa/activar').set(conToken(accessToken)).send({ codigo: codigoDelPaso(pasoActivacion) });
     assert.equal(act.status, 200);
     respaldo = act.body.data.codigosRespaldo;
     assert.equal(respaldo.length, 10);
@@ -169,10 +171,11 @@ describe('verificación en dos pasos', () => {
 
   test('segundo paso con TOTP: un código ya usado no sirve', async () => {
     const { tokenTemporal } = (await api().post('/api/v1/auth/login').send({ email, password: PASSWORD })).body.data;
-    // El código actual ya se usó al activar: hay que usar el del intervalo siguiente.
-    const reuso = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, metodo: 'totp', codigo: codigoTotp() });
+    // El código de la activación ya se usó: sirve el del intervalo siguiente. Se toman los intervalos
+    // fijos de la activación para que la prueba no falle si justo cambia el código de 30 segundos.
+    const reuso = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, metodo: 'totp', codigo: codigoDelPaso(pasoActivacion) });
     assert.equal(reuso.status, 400);
-    const ok = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, metodo: 'totp', codigo: codigoTotp(1) });
+    const ok = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, metodo: 'totp', codigo: codigoDelPaso(pasoActivacion + 1) });
     assert.equal(ok.status, 200);
     assert.ok(ok.body.data.accessToken);
   });

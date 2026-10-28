@@ -101,6 +101,37 @@ export const ESTADO_OM = {
   cancelada: { texto: 'Cancelada', tono: 'gris' },
 };
 
+export const ESTADO_SOLICITUD = {
+  nueva: { texto: 'Nueva', tono: 'rojo' },
+  en_analisis: { texto: 'En análisis', tono: 'aviso' },
+  presupuestada: { texto: 'Presupuestada', tono: 'negro' },
+  aprobada: { texto: 'Aprobada', tono: 'exito' },
+  rechazada: { texto: 'Rechazada', tono: 'error' },
+  cancelada: { texto: 'Cancelada', tono: 'gris' },
+};
+export const ESTADO_PRESUPUESTO = {
+  borrador: { texto: 'Borrador', tono: 'gris' },
+  enviado: { texto: 'Enviado al cliente', tono: 'aviso' },
+  aprobado: { texto: 'Aprobado', tono: 'exito' },
+  rechazado: { texto: 'Rechazado', tono: 'error' },
+  vencido: { texto: 'Vencido', tono: 'gris' },
+};
+export const TIPO_ITEM = { maquina: 'Máquina', mano_obra: 'Mano de obra', material: 'Material', tercerizado: 'Tercerizado', otro: 'Otro' };
+export const RESULTADO_INSPECCION = {
+  aprobada: { texto: 'Aprobada', tono: 'exito' },
+  aprobada_con_obs: { texto: 'Aprobada con observaciones', tono: 'aviso' },
+  rechazada: { texto: 'No conforme', tono: 'error' },
+};
+export const ESTADO_COMPROBANTE = {
+  pendiente: { texto: 'Pendiente', tono: 'aviso' },
+  parcial: { texto: 'Pago parcial', tono: 'rojo' },
+  pagado: { texto: 'Pagado', tono: 'exito' },
+  anulado: { texto: 'Anulado', tono: 'gris' },
+};
+export const TIPO_COMPROBANTE = {
+  factura_venta: 'Factura de venta', nota_credito_venta: 'Nota de crédito', factura_compra: 'Factura de proveedor', nota_credito_compra: 'Nota de crédito de proveedor',
+};
+
 export const MODULOS = [
   {
     codigo: 'PROD', titulo: 'Producción', icono: 'construct-outline',
@@ -130,6 +161,10 @@ export const MODULOS = [
   {
     codigo: 'VEN', titulo: 'Ventas', icono: 'briefcase-outline',
     descripcion: 'Clientes, solicitudes y presupuestos',
+    acciones: [
+      { titulo: 'Nueva solicitud (con foto)', icono: 'add-circle-outline', ruta: () => '/modulos/ventas/nueva', visible: ({ puede }) => puede('VEN', 'crear') },
+      { titulo: 'Solicitudes y presupuestos', icono: 'briefcase-outline', ruta: () => '/modulos/ventas' },
+    ],
     recursos: [
       {
         ruta: 'clientes', titulo: 'Clientes',
@@ -247,8 +282,24 @@ export const MODULOS = [
       abrir: (r) => `/modulos/mantenimiento/maquina/${r.centro_trabajo_id}`,
     }],
   },
-  { codigo: 'CAL', titulo: 'Calidad', icono: 'ribbon-outline', descripcion: 'Inspecciones y mediciones', recursos: [] },
-  { codigo: 'FIN', titulo: 'Finanzas', icono: 'cash-outline', descripcion: 'Facturas, cobros y pagos', recursos: [] },
+  {
+    codigo: 'CAL', titulo: 'Calidad', icono: 'ribbon-outline',
+    descripcion: 'Inspecciones y no conformidades',
+    acciones: [{ titulo: 'Para inspeccionar e inspecciones', icono: 'ribbon-outline', ruta: () => '/modulos/calidad' }],
+    recursos: [],
+  },
+  {
+    codigo: 'FIN', titulo: 'Finanzas', icono: 'cash-outline',
+    descripcion: 'Facturas, cobros y pagos',
+    acciones: [{ titulo: 'Facturas, cobros y pagos', icono: 'cash-outline', ruta: () => '/modulos/finanzas' }],
+    recursos: [],
+  },
+  {
+    codigo: 'TAB', titulo: 'Tablero', icono: 'stats-chart-outline',
+    descripcion: 'Los números del día',
+    acciones: [{ titulo: 'Ver tablero', icono: 'stats-chart-outline', ruta: () => '/modulos/tablero' }],
+    recursos: [],
+  },
   {
     codigo: 'SEG', titulo: 'Usuarios', icono: 'shield-outline',
     descripcion: 'Cuentas, roles y accesos',

@@ -23,6 +23,7 @@ export function destinoEscaneo(r) {
   if (r.tipo === 'maquina') return `/modulos/mantenimiento/maquina/${r.id}`;
   if (r.tipo === 'producto') return `/modulos/inventario/${r.id}`;
   if (r.tipo === 'orden_compra') return `/modulos/compras/${r.id}`;
+  if (r.tipo === 'inspeccion') return `/modulos/calidad/inspeccionar/${r.id}`;
   return null;
 }
 

@@ -1,7 +1,8 @@
 // Qué abrir al escanear un código con la cámara del teléfono.
 //
 // Las etiquetas QR que imprime el sistema tienen el formato BC:<TIPO>:<código>:
-//   BC:OT:OT-2026-0001   pieza / orden de trabajo  → la tarea del operario en esa OT (o la OT)
+//   BC:OT:OT-2026-0001   pieza / orden de trabajo  → la tarea del operario en esa OT (o la OT); a Calidad,
+//                                                    si está esperando control, la inspección
 //   BC:MAQ:CNC-02        máquina                   → su ficha, para reportar una falla
 //   BC:PRD:MP-1045-25    producto o estante        → su stock
 //   BC:OC:OC-2026-0001   orden de compra           → para recibirla
@@ -20,8 +21,13 @@ const PREFIJOS = { OT: 'orden_trabajo', MAQ: 'maquina', PRD: 'producto', OC: 'or
 const puede = async (usuario, modulo) => (await resolverPermiso(usuario, modulo, 'ver')).permitido;
 
 async function ordenTrabajo(usuario, numero) {
-  const fila = await queryOne('SELECT id FROM ordenes_trabajo WHERE numero = ?', [numero]);
-  if (!fila || !(await puede(usuario, 'PROD'))) return null;
+  const fila = await queryOne('SELECT id, numero, titulo, estado FROM ordenes_trabajo WHERE numero = ?', [numero]);
+  if (!fila) return null;
+  // El inspector escanea la pieza terminada y va directo a inspeccionarla.
+  if (fila.estado === 'control_calidad' && (await resolverPermiso(usuario, 'CAL', 'crear')).permitido) {
+    return { tipo: 'inspeccion', id: fila.id, titulo: `${fila.numero} · ${fila.titulo}` };
+  }
+  if (!(await puede(usuario, 'PROD'))) return null;
   const ot = await ordenes.obtener(usuario, fila.id).catch(() => null);
   if (!ot) return null;
   // Al operario le abre directamente su operación pendiente en esa pieza.

@@ -234,6 +234,56 @@ async function cargarAbastecimiento(conn) {
     [await siguienteNumero(conn, 'OM'), await maquina('CNC-02'), matias.id, daniel.empleado_id]);
 }
 
+/** El pedido del ejemplo: la reducción para la entrada de aire de una cosechadora, ya presupuestada. */
+async function cargarVentas(conn) {
+  const uno = async (sql, p) => (await conn.execute(sql, p))[0][0];
+  // Teléfonos de prueba para llamar o escribir por WhatsApp desde la app.
+  const TELEFONOS = [
+    ['Metalúrgica del Plata S.A.', '+54 11 4201-5500'], ['Agroindustrias San Jorge S.R.L.', '+54 9 2477 41-2233'],
+    ['Envases Patagónicos S.A.', '+54 299 448-1200'], ['Cervecería Los Andes S.A.', '+54 9 261 555-0101'],
+    ['Estudio de Arquitectura Lumen', '+54 9 11 6123-4567'], ['Transportes Ruta 5 S.A.', '+54 2323 42-7788'],
+    ['Juan Cruz Fernández', '+54 9 11 5987-6543'],
+  ];
+  for (const [razon, tel] of TELEFONOS) await conn.execute('UPDATE clientes SET telefono = ? WHERE razon_social = ?', [tel, razon]);
+
+  const cliente = (await uno("SELECT id FROM clientes WHERE razon_social = 'Agroindustrias San Jorge S.R.L.'")).id;
+  const florencia = (await uno("SELECT id FROM usuarios WHERE email = 'florencia.rios@burgoscorp.test'")).id;
+  const valentina = (await uno("SELECT id FROM empleados WHERE legajo = 'L0009'")).id;
+  const [sol] = await conn.execute(
+    `INSERT INTO solicitudes (numero, cliente_id, titulo, descripcion, tipo_trabajo, cantidad, fecha_requerida, estado, recibida_por, asignada_a)
+     VALUES (?, ?, ?, ?, 'fabricacion', 1, ?, 'presupuestada', ?, ?)`,
+    [await siguienteNumero(conn, 'SOL'), cliente, 'Reducción de entrada de aire para cosechadora',
+      'Pasar de una boca rectangular de 9 × 30 cm a una manguera de Ø 15 cm. Chapa 1,6 mm soldada y pintada.', dias(10), florencia, valentina]);
+  // Un segundo pedido recién recibido, para que Comercial tenga algo nuevo.
+  await conn.execute(
+    `INSERT INTO solicitudes (numero, cliente_id, titulo, descripcion, tipo_trabajo, cantidad, estado, recibida_por)
+     VALUES (?, (SELECT id FROM clientes WHERE razon_social = 'Transportes Ruta 5 S.A.'), ?, ?, 'reparacion', 2, 'nueva', ?)`,
+    [await siguienteNumero(conn, 'SOL'), 'Reparar soportes de paragolpes', 'Dos soportes fisurados de un semirremolque.', florencia]);
+
+  const maquina = async (c) => (await uno('SELECT id FROM centros_trabajo WHERE codigo = ?', [c])).id;
+  const chapa = (await uno("SELECT id FROM productos WHERE codigo = 'MP-CH-16'")).id;
+  const ITEMS = [
+    ['maquina', 'Diseño CAD y desarrollo de la transición', null, await maquina('DIS-01'), 2, 'h', 25000],
+    ['material', 'Chapa laminada en frío 1,6 mm', chapa, null, 0.4, 'm2', 31200],
+    ['maquina', 'Corte de la chapa por plasma', null, await maquina('COR-01'), 1, 'h', 32000],
+    ['maquina', 'Rolado y soldadura MIG', null, await maquina('SOL-01'), 2.5, 'h', 24000],
+    ['maquina', 'Pintura epoxi', null, await maquina('TER-01'), 1, 'h', 18000],
+  ];
+  let subtotal = 0;
+  const [pre] = await conn.execute(
+    `INSERT INTO presupuestos (numero, solicitud_id, cliente_id, fecha, validez_dias, plazo_entrega_dias, estado, creado_por)
+     VALUES (?, ?, ?, ?, 15, 7, 'enviado', ?)`, [await siguienteNumero(conn, 'PRE'), sol.insertId, cliente, dias(0), florencia]);
+  for (const [tipo, descripcion, producto, centro, cantidad, unidad, precio] of ITEMS) {
+    const sub = Math.round(cantidad * precio * 100) / 100;
+    subtotal += sub;
+    await conn.execute(
+      `INSERT INTO presupuesto_items (presupuesto_id, tipo, descripcion, producto_id, centro_trabajo_id, cantidad, unidad, precio_unitario, subtotal)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [pre.insertId, tipo, descripcion, producto, centro, cantidad, unidad, precio, sub]);
+  }
+  await conn.execute('UPDATE presupuestos SET subtotal = ?, iva_monto = ?, total = ? WHERE id = ?',
+    [subtotal, Math.round(subtotal * 21) / 100, Math.round(subtotal * 121) / 100, pre.insertId]);
+}
+
 async function main() {
   if (await queryOne("SELECT id FROM usuarios WHERE email = 'admin@burgoscorp.test'")) {
     console.log('Los datos de prueba ya estaban cargados. Para empezar de cero, volvé a correr schema.sql y seed.sql.');
@@ -336,6 +386,9 @@ async function main() {
 
     // Abastecimiento y Mantenimiento: reservas, una compra en curso, planes preventivos y una falla.
     await cargarAbastecimiento(conn);
+
+    // Ventas: el pedido de la reducción para la cosechadora, presupuestado y enviado al cliente.
+    await cargarVentas(conn);
   });
 
   const usuarios = await query(`

@@ -29,6 +29,17 @@ export default function LayoutModulos() {
       <Stack.Screen name="mantenimiento/nueva" options={{ title: 'Reportar una falla' }} />
       <Stack.Screen name="mantenimiento/[id]" options={{ title: 'Orden de mantenimiento' }} />
       <Stack.Screen name="mantenimiento/maquina/[id]" options={{ title: 'Máquina' }} />
+      <Stack.Screen name="ventas/index" options={{ title: 'Ventas' }} />
+      <Stack.Screen name="ventas/nueva" options={{ title: 'Nueva solicitud' }} />
+      <Stack.Screen name="ventas/solicitud/[id]" options={{ title: 'Solicitud' }} />
+      <Stack.Screen name="ventas/presupuesto/nuevo" options={{ title: 'Nuevo presupuesto' }} />
+      <Stack.Screen name="ventas/presupuesto/[id]" options={{ title: 'Presupuesto' }} />
+      <Stack.Screen name="calidad/index" options={{ title: 'Calidad' }} />
+      <Stack.Screen name="calidad/inspeccionar/[otId]" options={{ title: 'Inspección' }} />
+      <Stack.Screen name="calidad/[id]" options={{ title: 'Inspección' }} />
+      <Stack.Screen name="finanzas/index" options={{ title: 'Finanzas' }} />
+      <Stack.Screen name="finanzas/[id]" options={{ title: 'Comprobante' }} />
+      <Stack.Screen name="tablero" options={{ title: 'Tablero' }} />
     </Stack>
   );
 }

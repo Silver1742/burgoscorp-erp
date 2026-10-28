@@ -326,12 +326,58 @@ Abierta ──▶ En reparación ⇄ Esperando repuesto ──▶ Reparada (con 
   qué es y si el usuario lo puede ver; al operario le abre directamente su operación en esa pieza.
   Lo leído nunca se abre como enlace.
 
-### 4.10 Fotos y archivos adjuntos
+### 4.10 Ventas, Calidad, Finanzas y Tablero (día 8)
+
+**Archivos:** [`services/ventas.js`](../backend/src/services/ventas.js),
+[`services/calidad.js`](../backend/src/services/calidad.js),
+[`services/finanzas.js`](../backend/src/services/finanzas.js),
+[`services/tablero.js`](../backend/src/services/tablero.js) y sus rutas en
+[`routes/ventas.js`](../backend/src/routes/ventas.js), [`routes/calidad.js`](../backend/src/routes/calidad.js)
+y [`routes/finanzas.js`](../backend/src/routes/finanzas.js).
+
+El recorrido completo de un pedido, con el ejemplo de la reducción para la cosechadora (está
+cargado en los datos de prueba):
+
+```
+Solicitud (con foto de la pieza) ──▶ Ingeniería la analiza ──▶ Presupuesto ──▶ enviado al cliente (WhatsApp)
+     │                                                                              │
+     └──────────────── cancelada / rechazada ◀──────────────────────────────── el cliente responde
+                                                                                    │ acepta
+OT creada sola: operaciones (horas de máquina) + material reservado ◀───────────────┘
+     │
+Producción ──▶ Calidad inspecciona ── no conforme ──▶ la operación se rehace ──┐
+                     │ conforme                                               │
+                     ▼                    ◀───────────────────────────────────┘
+               OT terminada ──▶ Finanzas factura ──▶ cobro (total o en partes)
+```
+
+- **Solicitud:** Comercial carga lo que pide el cliente y le saca una foto a la pieza (o adjunta la
+  que mandó). Se la asigna a Ingeniería, que arma el presupuesto. Desde la solicitud se llama o se
+  escribe por WhatsApp al cliente con un toque.
+- **Presupuesto:** cada línea es horas de máquina, material del stock u otro concepto. La app
+  sugiere el precio (costo de la máquina o del material, con margen) y la API calcula subtotal,
+  IVA y total. Ya enviado, se le manda al cliente un resumen por WhatsApp.
+- **El cliente acepta:** el jefe elige el área y la API crea la OT sola: una operación por cada
+  línea de máquina (con sus horas estimadas) y una reserva por cada material. Si falta material, a
+  Abastecimiento le llega el aviso.
+- **Calidad:** el inspector escanea la pieza (o la elige de la lista), carga las mediciones con su
+  tolerancia y la app marca en rojo lo que queda afuera. Si algo no cumple, no se puede aprobar:
+  se registra la **no conformidad**, se elige qué operación rehacer, al operario le llega el aviso
+  y la OT vuelve a producción. Cuando se aprueba, la OT queda terminada y se avisa a Comercial y
+  a Finanzas.
+- **Finanzas:** factura la OT con las líneas del presupuesto (letra A o B según el cliente), carga
+  la factura del proveedor de cada compra recibida (con su foto) y registra cobros y pagos, totales
+  o parciales. Solo accede el área de Administración.
+- **Tablero:** los números del día en tarjetas para el celular: OT abiertas y atrasadas, pedidos y
+  presupuestos, calidad, máquinas paradas, stock y saldos. Cada rol ve solo lo de sus módulos.
+
+### 4.11 Fotos y archivos adjuntos
 
 **Archivos:** [`routes/adjuntos.js`](../backend/src/routes/adjuntos.js) y
 [`services/adjuntos.js`](../backend/src/services/adjuntos.js). Sirve a todos los módulos: hoy se
 usa en las tareas (foto del trabajo), las licencias (certificado médico), las órdenes de compra
-(remito y factura) y las fallas de máquina, y en el día 8 se suma a Ventas, Calidad y Finanzas.
+(remito), las fallas de máquina, las solicitudes (la pieza del cliente), las inspecciones y las
+facturas de proveedor.
 
 - **Quién puede:** ve una foto quien puede ver la tarea o la licencia. La agrega quien trabaja en
   la tarea (o su jefe), o el empleado que pidió la licencia, y solo mientras no esté cerrada.
@@ -343,7 +389,7 @@ usa en las tareas (foto del trabajo), las licencias (certificado médico), las �
 - **Dónde se guardan:** en la carpeta `UPLOADS_DIR`, con un nombre aleatorio. El nombre original
   solo se muestra, nunca se usa para buscar el archivo en el disco.
 
-### 4.11 Validación de datos
+### 4.12 Validación de datos
 
 **Archivos:** [`validators/`](../backend/src/validators). Cada campo tiene reglas (tipo, largo
 igual al de la base, formato). Por ejemplo, el CUIT se valida con su dígito verificador y se
@@ -386,6 +432,11 @@ pantalla, y la carpeta determina la ruta.
 | Stock (lista y ficha con ajuste y transferencia) | [`(app)/modulos/inventario/`](../mobile/src/app/(app)/modulos/inventario) |
 | Órdenes de compra (lista, nueva, detalle con aprobación y recepción) | [`(app)/modulos/compras/`](../mobile/src/app/(app)/modulos/compras) |
 | Mantenimiento (fallas, reportar, detalle, ficha de la máquina) | [`(app)/modulos/mantenimiento/`](../mobile/src/app/(app)/modulos/mantenimiento) |
+| Ventas (solicitudes con foto, presupuestos, aprobación que crea la OT) | [`(app)/modulos/ventas/`](../mobile/src/app/(app)/modulos/ventas) |
+| Llamar o escribir por WhatsApp | [`componentes/Contacto.js`](../mobile/src/componentes/Contacto.js) |
+| Calidad (para inspeccionar, inspección con mediciones, detalle) | [`(app)/modulos/calidad/`](../mobile/src/app/(app)/modulos/calidad) |
+| Finanzas (saldos, por facturar, comprobantes, cobros y pagos) | [`(app)/modulos/finanzas/`](../mobile/src/app/(app)/modulos/finanzas) |
+| Tablero | [`(app)/modulos/tablero.js`](../mobile/src/app/(app)/modulos/tablero.js) |
 
 ### 5.2 Qué pantalla se muestra (rutas protegidas)
 
@@ -455,11 +506,11 @@ prueba con tamaño de teléfono. Además, cada área usa lo que el teléfono tie
 | Operarios | **Escanear el QR** de la pieza para abrir su operación; registrar el material usado | Ícono QR de la barra · Mis tareas | ✅ |
 | Mantenimiento y operarios | **Escanear el QR de la máquina** y reportar la falla con foto | Ficha de la máquina · Mantenimiento | ✅ |
 | Abastecimiento | **Escanear el código** del estante o de la OC; **foto del remito**; **llamar** al proveedor | Inventario y Compras | ✅ |
-| Comercial | **Foto de la pieza** en la solicitud del cliente; **llamar o abrir WhatsApp** con un toque | Ventas | Día 8 |
-| Ingeniería | Fotos del relevamiento con las medidas | Solicitud y OT | Día 8 |
-| Calidad | Fotos de la inspección y de la no conformidad | Calidad | Día 8 |
-| Finanzas | Foto del comprobante del proveedor | Finanzas | Día 8 |
-| Gerencia | Tablero pensado para la pantalla del celular | Tablero | Día 8 |
+| Comercial | **Foto de la pieza** en la solicitud del cliente; **llamar o abrir WhatsApp** con un toque; mandar el presupuesto por WhatsApp | Ventas | ✅ |
+| Ingeniería | Fotos del relevamiento con las medidas | Solicitud | ✅ |
+| Calidad | **Escanear la pieza** para inspeccionarla; fotos de la inspección y de la no conformidad | Calidad | ✅ |
+| Finanzas | Foto del comprobante del proveedor | Finanzas | ✅ |
+| Gerencia | Tablero pensado para la pantalla del celular | Tablero | ✅ |
 
 La app solo pide permiso de **cámara**, y recién cuando se toca "Sacar foto". No pide micrófono
 (está bloqueado en [`app.json`](../mobile/app.json)) y en Android 13 o posterior la galería no
@@ -479,6 +530,8 @@ necesita ningún permiso.
 | Falta de registros (A09) | Tabla `auditoria`: logins, bloqueos, accesos denegados | `services/auditoria.js` |
 | Errores que revelan datos (A10) | Mensajes genéricos al usuario; el detalle queda solo en el servidor | `middlewares/errores.js` |
 | Códigos QR leídos con la cámara (A01/A05) | Formato validado, búsqueda por código exacto, nunca se abren como enlace, `404` si no se puede ver | `services/escaneo.js`, `componentes/Escaner.js` |
+| Ventas, Calidad y Finanzas (A01/A04) | Importes calculados en el servidor; no se aprueba una pieza fuera de tolerancia; una factura por OT; Finanzas solo para Administración | `services/ventas.js`, `calidad.js`, `finanzas.js` |
+| WhatsApp y llamadas | El número sale de la base y se reduce a dígitos antes de armar el enlace; nunca se abre un enlace escaneado | `componentes/Contacto.js` |
 | Compras (A01/A04) | La aprueba alguien distinto de quien la pidió; importes calculados en el servidor | `services/compras.js` |
 | Archivos subidos (A05/A06) | Tipo por contenido, tamaño y cantidad máximos, nombre aleatorio, sin datos de ubicación | `services/adjuntos.js` |
 | Datos en el celular | Tokens en SecureStore, sin copias de seguridad, solo el permiso de cámara | `mobile/src/lib/almacen.js`, `mobile/app.json` |
@@ -493,7 +546,7 @@ La skill y el agente que revisan esto durante el desarrollo están en
 
 | Qué | Cómo | Dónde |
 |---|---|---|
-| API | 110 tests automáticos: login, tokens, permisos, 2FA, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje, el circuito de licencias, órdenes de trabajo, tareas, fotos adjuntas, stock y reservas, órdenes de compra, mantenimiento y escaneo | [`backend/tests/`](../backend/tests) |
+| API | 122 tests automáticos: login, tokens, permisos, 2FA, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje, el circuito de licencias, órdenes de trabajo, tareas, fotos adjuntas, stock y reservas, órdenes de compra, mantenimiento, escaneo y el recorrido completo de un pedido (solicitud → presupuesto → OT → calidad con retrabajo → factura y cobro) | [`backend/tests/`](../backend/tests) |
 | App | Probada en el navegador, con tamaño de celular y de escritorio, con usuarios de distintos roles | — |
 
 Para correr los tests: `cd backend && npm test` (con una base de prueba, porque modifican datos).
@@ -511,6 +564,6 @@ Para correr los tests: `cd backend && npm test` (con una base de prueba, porque 
 | 5 | Organización y RRHH | ✅ |
 | 6 | Producción y Tareas, y fotos con la cámara (tareas y certificados) | ✅ |
 | 7 | Inventario, Compras y Mantenimiento: stock y reserva de material de la OT, orden de compra y recepción, fallas de máquina; QR de la OT y escaneo con la cámara | ✅ |
-| 8 | Ventas, Calidad, Finanzas y Tablero: solicitud con foto → presupuesto → OT, inspección con fotos y no conformidad (retrabajo), factura y cobro, tablero | ⏳ |
+| 8 | Ventas, Calidad, Finanzas y Tablero: solicitud con foto → presupuesto → OT, inspección con fotos y no conformidad (retrabajo), factura y cobro, tablero | ✅ |
 | 9 | Publicar la API, generar el APK, auditoría de seguridad | ⏳ |
 | 10 | Manual de usuario y documentación final | ⏳ |

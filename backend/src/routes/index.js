@@ -9,6 +9,9 @@ import adjuntosRoutes from './adjuntos.js';
 import inventarioRoutes from './inventario.js';
 import comprasRoutes from './compras.js';
 import mantenimientoRoutes from './mantenimiento.js';
+import ventasRoutes from './ventas.js';
+import calidadRoutes from './calidad.js';
+import finanzasRoutes from './finanzas.js';
 
 const router = Router();
 
@@ -22,6 +25,9 @@ router.use('/', produccionRoutes);
 router.use('/', inventarioRoutes);
 router.use('/', comprasRoutes);
 router.use('/', mantenimientoRoutes);
+router.use('/', ventasRoutes);
+router.use('/', calidadRoutes);
+router.use('/', finanzasRoutes);
 router.use('/', adjuntosRoutes);
 router.use('/', catalogosRoutes);
 

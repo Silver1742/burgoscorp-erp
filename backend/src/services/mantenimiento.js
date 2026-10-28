@@ -252,7 +252,7 @@ export async function maquinas(f) {
     filtro = 'AND (ct.codigo LIKE ? OR ct.nombre LIKE ?)';
     params.push(patron, patron);
   }
-  return query(`SELECT ct.id, ct.codigo, ct.nombre, ct.estado, ct.ubicacion, a.nombre AS area_nombre
+  return query(`SELECT ct.id, ct.codigo, ct.nombre, ct.estado, ct.ubicacion, ct.costo_hora, a.nombre AS area_nombre
                 FROM centros_trabajo ct JOIN areas a ON a.id = ct.area_id
                 WHERE ct.activo = 1 ${filtro} ORDER BY ct.codigo LIMIT ${Number(f.limite)}`, params);
 }

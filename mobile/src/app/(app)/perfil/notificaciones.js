@@ -24,6 +24,10 @@ const ICONO = {
   falla_maquina: ['warning', 'error'],
   om_asignada: ['build', 'aviso'],
   om_cerrada: ['build', 'exito'],
+  solicitud_asignada: ['briefcase', 'aviso'],
+  ot_nueva: ['clipboard', 'gris'],
+  no_conformidad: ['alert-circle', 'error'],
+  ot_terminada: ['ribbon', 'exito'],
 };
 // A dónde lleva cada aviso al tocarlo.
 const DESTINO = {
@@ -35,7 +39,7 @@ const DESTINO = {
   tarea_rechazada: (n) => `/tareas/${n.entidad_id}`,
   tarea_cancelada: (n) => `/tareas/${n.entidad_id}`,
   tarea_en_revision: (n) => `/modulos/tareas/${n.entidad_id}`,
-  material_faltante: (n) => `/modulos/inventario/${n.entidad_id}`,
+  material_faltante: (n) => (n.entidad === 'orden_trabajo' ? `/modulos/produccion/${n.entidad_id}` : `/modulos/inventario/${n.entidad_id}`),
   material_recibido: (n) => (n.entidad === 'orden_trabajo' ? `/modulos/produccion/${n.entidad_id}` : `/modulos/compras/${n.entidad_id}`),
   oc_para_aprobar: (n) => `/modulos/compras/${n.entidad_id}`,
   oc_aprobada: (n) => `/modulos/compras/${n.entidad_id}`,
@@ -43,6 +47,10 @@ const DESTINO = {
   falla_maquina: (n) => `/modulos/mantenimiento/${n.entidad_id}`,
   om_asignada: (n) => `/modulos/mantenimiento/${n.entidad_id}`,
   om_cerrada: (n) => `/modulos/mantenimiento/${n.entidad_id}`,
+  solicitud_asignada: (n) => `/modulos/ventas/solicitud/${n.entidad_id}`,
+  ot_nueva: (n) => `/modulos/produccion/${n.entidad_id}`,
+  no_conformidad: (n) => `/tareas/${n.entidad_id}`,
+  ot_terminada: (n) => `/modulos/produccion/${n.entidad_id}`,
 };
 
 export default function Notificaciones() {
