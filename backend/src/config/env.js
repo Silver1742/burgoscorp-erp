@@ -58,6 +58,9 @@ const esquema = z.object({
   SMTP_USER: z.string().default(''),
   SMTP_PASS: z.string().default(''),
   SMTP_FROM: z.string().default('BurgosCorp ERP <no-responder@burgoscorp.test>'),
+  // Clave de la API de Brevo: si está, los correos salen por HTTPS en vez de SMTP (Render gratis
+  // bloquea los puertos SMTP). El remitente es el de SMTP_FROM, verificado en Brevo.
+  BREVO_API_KEY: z.string().default(''),
 
   // Login social (vacío = proveedor deshabilitado)
   GOOGLE_CLIENT_IDS: z.string().default(''),   // ids de cliente web/android/ios separados por coma
@@ -89,8 +92,8 @@ if (env.NODE_ENV === 'production' && env.TRUST_PROXY === 0 && process.env.SIN_PR
   process.exit(1);
 }
 
-if (env.NODE_ENV === 'production' && !env.SMTP_HOST) {
-  console.error('En producción hace falta SMTP_HOST para enviar los códigos por email.');
+if (env.NODE_ENV === 'production' && !env.SMTP_HOST && !env.BREVO_API_KEY) {
+  console.error('En producción hace falta SMTP_HOST o BREVO_API_KEY para enviar los códigos por email.');
   process.exit(1);
 }
 

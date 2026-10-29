@@ -1,4 +1,5 @@
-// Envío de correos. Con SMTP configurado usa ese servidor; sin SMTP:
+// Envío de correos. Con BREVO_API_KEY sale por la API HTTPS de Brevo; si no, con SMTP configurado
+// usa ese servidor; sin ninguno de los dos:
 //   - en desarrollo muestra el correo en la consola (para probar sin cuenta de correo),
 //   - en test lo guarda en memoria (`bandejaDePrueba`) para que los tests lean el código.
 import nodemailer from 'nodemailer';
@@ -20,7 +21,34 @@ const transporte = env.SMTP_HOST
 
 const escapar = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+/** "Nombre <correo@x>" → { name, email } para la API de Brevo. */
+function remitente(from) {
+  const m = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(from);
+  return m ? { name: m[1] || undefined, email: m[2] } : { email: from.trim() };
+}
+
+async function enviarPorBrevo({ para, asunto, texto, html }) {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'api-key': env.BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({
+      sender: remitente(env.SMTP_FROM),
+      to: [{ email: para }],
+      subject: asunto,
+      textContent: texto,
+      htmlContent: html ?? `<pre>${escapar(texto)}</pre>`,
+    }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  // Solo el código HTTP: la respuesta puede repetir datos del envío y la clave nunca se registra.
+  if (!res.ok) throw new Error(`Brevo respondió ${res.status}`);
+}
+
 async function enviar({ para, asunto, texto, html }) {
+  if (env.BREVO_API_KEY) {
+    await enviarPorBrevo({ para, asunto, texto, html });
+    return;
+  }
   if (env.NODE_ENV === 'test' && !transporte) {
     bandejaDePrueba.push({ para, asunto, texto });
     return;
