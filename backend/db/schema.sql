@@ -117,7 +117,7 @@ CREATE TABLE empleados (
   legajo           VARCHAR(10)  NOT NULL UNIQUE,
   nombre           VARCHAR(60)  NOT NULL,
   apellido         VARCHAR(60)  NOT NULL,
-  dni              VARCHAR(10)  NOT NULL UNIQUE,
+  dni              VARCHAR(10)  NULL UNIQUE,     -- lo completa RRHH (el legajo se crea al habilitar la cuenta)
   cuil             VARCHAR(13)  NULL UNIQUE,
   fecha_nacimiento DATE         NULL,
   telefono         VARCHAR(30)  NULL,

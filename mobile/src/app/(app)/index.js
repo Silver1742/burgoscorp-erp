@@ -75,12 +75,15 @@ export default function Inicio() {
   const [error, setError] = useState(null);
   const [recargando, setRecargando] = useState(false);
   const [pendientes, setPendientes] = useState(0);
+  const [personal, setPersonal] = useState(null); // totales de /personal/resumen
   const puede = usePuede();
 
   // "¿Qué querés hacer?": las acciones marcadas como rápidas en los módulos que el rol puede ver.
   // Para el administrador, lo primero es Usuarios.
   const atajos = [];
-  const ordenados = usuario.rol === 'ADMIN' ? [...MODULOS].sort((a, b) => (b.codigo === 'SEG') - (a.codigo === 'SEG')) : MODULOS;
+  // Para administración y gerencia, Usuarios y Personal van primero.
+  const prioridad = (m) => ({ SEG: 2, RRHH: 1 }[m.codigo] ?? 0);
+  const ordenados = ['ADMIN', 'GERENCIA'].includes(usuario.rol) ? [...MODULOS].sort((a, b) => prioridad(b) - prioridad(a)) : MODULOS;
   for (const m of ordenados) {
     if (!permisos[m.codigo]?.ver) continue;
     for (const a of m.acciones ?? []) {
@@ -107,6 +110,9 @@ export default function Inicio() {
       if (puede('SEG', 'aprobar')) {
         setPendientes((await api('/usuarios', { consulta: { estado: 'pendientes', limite: 1 } })).meta.total);
       }
+      if (['ADMIN', 'GERENCIA', 'JEFE'].includes(usuario.rol)) {
+        setPersonal((await api('/personal/resumen')).totales);
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -130,6 +136,23 @@ export default function Inicio() {
         </View>
 
         {error ? <Tarjeta><ErrorCarga error={error} onReintentar={cargar} /></Tarjeta> : null}
+
+        {personal ? (
+          <Tarjeta onPress={() => router.push('/modulos/rrhh/personal', { withAnchor: true })}>
+            <View style={estilos.fila}>
+              <IconoEstadistica icono="people" tono="rojo" />
+              <View style={{ flex: 1, minWidth: 180 }}>
+                <Text style={{ color: t.texto, fontWeight: '700', fontSize: 16 }}>
+                  {personal.personal} {personal.personal === 1 ? 'persona' : 'personas'} {usuario.rol === 'JEFE' ? 'en tu área' : 'trabajando en BurgosCorp'}
+                </Text>
+                <Text style={{ color: t.textoSuave }}>
+                  {personal.trabajando_ahora} ficharon y están trabajando · {personal.en_licencia} de licencia
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={t.textoTenue} />
+            </View>
+          </Tarjeta>
+        ) : null}
 
         {pendientes > 0 ? (
           <Tarjeta onPress={() => router.push('/modulos/usuarios/solicitudes', { withAnchor: true })} acentoArriba>
@@ -158,8 +181,8 @@ export default function Inicio() {
             </View>
           </>
         ) : !usuario.empleadoId && usuario.rol !== 'ADMIN' ? (
-          <Tarjeta titulo="Tu cuenta todavía no tiene legajo" icono="information-circle-outline">
-            <Texto suave>Pedile a un administrador que vincule tu cuenta con tu legajo para ver los módulos de tu área.</Texto>
+          <Tarjeta titulo="Tu cuenta todavía no tiene área" icono="information-circle-outline">
+            <Texto suave>Pedile a un administrador que te asigne tu área y tus habilidades para ver los módulos.</Texto>
           </Tarjeta>
         ) : null}
 

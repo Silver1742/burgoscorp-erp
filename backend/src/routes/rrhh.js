@@ -13,6 +13,7 @@ import * as licencias from '../services/licencias.js';
 import { id, paramsId } from '../validators/comunes.js';
 import * as v from '../validators/rrhh.js';
 import { errores } from '../utils/errores.js';
+import { hoy as hoyEmpresa } from '../utils/fechas.js';
 
 const router = Router();
 
@@ -157,6 +158,50 @@ router.use('/epp-entregas', crearRecursoCrud({
 }));
 
 // ---------------------------------------------------------------- organigrama
+// Personal: cuánta gente trabaja, por área (con su jefe), quién vino hoy y qué cuentas faltan ubicar.
+// Toda la empresa para administración, gerencia y RRHH; un jefe ve solo su área.
+router.get('/personal/resumen', autenticado, requierePermiso('RRHH', 'ver'), async (req, res) => {
+  if (!['todo', 'area'].includes(req.permiso.alcance)) throw errores.prohibido('Solo jefes, RRHH, gerencia y administración ven el personal');
+  const alc = filtroAlcance(req.usuario, req.permiso.alcance, { areaCol: 'a.id' });
+  const fecha = hoyEmpresa();
+  const areas = await query(`
+    SELECT a.id, a.codigo, a.nombre, CONCAT(j.nombre, ' ', j.apellido) AS jefe_nombre,
+           COUNT(e.id) AS total,
+           SUM(e.estado = 'activo') AS activos,
+           SUM(e.estado = 'licencia') AS en_licencia,
+           SUM(e.estado <> 'baja' AND EXISTS (SELECT 1 FROM asistencias s WHERE s.empleado_id = e.id AND s.fecha = ?)) AS vinieron_hoy,
+           SUM(e.estado <> 'baja' AND EXISTS (SELECT 1 FROM asistencias s WHERE s.empleado_id = e.id AND s.fecha = ? AND s.salida_at IS NULL)) AS trabajando_ahora,
+           SUM(e.estado <> 'baja' AND NOT EXISTS (SELECT 1 FROM usuarios u WHERE u.empleado_id = e.id)) AS sin_cuenta
+    FROM areas a
+    LEFT JOIN empleados j ON j.id = a.jefe_empleado_id
+    LEFT JOIN empleados e ON e.area_id = a.id AND e.estado <> 'baja'
+    WHERE a.activo = 1 AND (${alc.sql})
+    GROUP BY a.id ORDER BY a.nombre`, [fecha, fecha, ...alc.params]);
+  const num = (v) => Number(v ?? 0);
+  const totales = areas.reduce((t, a) => ({
+    personal: t.personal + num(a.total),
+    activos: t.activos + num(a.activos),
+    en_licencia: t.en_licencia + num(a.en_licencia),
+    vinieron_hoy: t.vinieron_hoy + num(a.vinieron_hoy),
+    trabajando_ahora: t.trabajando_ahora + num(a.trabajando_ahora),
+    sin_cuenta: t.sin_cuenta + num(a.sin_cuenta),
+  }), { personal: 0, activos: 0, en_licencia: 0, vinieron_hoy: 0, trabajando_ahora: 0, sin_cuenta: 0 });
+  // Cuentas habilitadas que todavía no tienen área (solo las ve quien administra toda la empresa).
+  const sinArea = req.permiso.alcance === 'todo' ? await query(`
+    SELECT u.id, u.nombre, u.apellido, u.email, r.codigo AS rol FROM usuarios u JOIN roles r ON r.id = u.rol_id
+    WHERE u.empleado_id IS NULL AND u.estado_cuenta = 'habilitada' AND u.activo = 1 AND r.codigo <> 'ADMIN'
+    ORDER BY u.apellido`) : [];
+  res.json({
+    ok: true,
+    data: {
+      fecha, totales,
+      areas: areas.map((a) => ({ ...a, total: num(a.total), activos: num(a.activos), en_licencia: num(a.en_licencia),
+        vinieron_hoy: num(a.vinieron_hoy), trabajando_ahora: num(a.trabajando_ahora), sin_cuenta: num(a.sin_cuenta) })),
+      cuentas_sin_area: sinArea,
+    },
+  });
+});
+
 router.get('/organigrama', autenticado, requierePermiso('ORG', 'ver'), async (req, res) => {
   const areas = await query(`
     SELECT a.id, a.codigo, a.nombre, a.descripcion, a.jefe_empleado_id,

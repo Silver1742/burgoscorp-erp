@@ -26,6 +26,9 @@ async function nuevaSolicitud(nombre = 'Prueba') {
   return queryOne('SELECT id, email FROM usuarios WHERE email = ?', [email]);
 }
 
+const areaId = async (codigo) => (await queryOne('SELECT id FROM areas WHERE codigo = ?', [codigo])).id;
+const habilidadId = async (codigo) => (await queryOne('SELECT id FROM habilidades WHERE codigo = ?', [codigo])).id;
+
 after(() => pool.end());
 
 describe('administración de usuarios', () => {
@@ -51,7 +54,7 @@ describe('administración de usuarios', () => {
   test('edita el nombre y da de baja a otro administrador', async () => {
     const admin = await login('admin@burgoscorp.test');
     const solicitud = await nuevaSolicitud();
-    await api().post(`/api/v1/usuarios/${solicitud.id}/habilitar`).set(conToken(admin.accessToken)).send({ rol: 'EMPLEADO' });
+    await api().post(`/api/v1/usuarios/${solicitud.id}/habilitar`).set(conToken(admin.accessToken)).send({ rol: 'EMPLEADO', area_id: await areaId('MEC') });
 
     const editado = await api().put(`/api/v1/usuarios/${solicitud.id}`).set(conToken(admin.accessToken)).send({ nombre: 'Renombrado' });
     assert.equal(editado.status, 200);
@@ -73,7 +76,7 @@ describe('administración de usuarios', () => {
   test('la baja cierra las sesiones y se puede reactivar', async () => {
     const admin = await login('admin@burgoscorp.test');
     const solicitud = await nuevaSolicitud();
-    await api().post(`/api/v1/usuarios/${solicitud.id}/habilitar`).set(conToken(admin.accessToken)).send({ rol: 'EMPLEADO' });
+    await api().post(`/api/v1/usuarios/${solicitud.id}/habilitar`).set(conToken(admin.accessToken)).send({ rol: 'EMPLEADO', area_id: await areaId('MEC') });
 
     const baja = await api().put(`/api/v1/usuarios/${solicitud.id}`).set(conToken(admin.accessToken)).send({ activo: false });
     assert.equal(baja.status, 200);
@@ -104,7 +107,7 @@ describe('administración de usuarios', () => {
   test('manda el código para crear la contraseña sin mostrarlo al admin', async () => {
     const admin = await login('admin@burgoscorp.test');
     const solicitud = await nuevaSolicitud();
-    await api().post(`/api/v1/usuarios/${solicitud.id}/habilitar`).set(conToken(admin.accessToken)).send({ rol: 'EMPLEADO' });
+    await api().post(`/api/v1/usuarios/${solicitud.id}/habilitar`).set(conToken(admin.accessToken)).send({ rol: 'EMPLEADO', area_id: await areaId('MEC') });
 
     const antes = bandejaDePrueba.length;
     const res = await api().post(`/api/v1/usuarios/${solicitud.id}/restablecer-password`).set(conToken(admin.accessToken));
@@ -113,6 +116,56 @@ describe('administración de usuarios', () => {
     assert.ok(mail, 'tiene que llegarle el email con el código');
     const codigo = /\b(\d{6})\b/.exec(mail.texto)[1];
     assert.ok(!JSON.stringify(res.body).includes(codigo), 'el código no viaja en la respuesta al admin');
+  });
+
+  test('crear un usuario le arma el legajo; después se le cambia de área y habilidades', async () => {
+    const admin = await login('admin@burgoscorp.test');
+    const email = `nuevo.${Date.now()}@correo.test`;
+    const sinArea = await api().post('/api/v1/usuarios').set(conToken(admin.accessToken))
+      .send({ email, nombre: 'Nora', apellido: 'Nueva', rol: 'EMPLEADO' });
+    assert.equal(sinArea.status, 400, 'un empleado necesita área');
+
+    const creado = await api().post('/api/v1/usuarios').set(conToken(admin.accessToken)).send({
+      email, nombre: 'Nora', apellido: 'Nueva', rol: 'EMPLEADO', area_id: await areaId('SOL'),
+      habilidades: [{ habilidad_id: await habilidadId('SOLDADURA_MIG'), nivel: 'avanzado' }],
+    });
+    assert.equal(creado.status, 201, JSON.stringify(creado.body));
+    assert.equal(creado.body.data.area_nombre, 'Soldadura y Herrería');
+    assert.match(creado.body.data.legajo, /^L\d+$/);
+
+    const puestoCal = await queryOne("SELECT p.id FROM puestos p JOIN areas a ON a.id = p.area_id WHERE a.codigo = 'CAL' LIMIT 1");
+    const puestoAjeno = await queryOne("SELECT p.id FROM puestos p JOIN areas a ON a.id = p.area_id WHERE a.codigo = 'MEC' LIMIT 1");
+    const malPuesto = await api().put(`/api/v1/usuarios/${creado.body.data.id}/legajo`).set(conToken(admin.accessToken))
+      .send({ area_id: await areaId('CAL'), puesto_id: puestoAjeno.id });
+    assert.equal(malPuesto.status, 400, 'el puesto tiene que ser del área');
+
+    const cambio = await api().put(`/api/v1/usuarios/${creado.body.data.id}/legajo`).set(conToken(admin.accessToken)).send({
+      area_id: await areaId('CAL'), puesto_id: puestoCal.id,
+      habilidades: [{ habilidad_id: await habilidadId('METROLOGIA'), nivel: 'intermedio' }],
+    });
+    assert.equal(cambio.status, 200, JSON.stringify(cambio.body));
+    assert.equal(cambio.body.data.area_nombre, 'Calidad');
+    assert.equal(cambio.body.data.legajo, creado.body.data.legajo, 'mismo legajo, otra área');
+    const ficha = await api().get(`/api/v1/usuarios/${creado.body.data.id}`).set(conToken(admin.accessToken));
+    assert.deepEqual(ficha.body.data.habilidades.map((h) => h.nombre), ['Metrología e inspección dimensional']);
+  });
+
+  test('personal: el admin ve toda la empresa, un jefe solo su área y un empleado no entra', async () => {
+    const admin = await login('admin@burgoscorp.test');
+    const todo = await api().get('/api/v1/personal/resumen').set(conToken(admin.accessToken));
+    assert.equal(todo.status, 200, JSON.stringify(todo.body));
+    assert.ok(todo.body.data.totales.personal >= 30);
+    assert.ok(todo.body.data.areas.length >= 11);
+    assert.ok(todo.body.data.areas.every((a) => a.jefe_nombre), 'cada área tiene jefe');
+
+    const jefe = await login('jorge.dominguez@burgoscorp.test');
+    const suArea = await api().get('/api/v1/personal/resumen').set(conToken(jefe.accessToken));
+    assert.equal(suArea.status, 200);
+    assert.deepEqual(suArea.body.data.areas.map((a) => a.codigo), ['MEC']);
+    assert.deepEqual(suArea.body.data.cuentas_sin_area, []);
+
+    const empleado = await login('ramon.gimenez@burgoscorp.test');
+    assert.equal((await api().get('/api/v1/personal/resumen').set(conToken(empleado.accessToken))).status, 403);
   });
 
   test('un jefe no administra usuarios', async () => {

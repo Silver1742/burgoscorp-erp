@@ -10,6 +10,7 @@ import { revocarTodas } from '../services/tokens.js';
 import { notificar } from '../services/notificaciones.js';
 import { enviarAviso, enviarCodigo } from '../services/email.js';
 import { generarCodigo } from '../services/codigos.js';
+import { crearLegajo, actualizarLegajo } from '../services/legajos.js';
 import { paramsId, consultaListado, email, nombrePersona } from '../validators/comunes.js';
 import { usuarioAdmin } from '../validators/catalogos.js';
 import { errores } from '../utils/errores.js';
@@ -22,7 +23,7 @@ const SELECT = `
   SELECT u.id, u.email, u.nombre, u.apellido, r.codigo AS rol, u.empleado_id, u.activo, u.estado_cuenta, u.motivo_rechazo,
          u.email_verificado_at IS NOT NULL AS email_verificado, u.totp_habilitado AS dos_pasos,
          u.ultimo_login_at, u.created_at, u.habilitada_at, e.legajo, a.id AS area_id, a.nombre AS area_nombre,
-         p.nombre AS puesto_nombre,
+         e.puesto_id, p.nombre AS puesto_nombre,
          (SELECT GROUP_CONCAT(cs.proveedor) FROM cuentas_sociales cs WHERE cs.usuario_id = u.id) AS redes
   FROM usuarios u
   JOIN roles r ON r.id = u.rol_id
@@ -44,6 +45,41 @@ const ORDENES = {
   ultimo_ingreso: 'u.ultimo_login_at IS NULL, u.ultimo_login_at DESC',
   alta: 'u.created_at DESC',
 };
+
+// Dónde trabaja la persona: al habilitarla (o crearle la cuenta) se le arma el legajo con su área,
+// puesto y habilidades. `empleado_id` queda solo para vincular un legajo que RRHH ya había cargado.
+const ROL = z.enum(['ADMIN', 'GERENCIA', 'JEFE', 'EMPLEADO']);
+const ubicacion = {
+  area_id: z.coerce.number().int().positive().optional(),
+  puesto_id: z.coerce.number().int().positive().nullable().optional(),
+  habilidades: z.array(z.object({
+    habilidad_id: z.coerce.number().int().positive(),
+    nivel: z.enum(['basico', 'intermedio', 'avanzado']).default('basico'),
+  }).strict()).max(20).optional(),
+  dni: z.string().trim().regex(/^\d{7,8}$/, 'DNI de 7 u 8 dígitos, sin puntos').optional(),
+  empleado_id: z.coerce.number().int().positive().nullable().optional(),
+};
+
+/**
+ * Devuelve el id del legajo de la persona: el existente que se eligió o uno nuevo con el área,
+ * puesto y habilidades. Solo el administrador puede quedar sin área (no la necesita para ver todo).
+ */
+async function legajoPara(conn, persona, datos, rol) {
+  if (datos.empleado_id) {
+    const [[emp]] = await conn.execute(
+      `SELECT e.id, (SELECT u2.id FROM usuarios u2 WHERE u2.empleado_id = e.id) AS usuario_id
+       FROM empleados e WHERE e.id = ? AND e.estado <> 'baja'`, [datos.empleado_id]);
+    if (!emp) throw errores.validacion([{ campo: 'body.empleado_id', mensaje: 'El legajo no existe o está dado de baja' }]);
+    if (emp.usuario_id && emp.usuario_id !== persona.id) throw errores.conflicto('Ese legajo ya tiene una cuenta vinculada');
+    return emp.id;
+  }
+  if (!datos.area_id) {
+    if (rol === 'ADMIN') return null;
+    throw errores.validacion([{ campo: 'body.area_id', mensaje: 'Elegí el área donde va a trabajar' }]);
+  }
+  const nuevo = await crearLegajo(conn, { ...datos, nombre: persona.nombre, apellido: persona.apellido, email: persona.email }, rol);
+  return nuevo.id;
+}
 
 /** Que nunca quede el sistema sin un administrador activo. */
 async function exigirOtroAdmin(id, conn) {
@@ -93,28 +129,52 @@ router.get('/', requierePermiso('SEG', 'ver'),
 router.get('/:id', requierePermiso('SEG', 'ver'), validar({ params: paramsId }), async (req, res) => {
   const usuario = await queryOne(`${SELECT} WHERE u.id = ?`, [req.validado.params.id]);
   if (!usuario) throw errores.noEncontrado();
+  usuario.habilidades = usuario.empleado_id ? await query(
+    `SELECT h.id AS habilidad_id, h.nombre, h.requiere_certificacion, eh.nivel, eh.certificado_vence
+     FROM empleado_habilidades eh JOIN habilidades h ON h.id = eh.habilidad_id WHERE eh.empleado_id = ? ORDER BY h.nombre`,
+    [usuario.empleado_id]) : [];
   res.json({ ok: true, data: usuario });
 });
 
 // Alta de una cuenta para un empleado. Queda sin contraseña: entra con Google/GitHub/Facebook
 // usando ese email, o define su contraseña con "Olvidé mi contraseña".
 router.post('/', requierePermiso('SEG', 'crear'), validar({
-  body: z.object({
-    email,
-    nombre: nombrePersona,
-    apellido: nombrePersona,
-    rol: z.enum(['ADMIN', 'GERENCIA', 'JEFE', 'EMPLEADO']),
-    empleado_id: z.coerce.number().int().positive().nullable().optional(),
-  }).strict(),
+  body: z.object({ email, nombre: nombrePersona, apellido: nombrePersona, rol: ROL, ...ubicacion }).strict(),
 }), async (req, res) => {
-  const { email: mail, nombre, apellido, rol, empleado_id: empleadoId = null } = req.validado.body;
-  const [r] = await pool.execute(
-    `INSERT INTO usuarios (email, nombre, apellido, rol_id, empleado_id, email_verificado_at)
-     VALUES (?, ?, ?, (SELECT id FROM roles WHERE codigo = ?), ?, UTC_TIMESTAMP())`,
-    [mail, nombre, apellido, rol, empleadoId],
-  );
-  await auditar(req, { accion: 'crear', entidad: 'usuario', entidadId: r.insertId, detalle: { rol } });
-  res.status(201).json({ ok: true, data: await queryOne(`${SELECT} WHERE u.id = ?`, [r.insertId]) });
+  const { email: mail, nombre, apellido, rol } = req.validado.body;
+  const id = await transaccion(async (conn) => {
+    const [r] = await conn.execute(
+      `INSERT INTO usuarios (email, nombre, apellido, rol_id, email_verificado_at)
+       VALUES (?, ?, ?, (SELECT id FROM roles WHERE codigo = ?), UTC_TIMESTAMP())`,
+      [mail, nombre, apellido, rol],
+    );
+    const empleadoId = await legajoPara(conn, { id: r.insertId, nombre, apellido, email: mail }, req.validado.body, rol);
+    if (empleadoId) await conn.execute('UPDATE usuarios SET empleado_id = ? WHERE id = ?', [empleadoId, r.insertId]);
+    return r.insertId;
+  });
+  await auditar(req, { accion: 'crear', entidad: 'usuario', entidadId: id, detalle: { rol } });
+  res.status(201).json({ ok: true, data: await queryOne(`${SELECT} WHERE u.id = ?`, [id]) });
+});
+
+// Área, puesto y habilidades de la persona: si no tiene legajo se le crea; si tiene, se actualiza.
+router.put('/:id/legajo', requierePermiso('SEG', 'editar'), validar({
+  params: paramsId,
+  body: z.object({ ...ubicacion, area_id: z.coerce.number().int().positive() }).omit({ empleado_id: true }).strict(),
+}), async (req, res) => {
+  const { id } = req.validado.params;
+  await transaccion(async (conn) => {
+    const [[u]] = await conn.execute(
+      'SELECT u.id, u.nombre, u.apellido, u.email, u.empleado_id, r.codigo AS rol FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.id = ? FOR UPDATE', [id]);
+    if (!u) throw errores.noEncontrado();
+    if (u.empleado_id) {
+      await actualizarLegajo(conn, u.empleado_id, req.validado.body, u.rol);
+    } else {
+      const nuevo = await crearLegajo(conn, { ...req.validado.body, nombre: u.nombre, apellido: u.apellido, email: u.email }, u.rol);
+      await conn.execute('UPDATE usuarios SET empleado_id = ? WHERE id = ?', [nuevo.id, id]);
+    }
+  });
+  await auditar(req, { accion: 'editar', entidad: 'legajo', entidadId: id, detalle: { area_id: req.validado.body.area_id } });
+  res.json({ ok: true, data: await queryOne(`${SELECT} WHERE u.id = ?`, [id]) });
 });
 
 // Cambiar nombre, rol, legajo vinculado o activar/desactivar (dar de baja).
@@ -190,26 +250,18 @@ router.delete('/:id', requierePermiso('SEG', 'borrar'), validar({ params: params
 
 const paramsYHabilitar = {
   params: paramsId,
-  body: z.object({
-    rol: z.enum(['ADMIN', 'GERENCIA', 'JEFE', 'EMPLEADO']),
-    empleado_id: z.coerce.number().int().positive().nullable().optional(),
-  }).strict(),
+  body: z.object({ rol: ROL, ...ubicacion }).strict(),
 };
 
 router.post('/:id/habilitar', requierePermiso('SEG', 'aprobar'), validar(paramsYHabilitar), async (req, res) => {
   const { id } = req.validado.params;
-  const { rol, empleado_id: empleadoId = null } = req.validado.body;
+  const { rol } = req.validado.body;
+  let empleadoId = null;
   const u = await transaccion(async (conn) => {
-    const [[actual]] = await conn.execute('SELECT id, email, nombre, estado_cuenta FROM usuarios WHERE id = ? FOR UPDATE', [id]);
+    const [[actual]] = await conn.execute('SELECT id, email, nombre, apellido, estado_cuenta FROM usuarios WHERE id = ? FOR UPDATE', [id]);
     if (!actual) throw errores.noEncontrado();
     if (actual.estado_cuenta === 'habilitada') throw errores.conflicto('La cuenta ya está habilitada');
-    if (empleadoId) {
-      const [[emp]] = await conn.execute(
-        `SELECT e.id, (SELECT u2.id FROM usuarios u2 WHERE u2.empleado_id = e.id) AS usuario_id
-         FROM empleados e WHERE e.id = ? AND e.estado <> 'baja'`, [empleadoId]);
-      if (!emp) throw errores.validacion([{ campo: 'body.empleado_id', mensaje: 'El legajo no existe o está dado de baja' }]);
-      if (emp.usuario_id) throw errores.conflicto('Ese legajo ya tiene una cuenta vinculada');
-    }
+    empleadoId = await legajoPara(conn, actual, req.validado.body, rol);
     await conn.execute(
       `UPDATE usuarios SET estado_cuenta = 'habilitada', motivo_rechazo = NULL, habilitada_por = ?, habilitada_at = UTC_TIMESTAMP(),
          rol_id = (SELECT id FROM roles WHERE codigo = ?), empleado_id = ? WHERE id = ?`,

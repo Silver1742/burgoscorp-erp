@@ -253,11 +253,12 @@ apps OAuth está en [`docs/guia-oauth.md`](../docs/guia-oauth.md).
 | GET | `/usuarios/roles` | SEG ver | — | Lista de roles |
 | GET | `/usuarios` | SEG ver | Query: `pagina`, `limite`, `q` (nombre, email o legajo), `rol`, `estado` (`activos`, `inactivos`, `pendientes`, `rechazados`), `estado_cuenta`, `area_id`, `orden` (`nombre`, `rol`, `area`, `ultimo_ingreso`, `alta`) | Listado paginado, primero los pendientes |
 | GET | `/usuarios/:id` | SEG ver | — | `200` · `404` |
-| POST | `/usuarios` | SEG crear | `email`, `nombre`, `apellido`, `rol`, `empleado_id?` | `201` (cuenta sin contraseña: entra con red social o recupera contraseña) |
+| POST | `/usuarios` | SEG crear | `email`, `nombre`, `apellido`, `rol`, y área, puesto y habilidades como en `habilitar` | `201` (cuenta sin contraseña: entra con red social o recupera contraseña) |
 | PUT | `/usuarios/:id` | SEG editar | `nombre?`, `apellido?`, `rol?`, `empleado_id?`, `activo?` (`false` = dar de baja) | `200` · `403` si cambia su propio rol o se da de baja · `409` si deja el sistema sin administrador activo |
 | POST | `/usuarios/:id/restablecer-password` | SEG editar | — | `200`: le manda por email un código para crear su contraseña (el admin nunca lo ve) · `409` si la cuenta no está activa |
 | DELETE | `/usuarios/:id` | SEG borrar | — | `200` · `403` la propia cuenta · `409` si tiene actividad registrada (hay que darla de baja) |
-| POST | `/usuarios/:id/habilitar` | SEG aprobar (admin) | `rol`, `empleado_id?` | `200` · `409` si ya estaba habilitada o el legajo ya tiene cuenta. Le avisa por email |
+| POST | `/usuarios/:id/habilitar` | SEG aprobar (admin) | `rol`, `area_id` (obligatoria salvo ADMIN), `puesto_id?`, `habilidades?` (`[{ habilidad_id, nivel }]`), `dni?` · o `empleado_id` para vincular un legajo ya cargado | `200`: le crea el legajo con el número siguiente y el jefe del área como supervisor · `400` sin área o puesto de otra área · `409` si ya estaba habilitada o el legajo ya tiene cuenta. Le avisa por email |
+| PUT | `/usuarios/:id/legajo` | SEG editar | `area_id`, `puesto_id?`, `habilidades?`, `dni?` | `200`: cambia área, puesto y habilidades (si no tenía legajo, se le crea) |
 | POST | `/usuarios/:id/rechazar` | SEG aprobar (admin) | `motivo?` | `200` · `409` si no estaba pendiente. Le avisa por email con el motivo |
 
 Cambiar el rol o desactivar una cuenta cierra todas sus sesiones.
@@ -345,6 +346,7 @@ Fichar es personal: alcanza con tener la cuenta vinculada a un legajo (si no, `4
 | Método | Ruta | Permiso | Body / Query | Respuesta |
 |---|---|---|---|---|
 | GET | `/asistencias/hoy` | Sesión | — | `{ dentro, desde, registros, minutosHoy }` |
+| GET | `/personal/resumen` | RRHH ver (alcance todo o área) | — | `{ fecha, totales: { personal, activos, en_licencia, vinieron_hoy, trabajando_ahora, sin_cuenta }, areas: [...con jefe], cuentas_sin_area }` · `403` para un empleado |
 | POST | `/asistencias/entrada` | Sesión | — | `201` estado de hoy · `409` ya está dentro |
 | POST | `/asistencias/salida` | Sesión | — | `200` · `409` no registró la entrada |
 | GET | `/asistencias` | RRHH ver (según alcance) | `empleado_id`, `desde`, `hasta`, `pagina`, `limite` | Listado con `horas` |

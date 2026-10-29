@@ -1,5 +1,6 @@
 // Pestañas principales. Barra negra en los dos modos; la pestaña activa en blanco con línea roja
 // (como .bc-navbar .nav-link.active del portal R3). A la derecha: escanear QR, modo claro/oscuro y avatar.
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -7,6 +8,10 @@ import { Escudo } from '../../componentes/Marca';
 import SelectorTema from '../../componentes/SelectorTema';
 import { Avatar } from '../../componentes/ui';
 import { useSesion } from '../../contexto/sesion';
+import { useToast } from '../../contexto/toast';
+import { destinoEscaneo } from '../../componentes/Escaner';
+import { api } from '../../lib/api';
+import { tomarQrPendiente } from '../../lib/qr';
 import { useTema } from '../../tema';
 
 function IconoPestana({ nombre, color, size, focused, rojo }) {
@@ -34,7 +39,30 @@ function AccionesCabecera() {
   );
 }
 
+/** Si antes de entrar se escaneó una etiqueta con la cámara del teléfono, se abre al entrar. */
+function AbrirQrPendiente() {
+  const router = useRouter();
+  const toast = useToast();
+  useEffect(() => {
+    const codigo = tomarQrPendiente();
+    if (!codigo) return;
+    api('/escaneo', { consulta: { codigo } })
+      .then((r) => { const destino = destinoEscaneo(r); if (destino) router.push(destino, { withAnchor: true }); })
+      .catch((err) => toast.error(err.message));
+  }, [router, toast]);
+  return null;
+}
+
 export default function LayoutApp() {
+  return (
+    <>
+      <AbrirQrPendiente />
+      <Pestanas />
+    </>
+  );
+}
+
+function Pestanas() {
   const t = useTema();
   const icono = (nombre) => (props) => <IconoPestana nombre={nombre} rojo={t.primario} {...props} />;
   return (

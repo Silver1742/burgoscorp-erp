@@ -7,7 +7,7 @@ import {
   Pantalla, Tarjeta, Insignia, InsigniaRol, Avatar, Boton, Campo, Opciones, Dato, Cargando, ErrorCarga, Texto,
 } from '../../../../componentes/ui';
 import ConfirmDialog from '../../../../componentes/ConfirmDialog';
-import Selector from '../../../../componentes/Selector';
+import UbicacionLaboral, { cuerpoUbicacion } from '../../../../componentes/UbicacionLaboral';
 import { usePuede, useSesion } from '../../../../contexto/sesion';
 import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
@@ -16,6 +16,7 @@ import { ROLES, fechaHoraCorta } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
 
 const OPCIONES_ROL = ['EMPLEADO', 'JEFE', 'GERENCIA', 'ADMIN'].map((valor) => ({ valor, titulo: ROLES[valor] }));
+const NIVEL = { basico: 'básico', intermedio: 'intermedio', avanzado: 'avanzado' };
 
 export default function Usuario() {
   const { id } = useLocalSearchParams();
@@ -26,7 +27,8 @@ export default function Usuario() {
   const t = useTema();
   const [u, setU] = useState(null);
   const [error, setError] = useState(null);
-  const [editando, setEditando] = useState(null); // copia editable
+  const [editando, setEditando] = useState(null); // copia editable de nombre, apellido y rol
+  const [ubicando, setUbicando] = useState(null); // área, puesto y habilidades (con error del área)
   const [erroresEdicion, setErroresEdicion] = useState({});
   const [confirmar, setConfirmar] = useState(null); // { titulo, mensaje, texto, variante, accion }
 
@@ -65,7 +67,6 @@ export default function Usuario() {
     if (editando.nombre.trim() !== u.nombre) cuerpo.nombre = editando.nombre.trim();
     if (editando.apellido.trim() !== u.apellido) cuerpo.apellido = editando.apellido.trim();
     if (!esYo && editando.rol !== u.rol) cuerpo.rol = editando.rol;
-    if ((editando.empleado_id ?? null) !== (u.empleado_id ?? null)) cuerpo.empleado_id = editando.empleado_id ?? null;
     if (!Object.keys(cuerpo).length) return;
     try {
       await ejecutar(() => api(`/usuarios/${u.id}`, { metodo: 'PUT', cuerpo }), 'Cambios guardados');
@@ -73,6 +74,15 @@ export default function Usuario() {
       setErroresEdicion(err.porCampo ?? {});
       throw err;
     }
+  }
+
+  async function guardarUbicacion() {
+    if (!ubicando.area_id) {
+      setUbicando((x) => ({ ...x, error: 'Elegí el área' }));
+      throw new Error('falta el área');
+    }
+    await ejecutar(() => api(`/usuarios/${u.id}/legajo`, { metodo: 'PUT', cuerpo: cuerpoUbicacion(ubicando) }),
+      u.legajo ? 'Área y habilidades actualizadas' : 'Listo: se le creó el legajo');
   }
 
   return (
@@ -106,9 +116,22 @@ export default function Usuario() {
           {u.motivo_rechazo ? <Dato etiqueta="Motivo del rechazo">{u.motivo_rechazo}</Dato> : null}
         </View>
         {!u.legajo && u.rol !== 'ADMIN' && habilitada ? (
-          <Texto suave estilo={{ fontSize: 13 }}>Sin legajo la persona entra pero no ve ningún módulo: editala y vinculala a su legajo.</Texto>
+          <Texto suave estilo={{ fontSize: 13 }}>Todavía no tiene área: entra pero no ve ningún módulo. Tocá "Área, puesto y habilidades".</Texto>
         ) : null}
       </Tarjeta>
+
+      {u.legajo ? (
+        <Tarjeta titulo="Habilidades" icono="construct-outline">
+          {u.habilidades.length ? (
+            <View style={estilos.fila}>
+              {u.habilidades.map((h) => (
+                <Insignia key={h.habilidad_id} texto={`${h.nombre} · ${NIVEL[h.nivel]}`}
+                  tono={h.requiere_certificacion && !h.certificado_vence ? 'aviso' : 'gris'} />
+              ))}
+            </View>
+          ) : <Texto suave>Sin habilidades cargadas: no se le pueden asignar tareas que pidan una.</Texto>}
+        </Tarjeta>
+      ) : null}
 
       <Tarjeta titulo="Acciones" icono="flash-outline">
         {u.estado_cuenta === 'pendiente' ? (
@@ -120,8 +143,15 @@ export default function Usuario() {
         ) : null}
 
         {puede('SEG', 'editar') && habilitada ? (
-          <Boton titulo="Editar datos, rol o legajo" icono="create-outline" variante="secundario"
-            onPress={() => { setErroresEdicion({}); setEditando({ nombre: u.nombre, apellido: u.apellido, rol: u.rol, empleado_id: u.empleado_id, legajo: u.legajo }); }} />
+          <>
+            <Boton titulo="Editar nombre o rol" icono="create-outline" variante="secundario"
+              onPress={() => { setErroresEdicion({}); setEditando({ nombre: u.nombre, apellido: u.apellido, rol: u.rol }); }} />
+            <Boton titulo="Área, puesto y habilidades" icono="business-outline" variante="secundario"
+              onPress={() => setUbicando({
+                area_id: u.area_id, area_codigo: null, area_nombre: u.area_nombre, puesto_id: u.puesto_id, puesto_nombre: u.puesto_nombre,
+                habilidades: u.habilidades.map((h) => ({ habilidad_id: h.habilidad_id, nombre: h.nombre, nivel: h.nivel, requiere_certificacion: h.requiere_certificacion })),
+              })} />
+          </>
         ) : null}
 
         {puede('SEG', 'editar') && habilitada && u.activo ? (
@@ -186,14 +216,19 @@ export default function Usuario() {
                 <Opciones opciones={OPCIONES_ROL} valor={editando.rol} alCambiar={(rol) => setEditando((e) => ({ ...e, rol }))} />
               </>
             ) : null}
-            <Selector etiqueta="Legajo del empleado" ruta="/empleados" consulta={{ estado: 'activo' }} valor={editando.empleado_id}
-              textoValor={editando.legajo} opcional placeholder="Sin legajo (no ve módulos)"
-              alCambiar={(empleadoId, e) => setEditando((x) => ({ ...x, empleado_id: empleadoId, legajo: e ? `${e.legajo} · ${e.apellido}, ${e.nombre}` : null }))}
-              mapear={(e) => ({ titulo: `${e.apellido}, ${e.nombre}`, sub: `${e.legajo} · ${e.area_nombre}${e.usuario_id && e.usuario_id !== u.id ? ' · ya tiene cuenta' : ''}` })}
-              estilo={{ marginBottom: 0 }} />
             {editando.rol !== u.rol ? (
               <Texto suave estilo={{ fontSize: 13, marginTop: espacio.m }}>Al cambiar el rol se cierran sus sesiones para que el cambio rija enseguida.</Texto>
             ) : null}
+          </>
+        ) : null}
+      </ConfirmDialog>
+
+      <ConfirmDialog visible={Boolean(ubicando)} titulo="Área, puesto y habilidades" variante="primario"
+        textoConfirmar={u.legajo ? 'Guardar' : 'Crear legajo'} alConfirmar={guardarUbicacion} alCerrar={() => setUbicando(null)}>
+        {ubicando ? (
+          <>
+            {!u.legajo ? <Texto suave estilo={{ marginBottom: espacio.m }}>Todavía no tiene legajo: se le crea con el próximo número.</Texto> : null}
+            <UbicacionLaboral valor={ubicando} error={ubicando.error} alCambiar={(v) => setUbicando({ ...v, error: null })} />
           </>
         ) : null}
       </ConfirmDialog>

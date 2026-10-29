@@ -52,6 +52,7 @@ export const TEMAS_AYUDA = [
       'Tocá el botón del QR arriba a la derecha y permití usar la cámara.',
       'Apuntá a la etiqueta: se abre la orden de trabajo, la máquina, el material o la orden de compra.',
       'Si la cámara no lee, podés escribir el código a mano.',
+      'También anda con la cámara común del teléfono: la etiqueta abre la web y, si no entraste, te pide iniciar sesión.',
     ],
   },
   {
@@ -96,10 +97,11 @@ export const TEMAS_AYUDA = [
   {
     id: 'admin', titulo: 'Administrar usuarios', icono: 'people-outline', roles: ['ADMIN'],
     pasos: [
-      '"Solicitudes de acceso": revisá quién pidió entrar. Antes de habilitar ves su ficha, la del legajo y avisos si no coinciden.',
-      'Elegí el rol y el legajo, y tocá "Habilitar". Si no corresponde, "Rechazar" con un motivo.',
+      '"Solicitudes de acceso": revisá quién pidió entrar y elegí su rol, área, puesto y habilidades.',
+      'Tocá "Habilitar": el legajo se crea solo. Si no corresponde, "Rechazar" con un motivo.',
+      '"Personal": cuántas personas trabajan, quién vino hoy y cada área con su jefe.',
       '"Usuarios": buscá por nombre, email o legajo, y filtrá por estado o rol.',
-      'En la ficha de cada usuario: editar datos, rol o legajo; mandarle un código para crear su contraseña; dar de baja o reactivar.',
+      'En la ficha de cada usuario: editar nombre o rol; cambiar área, puesto y habilidades; mandarle un código para crear su contraseña; dar de baja o reactivar.',
       'Eliminar solo se puede con cuentas sin actividad; si tiene historia, dala de baja.',
     ],
   },
@@ -114,7 +116,7 @@ export const TEMAS_AYUDA = [
   {
     id: 'problemas', titulo: 'Problemas comunes', icono: 'help-buoy-outline', roles: [],
     pasos: [
-      '"No veo ningún módulo": tu cuenta no está vinculada a un legajo. Pedile a un administrador que lo haga.',
+      '"No veo ningún módulo": tu cuenta todavía no tiene área. Pedile a un administrador que te la asigne.',
       '"Olvidé mi contraseña": en el ingreso, "¿Olvidaste tu contraseña?". Te llega un código por email.',
       '"No me llega el email": revisá Spam. El código vence a los 10 minutos.',
       '"Tarda en cargar": la primera consulta del día puede tardar unos 30 segundos.',

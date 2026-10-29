@@ -111,7 +111,17 @@ describe('fichaje', () => {
   });
 
   test('sin legajo no se puede fichar', async () => {
-    assert.equal((await api().post('/api/v1/asistencias/entrada').set(como('admin'))).status, 422);
+    // Un administrador habilitado sin área (el único rol que puede quedar sin legajo).
+    const email = `sinlegajo.${Date.now()}@correo.test`;
+    await api().post('/api/v1/auth/registro').send({ email, password: 'SinLegajo2026x', nombre: 'Sin', apellido: 'Legajo' });
+    const [{ id }] = await query('SELECT id FROM usuarios WHERE email = ?', [email]);
+    assert.equal((await api().post(`/api/v1/usuarios/${id}/habilitar`).set(como('admin')).send({ rol: 'ADMIN' })).status, 200);
+    await query('UPDATE usuarios SET email_verificado_at = UTC_TIMESTAMP() WHERE id = ?', [id]);
+    const sesion = await api().post('/api/v1/auth/login').send({ email, password: 'SinLegajo2026x' });
+    assert.equal(sesion.status, 200, JSON.stringify(sesion.body));
+    const res = await api().post('/api/v1/asistencias/entrada').set({ Authorization: `Bearer ${sesion.body.data.accessToken}` });
+    assert.equal(res.status, 422);
+    await query('UPDATE usuarios SET activo = 0 WHERE id = ?', [id]); // no deja un admin de más activo
   });
 
   test('el jefe ve los fichajes de su equipo; solo RRHH corrige', async () => {

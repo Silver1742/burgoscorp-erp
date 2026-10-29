@@ -172,9 +172,21 @@ describe('registro', () => {
     const conLegajoAjeno = await api().post(`/api/v1/usuarios/${id}/habilitar`).set(conToken(admin.accessToken))
       .send({ rol: 'EMPLEADO', empleado_id: jefe.usuario.empleadoId });
     assert.equal(conLegajoAjeno.status, 409, 'ese legajo ya tiene cuenta');
-    const hab = await api().post(`/api/v1/usuarios/${id}/habilitar`).set(conToken(admin.accessToken)).send({ rol: 'EMPLEADO' });
+    const sinArea = await api().post(`/api/v1/usuarios/${id}/habilitar`).set(conToken(admin.accessToken)).send({ rol: 'EMPLEADO' });
+    assert.equal(sinArea.status, 400, 'un empleado necesita área');
+    const [{ id: areaMec }] = await query("SELECT id FROM areas WHERE codigo = 'MEC'");
+    const [{ id: torneria }] = await query("SELECT id FROM habilidades WHERE codigo = 'TORNERIA'");
+    const hab = await api().post(`/api/v1/usuarios/${id}/habilitar`).set(conToken(admin.accessToken))
+      .send({ rol: 'EMPLEADO', area_id: areaMec, habilidades: [{ habilidad_id: torneria, nivel: 'intermedio' }] });
     assert.equal(hab.status, 200, JSON.stringify(hab.body));
     assert.equal(hab.body.data.estado_cuenta, 'habilitada');
+    assert.match(hab.body.data.legajo, /^L\d+$/, 'se le crea el legajo solo');
+    assert.equal(hab.body.data.area_nombre, 'Mecanizado');
+    const [emp] = await query(
+      `SELECT e.supervisor_id, a.jefe_empleado_id, (SELECT COUNT(*) FROM empleado_habilidades eh WHERE eh.empleado_id = e.id) AS habs
+       FROM empleados e JOIN areas a ON a.id = e.area_id WHERE e.legajo = ?`, [hab.body.data.legajo]);
+    assert.equal(emp.supervisor_id, emp.jefe_empleado_id, 'queda a cargo del jefe del área');
+    assert.equal(Number(emp.habs), 1);
     const entra = await api().post('/api/v1/auth/login').send({ email, password: 'unaClaveLarga123' });
     assert.equal(entra.status, 200);
 

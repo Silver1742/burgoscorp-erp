@@ -1,11 +1,13 @@
 // Etiqueta QR para pegar en una pieza, una máquina o un estante del depósito.
-// El contenido es un código interno (BC:OT:OT-2026-0001), nunca un enlace: al escanearlo,
-// la app le pregunta a la API qué es y si el usuario lo puede ver.
+// El QR lleva un enlace a nuestra web con el código interno (…/qr?c=BC:MAQ:CNC-02): con la cámara
+// común del teléfono abre la ficha (pidiendo entrar si hace falta), y la app lo lee directo. En los
+// dos casos la API decide qué es y si el usuario lo puede ver.
 import { useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Boton } from './ui';
+import { enlaceDeCodigo } from '../lib/qr';
 import { espacio, radio, sombra, useTema } from '../tema';
 
 /** Botón que abre la etiqueta en grande (para mostrarla, imprimirla o sacarle captura). */
@@ -25,7 +27,7 @@ export default function EtiquetaQR({ codigo, titulo, sub, textoBoton = 'Etiqueta
             </Pressable>
             {/* El código, siempre negro sobre blanco para que se lea bien impreso y con poca luz. */}
             <View style={estilos.marco}>
-              <QRCode value={codigo} size={220} color="#000000" backgroundColor="#ffffff" ecl="M" />
+              <QRCode value={enlaceDeCodigo(codigo)} size={220} color="#000000" backgroundColor="#ffffff" ecl="M" />
             </View>
             <Text style={[estilos.titulo, { color: t.texto }]} numberOfLines={2}>{titulo}</Text>
             {sub ? <Text style={[estilos.sub, { color: t.textoSuave }]} numberOfLines={2}>{sub}</Text> : null}

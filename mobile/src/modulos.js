@@ -219,6 +219,8 @@ export const MODULOS = [
     descripcion: 'Legajos, habilidades, asistencia y licencias',
     // Accesos a pantallas propias del módulo (además de los listados).
     acciones: [
+      { titulo: 'Personal: cuántos somos y dónde', icono: 'people-circle-outline', ruta: () => '/modulos/rrhh/personal',
+        visible: ({ usuario }) => ['ADMIN', 'GERENCIA', 'JEFE'].includes(usuario.rol), rapido: 'Personal' },
       { titulo: 'Mi legajo', icono: 'id-card-outline', ruta: (u) => `/modulos/rrhh/legajo/${u.empleadoId}`, visible: ({ usuario }) => Boolean(usuario.empleadoId) },
       { titulo: 'Mis licencias y vacaciones', icono: 'airplane-outline', ruta: () => '/modulos/rrhh/licencias', visible: ({ usuario }) => Boolean(usuario.empleadoId), rapido: 'Pedir licencia' },
       { titulo: 'Aprobar licencias', icono: 'checkmark-done-outline', ruta: () => '/modulos/rrhh/aprobaciones', visible: ({ puede }) => puede('RRHH', 'aprobar'), rapido: 'Aprobar licencias' },

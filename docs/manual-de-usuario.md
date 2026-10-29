@@ -57,8 +57,12 @@ bien, rojo si hubo un problema). Antes de algo que no se puede deshacer, la app 
 | **Gerencia** | **Ver todo** (todos los módulos y el tablero de la empresa) sin modificar nada. |
 | **Administrador** | Todo, más **usuarios**: habilitar solicitudes, crear cuentas, editarlas, darlas de baja. |
 
-Si entrás y **no ves ningún módulo**, tu cuenta no está vinculada a tu legajo: pedíselo a un
+Si entrás y **no ves ningún módulo**, tu cuenta todavía no tiene área: pedíselo a un
 administrador.
+
+El **legajo** es tu ficha como empleado (número, área, puesto, jefe y habilidades). Se crea solo
+cuando el administrador habilita tu cuenta. El detalle de qué puede hacer cada área y cada
+habilidad está en [capacidades-por-area.md](capacidades-por-area.md).
 
 ---
 
@@ -81,6 +85,9 @@ En **Inicio**, tarjeta **Fichaje**: **Registrar entrada** al llegar y **Registra
 ### Escanear un QR
 Botón **QR** arriba → permití la cámara → apuntá a la etiqueta. Se abre lo que corresponde
 (orden de trabajo, máquina, material, orden de compra). Si no lee, escribí el código a mano.
+
+También sirve **la cámara común del teléfono**: la etiqueta es un enlace a la web de BurgosCorp.
+Si no entraste, te pide iniciar sesión y después abre la máquina o la pieza.
 
 ### Reportar una falla de máquina
 Escaneá el QR de la máquina o **Inicio → Reportar falla**. Contá qué pasa, sacá una foto y
@@ -119,12 +126,14 @@ Todo está en **Módulos → Usuarios** (o el botón **Usuarios** en Inicio).
 
 ### Solicitudes de acceso
 Cuando alguien pide entrar, en Inicio aparece **"Hay N personas esperando acceso"**.
-1. Tocá **Habilitar** en la solicitud.
-2. Revisá la **vista previa**: quién es, su email, cómo pidió acceso y, al elegir el legajo, sus
-   datos (área, puesto, ingreso). La app **avisa** si el nombre o el email no coinciden con el
-   legajo, y **no deja** usar un legajo que ya tiene cuenta.
-3. Elegí el **rol** y el **legajo** → **Habilitar**. Le llega un email avisándole.
-4. Si no corresponde: **Rechazar**, con un motivo opcional (también le llega por email).
+1. Tocá **Habilitar** en la solicitud. Arriba ves quién es: su email, cómo pidió acceso y cuándo.
+2. Elegí el **rol** y **dónde va a trabajar**: el **área**, el **puesto** y sus **habilidades**
+   (primero aparecen las de esa área) con el nivel de cada una.
+3. Tocá **Habilitar**: se le **crea el legajo solo**, con el número siguiente y el jefe del área
+   como supervisor. Si es jefe y el área no tiene jefe, queda a cargo. Le llega un email avisándole.
+4. Si RRHH ya le había cargado el legajo, marcá **"RRHH ya le cargó el legajo"** y elegilo: la app
+   avisa si el nombre o el email no coinciden y no deja usar uno que ya tiene cuenta.
+5. Si no corresponde: **Rechazar**, con un motivo opcional (también le llega por email).
 
 ### Lista de usuarios
 - **Buscar** por nombre, email o legajo.
@@ -134,14 +143,20 @@ Cuando alguien pide entrar, en Inicio aparece **"Hay N personas esperando acceso
 ### Acciones en la ficha
 | Acción | Qué hace |
 |---|---|
-| **Editar datos, rol o legajo** | Cambia nombre, apellido, rol o legajo. Si cambia el rol, se cierran sus sesiones. |
+| **Editar nombre o rol** | Cambia nombre, apellido o rol. Si cambia el rol, se cierran sus sesiones. |
+| **Área, puesto y habilidades** | Lo cambia de área o de puesto y le agrega o quita habilidades. Si no tenía legajo, se le crea. |
 | **Mandarle un código para crear su contraseña** | Le llega un email con un código. Vos nunca ves su contraseña. |
 | **Dar de baja** | No puede entrar más y se cierran sus sesiones. Su historia se conserva. Se puede **Reactivar**. |
 | **Eliminar** | Borra la cuenta del todo. Solo si **no tiene actividad** (si la tiene, dala de baja). |
 
 ### Nuevo usuario
-**Usuarios → Nuevo**: elegí primero el **legajo** (completa nombre y email laboral), el rol, y dejá
-marcado **"Mandarle un email…"** para que cree su contraseña.
+**Usuarios → Nuevo**: nombre, apellido, email y rol; después **área, puesto y habilidades** (el
+legajo se crea solo). Dejá marcado **"Mandarle un email…"** para que cree su contraseña.
+
+### Personal
+**Recursos humanos → Personal** (o la tarjeta de Inicio): cuántas personas trabajan, cuántas
+ficharon hoy y están trabajando, quién está de licencia, cada área con su jefe, y las **cuentas sin
+área** para ubicarlas. Los jefes ven solo su área.
 
 No podés cambiarte el rol, darte de baja ni eliminarte a vos mismo, y el sistema nunca queda sin
 un administrador activo.
@@ -159,7 +174,7 @@ un administrador activo.
 
 | Problema | Qué hacer |
 |---|---|
-| No veo ningún módulo | Tu cuenta no tiene legajo: pedile al administrador que lo vincule. |
+| No veo ningún módulo | Tu cuenta no tiene área: pedile al administrador que te la asigne. |
 | No me llega el email | Revisá **Spam**. Los códigos vencen a los 10 minutos: pedí otro. |
 | "Tu cuenta está pendiente" | Un administrador todavía no la habilitó. |
 | Tarda en cargar | La primera vez del día el servidor tarda unos 30 segundos en despertar. |

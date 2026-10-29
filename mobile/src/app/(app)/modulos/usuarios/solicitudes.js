@@ -1,14 +1,15 @@
 // Solicitudes de acceso (como en el portal R3): quien se registra queda pendiente hasta que el
-// administrador lo habilita con un rol (y el legajo del empleado) o lo rechaza con un motivo.
-// En los dos casos a la persona le llega un email.
+// administrador lo habilita o lo rechaza con un motivo. Al habilitarlo se elige su rol y dónde va a
+// trabajar (área, puesto y habilidades): con eso se le crea el legajo solo. En los dos casos le llega un email.
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  Pantalla, EncabezadoPagina, Tarjeta, Insignia, Boton, Campo, Opciones, EsqueletoLista, ErrorCarga, Vacio, Avatar, Dato,
+  Pantalla, EncabezadoPagina, Tarjeta, Insignia, Boton, Campo, Opciones, EsqueletoLista, ErrorCarga, Vacio, Avatar, Dato, Casilla,
 } from '../../../../componentes/ui';
 import ConfirmDialog from '../../../../componentes/ConfirmDialog';
 import Selector from '../../../../componentes/Selector';
+import UbicacionLaboral, { UBICACION_VACIA, cuerpoUbicacion } from '../../../../componentes/UbicacionLaboral';
 import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { ROLES, fechaCorta, fechaHoraCorta } from '../../../../modulos';
@@ -48,8 +49,8 @@ function controles(usuario, empleado) {
   return avisos;
 }
 
-/** Ficha de quién pide acceso y, si ya se eligió, del legajo al que se lo vincula. */
-function VistaPrevia({ usuario, empleado, rol }) {
+/** Ficha de quién pide acceso y de su legajo: el que se le va a crear o el existente que se eligió. */
+function VistaPrevia({ usuario, empleado, rol, ubicacion }) {
   const t = useTema();
   const avisos = controles(usuario, empleado);
   const redes = usuario.redes ? usuario.redes.split(',').map((r) => METODO[r] ?? r).join(', ') : null;
@@ -70,6 +71,17 @@ function VistaPrevia({ usuario, empleado, rol }) {
         </View>
         <Text style={{ color: t.textoSuave, fontSize: 13, marginTop: espacio.s }}>Pidió acceso el {fechaHoraCorta(usuario.created_at)}</Text>
       </View>
+
+      {!empleado && ubicacion?.area_id ? (
+        <View style={[estilos.ficha, { borderColor: t.borde }]}>
+          <Text style={[estilos.subtitulo, { color: t.textoSuave }]}>SE LE CREA EL LEGAJO</Text>
+          <View style={estilos.datos}>
+            <Dato etiqueta="Área">{ubicacion.area_nombre}</Dato>
+            <Dato etiqueta="Puesto">{ubicacion.puesto_nombre ?? '—'}</Dato>
+            <Dato etiqueta="Habilidades">{ubicacion.habilidades.length ? ubicacion.habilidades.map((h) => h.nombre).join(', ') : 'Ninguna todavía'}</Dato>
+          </View>
+        </View>
+      ) : null}
 
       {empleado ? (
         <View style={[estilos.ficha, { borderColor: t.borde }]}>
@@ -103,7 +115,8 @@ export default function SolicitudesAcceso() {
   const toast = useToast();
   const [lista, setLista] = useState(null);
   const [error, setError] = useState(null);
-  const [habilitando, setHabilitando] = useState(null); // { usuario, rol, empleado_id, legajo, empleado }
+  // { usuario, rol, ubicacion, existente (vincular un legajo que ya cargó RRHH), empleado_id, legajo, empleado, errorArea }
+  const [habilitando, setHabilitando] = useState(null);
   const [rechazando, setRechazando] = useState(null);
   const [motivo, setMotivo] = useState('');
 
@@ -118,9 +131,15 @@ export default function SolicitudesAcceso() {
   useEffect(() => { cargar(); }, [cargar]);
 
   async function habilitar() {
+    const h = habilitando;
+    if (!h.existente && h.rol !== 'ADMIN' && !h.ubicacion.area_id) {
+      setHabilitando({ ...h, errorArea: 'Elegí el área donde va a trabajar' });
+      throw new Error('falta el área');
+    }
     try {
-      await api(`/usuarios/${habilitando.usuario.id}/habilitar`, {
-        metodo: 'POST', cuerpo: { rol: habilitando.rol, empleado_id: habilitando.empleado_id ?? undefined },
+      await api(`/usuarios/${h.usuario.id}/habilitar`, {
+        metodo: 'POST',
+        cuerpo: { rol: h.rol, ...(h.existente ? { empleado_id: h.empleado_id ?? undefined } : cuerpoUbicacion(h.ubicacion)) },
       });
       toast.exito(`${habilitando.usuario.nombre} ya puede entrar. Le avisamos por email.`);
       cargar();
@@ -145,7 +164,7 @@ export default function SolicitudesAcceso() {
   return (
     <Pantalla>
       <EncabezadoPagina titulo="Solicitudes de acceso" icono="person-add"
-        sub="Nadie entra hasta que lo habilitás. Elegí su rol y, si es empleado, vinculalo a su legajo." />
+        sub="Nadie entra hasta que lo habilitás. Elegí su rol y dónde va a trabajar: el legajo se crea solo." />
       {error ? <Tarjeta><ErrorCarga error={error} onReintentar={cargar} /></Tarjeta> : null}
       {!lista && !error ? <Tarjeta><EsqueletoLista filas={2} /></Tarjeta> : null}
       {lista?.length === 0 ? <Tarjeta><Vacio icono="checkmark-done-outline" titulo="No hay solicitudes pendientes" /></Tarjeta> : null}
@@ -161,28 +180,34 @@ export default function SolicitudesAcceso() {
           </Text>
           <View style={[estilos.fila, { marginTop: espacio.m }]}>
             <Boton titulo="Habilitar" icono="checkmark" chico variante="exito" estilo={{ marginBottom: 0 }}
-              onPress={() => setHabilitando({ usuario: u, rol: 'EMPLEADO', empleado_id: null, legajo: null, empleado: null })} />
+              onPress={() => setHabilitando({ usuario: u, rol: 'EMPLEADO', ubicacion: UBICACION_VACIA, existente: false, empleado_id: null, legajo: null, empleado: null })} />
             <Boton titulo="Rechazar" chico variante="contornoPeligro" estilo={{ marginBottom: 0 }} onPress={() => setRechazando(u)} />
           </View>
         </Tarjeta>
       ))}
 
       <ConfirmDialog visible={Boolean(habilitando)} titulo="Habilitar cuenta" variante="primario" textoConfirmar="Habilitar"
-        deshabilitado={Boolean(habilitando?.empleado?.usuario_id)}
+        deshabilitado={Boolean(habilitando?.existente && habilitando?.empleado?.usuario_id)}
         alConfirmar={habilitar} alCerrar={() => setHabilitando(null)}>
         {habilitando ? (
           <>
-            <VistaPrevia usuario={habilitando.usuario} empleado={habilitando.empleado} rol={habilitando.rol} />
+            <VistaPrevia usuario={habilitando.usuario} empleado={habilitando.existente ? habilitando.empleado : null}
+              rol={habilitando.rol} ubicacion={habilitando.ubicacion} />
             <Text style={[estilos.etiqueta, { color: t.texto }]}>Rol</Text>
             <Opciones opciones={OPCIONES_ROL} valor={habilitando.rol} alCambiar={(rol) => setHabilitando((h) => ({ ...h, rol }))} />
-            <Selector etiqueta="Legajo del empleado" ruta="/empleados" consulta={{ estado: 'activo' }} valor={habilitando.empleado_id}
-              textoValor={habilitando.legajo} opcional placeholder="Sin legajo (no ve módulos)"
-              ayuda="Sin legajo la persona entra pero no ve ningún módulo."
-              alCambiar={(id, e) => setHabilitando((h) => ({
-                ...h, empleado_id: id, empleado: e ?? null, legajo: e ? `${e.legajo} · ${e.apellido}, ${e.nombre}` : null,
-              }))}
-              mapear={(e) => ({ titulo: `${e.apellido}, ${e.nombre}`, sub: `${e.legajo} · ${e.area_nombre}${e.usuario_id ? ' · ya tiene cuenta' : ''}` })}
-              estilo={{ marginBottom: 0 }} />
+            {habilitando.existente ? (
+              <Selector etiqueta="Legajo que cargó RRHH" ruta="/empleados" consulta={{ estado: 'activo' }} valor={habilitando.empleado_id}
+                textoValor={habilitando.legajo} placeholder="Elegí el legajo"
+                alCambiar={(id, e) => setHabilitando((h) => ({
+                  ...h, empleado_id: id, empleado: e ?? null, legajo: e ? `${e.legajo} · ${e.apellido}, ${e.nombre}` : null,
+                }))}
+                mapear={(e) => ({ titulo: `${e.apellido}, ${e.nombre}`, sub: `${e.legajo} · ${e.area_nombre}${e.usuario_id ? ' · ya tiene cuenta' : ''}` })} />
+            ) : (
+              <UbicacionLaboral valor={habilitando.ubicacion} error={habilitando.errorArea}
+                alCambiar={(ubicacion) => setHabilitando((h) => ({ ...h, ubicacion, errorArea: null }))} />
+            )}
+            <Casilla marcada={habilitando.existente} etiqueta="RRHH ya le cargó el legajo (vincular ese en vez de crear uno)"
+              alCambiar={(existente) => setHabilitando((h) => ({ ...h, existente }))} />
           </>
         ) : null}
       </ConfirmDialog>

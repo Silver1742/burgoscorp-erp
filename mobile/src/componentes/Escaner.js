@@ -10,6 +10,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Boton, Campo, Tarjeta } from './ui';
 import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
+import { codigoDeQR } from '../lib/qr';
 import { espacio, radio, useTema } from '../tema';
 
 const FORMATO = /^[A-Za-z0-9:._\-/]{1,100}$/;
@@ -41,7 +42,8 @@ export default function Escaner({ alEncontrar, tipos, ayuda = 'Apuntá al códig
   const ocupado = useRef(false);
 
   const resolver = useCallback(async (codigo) => {
-    const texto = String(codigo ?? '').trim();
+    // Acepta el enlace impreso en las etiquetas (solo de nuestro dominio) o el código suelto.
+    const texto = codigoDeQR(codigo) ?? '';
     if (ocupado.current) return;
     if (!FORMATO.test(texto)) {
       toast.error('Ese código no es de BurgosCorp.');

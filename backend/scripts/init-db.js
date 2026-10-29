@@ -10,6 +10,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import mysql from 'mysql2/promise';
 import env from '../src/config/env.js';
+import { migrar } from './migraciones.js';
 
 const carpeta = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'db');
 
@@ -65,6 +66,8 @@ try {
       console.log(`La base "${env.DB_NAME}" ya tiene ${tablas} tablas: no se toca nada.`);
     }
   }
+  // Ajustes sobre una base existente (idempotentes): ver scripts/migraciones.js.
+  await migrar(conexion);
 } finally {
   await conexion.end();
 }
