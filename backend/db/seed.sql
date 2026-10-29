@@ -38,7 +38,8 @@ INSERT INTO modulos (codigo, nombre) VALUES
 CREATE TEMPORARY TABLE tmp_permisos (
   rol VARCHAR(20), modulo VARCHAR(10),
   v BOOLEAN, c BOOLEAN, e BOOLEAN, b BOOLEAN, a BOOLEAN,
-  alcance VARCHAR(10), duenia VARCHAR(10)
+  alcance VARCHAR(10), duenia VARCHAR(10),
+  PRIMARY KEY (rol, modulo) -- MySQL con sql_require_primary_key (Aiven) lo exige
 );
 
 INSERT INTO tmp_permisos VALUES

@@ -31,17 +31,39 @@ const conexion = await mysql.createConnection({
   charset: 'utf8mb4',
 });
 
+/** Tablas que llena seed.sql, en el orden en que las llena. */
+function tablasDelSeed(sql) {
+  return [...new Set([...sql.matchAll(/^INSERT INTO (\w+)/gim)].map((m) => m[1]))]
+    .filter((t) => !t.startsWith('tmp_'));
+}
+
+const aplicar = async (archivo) => {
+  await conexion.query(adaptar(await fs.readFile(path.join(carpeta, archivo), 'utf8')));
+  console.log(`${archivo} aplicado.`);
+};
+
 try {
   const [[{ tablas }]] = await conexion.query(
     'SELECT COUNT(*) AS tablas FROM information_schema.tables WHERE table_schema = ?', [env.DB_NAME]);
-  if (tablas > 0) {
-    console.log(`La base "${env.DB_NAME}" ya tiene ${tablas} tablas: no se toca nada.`);
-  } else {
-    for (const archivo of ['schema.sql', 'seed.sql']) {
-      await conexion.query(adaptar(await fs.readFile(path.join(carpeta, archivo), 'utf8')));
-      console.log(`${archivo} aplicado.`);
-    }
+  if (tablas === 0) {
+    await aplicar('schema.sql');
+    await aplicar('seed.sql');
     console.log(`Base "${env.DB_NAME}" lista. Para los usuarios de prueba: npm run seed (en producción, con SEED_PASSWORD).`);
+  } else {
+    // seed.sql termina cargando las secuencias: si no están, la carga se cortó a la mitad. Se reintenta
+    // solo si todavía no hay usuarios (o sea, nadie empezó a usar la base).
+    const [[{ secuencias }]] = await conexion.query('SELECT COUNT(*) AS secuencias FROM secuencias');
+    const [[{ usuarios }]] = await conexion.query('SELECT COUNT(*) AS usuarios FROM usuarios');
+    if (secuencias === 0 && usuarios === 0) {
+      console.log('La carga de catálogos quedó incompleta: se vuelve a hacer.');
+      const sql = await fs.readFile(path.join(carpeta, 'seed.sql'), 'utf8');
+      await conexion.query('SET FOREIGN_KEY_CHECKS = 0');
+      for (const tabla of tablasDelSeed(sql).reverse()) await conexion.query(`DELETE FROM \`${tabla}\``);
+      await conexion.query('SET FOREIGN_KEY_CHECKS = 1');
+      await aplicar('seed.sql');
+    } else {
+      console.log(`La base "${env.DB_NAME}" ya tiene ${tablas} tablas: no se toca nada.`);
+    }
   }
 } finally {
   await conexion.end();
