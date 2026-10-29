@@ -17,7 +17,7 @@ const router = Router();
 router.post('/registro', limiteAuth, validar({ body: v.registro }), async (req, res) => {
   await auth.registrar(req.validado.body, req);
   // Misma respuesta exista o no el email: la cuenta queda pendiente hasta que la habilite un administrador.
-  res.status(202).json({ ok: true, data: { mensaje: 'Solicitud enviada. Un administrador tiene que habilitar tu cuenta: te avisamos por email.' } });
+  res.status(202).json({ ok: true, data: { mensaje: 'Solicitud enviada. Cuando un administrador habilite tu cuenta, te avisamos por email.' } });
 });
 
 router.post('/login', limiteAuth, validar({ body: v.login }), async (req, res) => {

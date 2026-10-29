@@ -36,7 +36,7 @@ export default function Registro() {
         nombre: datos.nombre.trim(), apellido: datos.apellido.trim(),
         email: datos.email.trim(), password: datos.password,
       });
-      toast.exito('Solicitud enviada. Un administrador tiene que habilitar tu cuenta: te avisamos por email.', { duracion: 7000 });
+      toast.exito('Solicitud enviada. Cuando un administrador habilite tu cuenta, te avisamos por email.', { duracion: 7000 });
       router.replace('/login');
     } catch (err) {
       setErrores(err.porCampo ?? {});

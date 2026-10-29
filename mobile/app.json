@@ -6,6 +6,11 @@
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#141416"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.burgoscorp.erp"
@@ -19,6 +24,7 @@
       },
       "package": "com.burgoscorp.erp",
       "allowBackup": false,
+      "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "android.permission.CAMERA"
       ],
