@@ -4,6 +4,7 @@
   "description": "API REST del ERP de BurgosCorp",
   "main": "src/server.js",
   "scripts": {
+    "prestart": "node scripts/restablecer-admin.js",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node scripts/seed.js",
