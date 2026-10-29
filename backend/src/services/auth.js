@@ -4,10 +4,10 @@ import env from '../config/env.js';
 import { query, queryOne, transaccion } from '../config/db.js';
 import { errores } from '../utils/errores.js';
 import { auditar } from './auditoria.js';
-import { buscarUsuarioPorId, perfilPublico } from './usuarios.js';
+import { buscarUsuarioPorId, perfilPublico, exigirCuentaHabilitada } from './usuarios.js';
 import { firmarAcceso, firmarTemporal, emitirRefresh, rotarRefresh, revocarFamilia, revocarTodas } from './tokens.js';
-import { enviarCodigoVerificacion } from './verificacion.js';
 import * as intentos from './intentos.js';
+import { notificar } from './notificaciones.js';
 
 const COSTO_BCRYPT = 12;
 // Hash de relleno: si el email no existe se compara igual, para que el tiempo
@@ -27,30 +27,45 @@ export async function emitirSesion(usuario, req) {
   };
 }
 
+/** Usuarios administradores activos (reciben las solicitudes de acceso). */
+async function administradores() {
+  const filas = await query(`SELECT u.id FROM usuarios u JOIN roles r ON r.id = u.rol_id
+    WHERE r.codigo = 'ADMIN' AND u.activo = 1 AND u.estado_cuenta = 'habilitada'`);
+  return filas.map((f) => f.id);
+}
+
+/** Avisa a los administradores que hay una solicitud de acceso para revisar. */
+export async function avisarSolicitud(usuarioId, nombre, apellido) {
+  await notificar(await administradores(), {
+    tipo: 'cuenta_pendiente', titulo: `Solicitud de acceso: ${nombre} ${apellido}`.slice(0, 120),
+    mensaje: 'Revisala en Usuarios → Solicitudes de acceso.', entidad: 'usuario', entidadId: usuarioId,
+  });
+}
+
+/**
+ * Solicitud de acceso (como en el portal R3): la cuenta queda 'pendiente' y no puede entrar hasta
+ * que un administrador la habilita y le asigna rol y legajo. No se entrega sesión, y la respuesta
+ * es la misma exista o no el email (no revela quién tiene cuenta).
+ */
 export async function registrar({ email, password, nombre, apellido }, req) {
-  // En producción las cuentas las crea un administrador (REGISTRO_ABIERTO=false). Se responde
-  // igual exista o no el email, para no revelar quién tiene cuenta.
   if (!env.registroAbierto) throw errores.prohibido('El registro está cerrado. Pedile la cuenta a un administrador.');
-  const existe = await queryOne('SELECT id FROM usuarios WHERE email = ?', [email]);
-  if (existe) throw errores.conflicto('No se pudo registrar con ese email. Si ya tenés cuenta, iniciá sesión.');
-
-  const hash = await bcrypt.hash(password, COSTO_BCRYPT);
-  // Toda cuenta nueva es EMPLEADO sin legajo: un administrador la vincula y le asigna el rol.
-  const res = await query(
-    `INSERT INTO usuarios (email, password_hash, nombre, apellido, rol_id)
-     VALUES (?, ?, ?, ?, (SELECT id FROM roles WHERE codigo = 'EMPLEADO'))`,
-    [email, hash, nombre, apellido],
-  );
-  await auditar(req, { accion: 'registro', entidad: 'usuario', entidadId: res.insertId, usuarioId: res.insertId });
-
-  const usuario = await buscarUsuarioPorId(res.insertId);
-  // Se entrega la sesión, pero hasta confirmar el email solo puede usar /auth (ver requiereEmailVerificado).
-  try {
-    await enviarCodigoVerificacion(usuario);
-  } catch (err) {
-    console.error('[registro] no se pudo enviar el código de verificación', err.message);
+  const hash = await bcrypt.hash(password, COSTO_BCRYPT); // también si ya existe: iguala el tiempo de respuesta
+  const existe = await queryOne('SELECT id, estado_cuenta FROM usuarios WHERE email = ?', [email]);
+  if (existe) {
+    await auditar(req, { accion: 'registro_duplicado', usuarioId: existe.id, detalle: { estado: existe.estado_cuenta } });
+    return;
   }
-  return emitirSesion(usuario, req);
+  try {
+    const res = await query(
+      `INSERT INTO usuarios (email, password_hash, nombre, apellido, rol_id, estado_cuenta)
+       VALUES (?, ?, ?, ?, (SELECT id FROM roles WHERE codigo = 'EMPLEADO'), 'pendiente')`,
+      [email, hash, nombre, apellido],
+    );
+    await auditar(req, { accion: 'registro', entidad: 'usuario', entidadId: res.insertId, usuarioId: res.insertId });
+    await avisarSolicitud(res.insertId, nombre, apellido);
+  } catch (err) {
+    if (err.code !== 'ER_DUP_ENTRY') throw err; // dos registros simultáneos con el mismo email: misma respuesta
+  }
 }
 
 /**
@@ -66,7 +81,7 @@ export async function login({ email, password }, req) {
     await auditar(req, { accion: 'login_bloqueado', detalle: { metodo: 'password' } });
     throw err;
   }
-  const fila = await queryOne('SELECT id, password_hash, activo, totp_habilitado FROM usuarios WHERE email = ?', [email]);
+  const fila = await queryOne('SELECT id, password_hash, activo, estado_cuenta, totp_habilitado FROM usuarios WHERE email = ?', [email]);
 
   const passwordOk = await bcrypt.compare(password, fila?.password_hash ?? HASH_FALSO);
   if (!fila || !fila.password_hash || !passwordOk) {
@@ -75,9 +90,12 @@ export async function login({ email, password }, req) {
     throw credencialesInvalidas();
   }
 
-  if (!fila.activo) {
-    await auditar(req, { accion: 'login_cuenta_inactiva', usuarioId: fila.id });
-    throw errores.prohibido('Tu cuenta está desactivada. Contactá a un administrador.');
+  // El estado se informa recién con la contraseña correcta: no revela qué cuentas existen.
+  try {
+    exigirCuentaHabilitada(fila);
+  } catch (err) {
+    await auditar(req, { accion: 'login_cuenta_no_habilitada', usuarioId: fila.id, detalle: { estado: fila.estado_cuenta, activo: fila.activo } });
+    throw err;
   }
 
   // Con 2FA, los fallos acumulados NO se borran todavía: recién al completar el segundo paso.
@@ -94,9 +112,9 @@ export async function login({ email, password }, req) {
 export async function renovar(refreshToken, req) {
   const { usuarioId, refreshToken: nuevo } = await rotarRefresh(refreshToken, req);
   const usuario = await buscarUsuarioPorId(usuarioId);
-  if (!usuario?.activo) {
+  if (!usuario?.activo || usuario.estado_cuenta !== 'habilitada') {
     await revocarTodas(usuarioId);
-    throw errores.noAutenticado('Tu cuenta está desactivada');
+    throw errores.noAutenticado('Tu cuenta no está activa');
   }
   return { accessToken: firmarAcceso(usuario), refreshToken: nuevo, usuario: perfilPublico(usuario) };
 }

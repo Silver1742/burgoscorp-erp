@@ -30,8 +30,9 @@ const esquema = z.object({
   REFRESH_TOKEN_DAYS: z.coerce.number().int().min(1).max(30).default(7),
   // Clave propia para el HMAC de los códigos por email y de respaldo (no se reutiliza la de los JWT).
   CODIGOS_HMAC_KEY: z.string().min(32, 'CODIGOS_HMAC_KEY debe tener al menos 32 caracteres'),
-  // Registro libre de cuentas. Por defecto, cerrado en producción (las cuentas las crea un admin).
-  REGISTRO_ABIERTO: z.enum(['true', 'false']).optional(),
+  // Solicitudes de acceso desde la app (quedan pendientes hasta que las habilita un administrador).
+  // false: solo el administrador crea cuentas.
+  REGISTRO_ABIERTO: z.enum(['true', 'false']).default('true'),
   // Zona horaria de la empresa (fechas de "hoy", vencimientos, fichaje).
   TZ_EMPRESA: z.string().default('America/Argentina/Buenos_Aires')
     .refine((v) => { try { new Intl.DateTimeFormat('es-AR', { timeZone: v }); return true; } catch { return false; } }, 'TZ_EMPRESA no es una zona horaria válida'),
@@ -95,7 +96,7 @@ const lista = (v) => v.split(',').map((o) => o.trim()).filter(Boolean);
 export default {
   ...env,
   esProduccion: env.NODE_ENV === 'production',
-  registroAbierto: env.REGISTRO_ABIERTO ? env.REGISTRO_ABIERTO === 'true' : env.NODE_ENV !== 'production',
+  registroAbierto: env.REGISTRO_ABIERTO === 'true',
   corsOrigins: lista(env.CORS_ORIGINS),
   googleClientIds: lista(env.GOOGLE_CLIENT_IDS),
   oauthRedirectUris: lista(env.OAUTH_REDIRECT_URIS),

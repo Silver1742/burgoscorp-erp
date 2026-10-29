@@ -27,12 +27,20 @@ async function ultimoCodigo(para) {
 }
 const limpiarBandeja = () => bandejaDePrueba.splice(0);
 
+/**
+ * Solicitud de acceso + habilitación (como si lo hiciera el admin) + primer login. Igual que la app
+ * al abrir la pantalla de confirmar email, pide el código de verificación.
+ */
 async function registrar() {
   const email = `prueba.${Date.now()}.${Math.floor(Math.random() * 1e6)}@correo.test`;
   const res = await api().post('/api/v1/auth/registro')
     .send({ email, password: 'claveInicial123', nombre: 'Prueba', apellido: 'Test' });
-  assert.equal(res.status, 201);
-  return { email, ...res.body.data };
+  assert.equal(res.status, 202);
+  await query("UPDATE usuarios SET estado_cuenta = 'habilitada' WHERE email = ?", [email]);
+  const sesion = await api().post('/api/v1/auth/login').send({ email, password: 'claveInicial123' });
+  assert.equal(sesion.status, 200, JSON.stringify(sesion.body));
+  await api().post('/api/v1/auth/email/enviar').set(conToken(sesion.body.data.accessToken));
+  return { email, ...sesion.body.data };
 }
 
 describe('TOTP (RFC 6238)', () => {

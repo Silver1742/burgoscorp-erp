@@ -232,8 +232,15 @@ CREATE TABLE usuarios (
   bloqueado_hasta     DATETIME NULL,
   ultimo_login_at     DATETIME NULL,
   activo              BOOLEAN NOT NULL DEFAULT 1,
+  -- Quien se registra solo (o entra por primera vez con una red social) queda 'pendiente' hasta que
+  -- un administrador lo habilita; no puede iniciar sesión. Las cuentas que crea el admin nacen habilitadas.
+  estado_cuenta       ENUM('pendiente','habilitada','rechazada') NOT NULL DEFAULT 'habilitada',
+  motivo_rechazo      VARCHAR(255) NULL,
+  habilitada_por      INT UNSIGNED NULL,
+  habilitada_at       DATETIME NULL,
   created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_usr_estado (estado_cuenta),
   CONSTRAINT fk_usr_rol      FOREIGN KEY (rol_id)      REFERENCES roles(id),
   CONSTRAINT fk_usr_empleado FOREIGN KEY (empleado_id) REFERENCES empleados(id)
 ) ENGINE=InnoDB;

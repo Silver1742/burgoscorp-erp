@@ -50,6 +50,8 @@ after(async () => {
   await pool.end();
 });
 
+const habilitar = (email) => query("UPDATE usuarios SET estado_cuenta = 'habilitada' WHERE email = ?", [email]);
+
 function idTokenGoogle(datos, { clave = claveGoogle.privateKey, aud = env.googleClientIds[0] } = {}) {
   return jwt.sign({ email_verified: true, given_name: 'Ana', family_name: 'Paz', ...datos }, clave, {
     algorithm: 'RS256', keyid: 'clave-1', audience: aud, issuer: 'https://accounts.google.com', expiresIn: '5m',
@@ -75,19 +77,22 @@ describe('Google', () => {
   const sub = `g-${Date.now()}`;
   const email = `ana.${Date.now()}@gmail.test`;
 
-  test('id_token válido crea un usuario EMPLEADO con email verificado', async () => {
+  test('la primera vez es una solicitud de acceso: queda pendiente hasta que la habilite el admin', async () => {
     const res = await api().post('/api/v1/auth/social/google').send({ idToken: idTokenGoogle({ sub, email }) });
-    assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.equal(res.body.data.usuario.email, email);
-    assert.equal(res.body.data.usuario.rol, 'EMPLEADO');
-    assert.equal(res.body.data.usuario.emailVerificado, true);
-    assert.equal(res.body.data.usuario.tienePassword, false);
+    assert.equal(res.status, 403, JSON.stringify(res.body));
+    assert.equal(res.body.error.codigo, 'CUENTA_PENDIENTE');
+    const [u] = await query('SELECT estado_cuenta, email_verificado_at IS NOT NULL AS verificado FROM usuarios WHERE email = ?', [email]);
+    assert.equal(u.estado_cuenta, 'pendiente');
+    assert.equal(u.verificado, 1);
   });
 
-  test('la segunda vez entra al mismo usuario', async () => {
+  test('ya habilitada, entra al mismo usuario', async () => {
+    await habilitar(email);
     const a = await api().post('/api/v1/auth/social/google').send({ idToken: idTokenGoogle({ sub, email }) });
     const [{ n }] = await query('SELECT COUNT(*) AS n FROM usuarios WHERE email = ?', [email]);
-    assert.equal(a.status, 200);
+    assert.equal(a.status, 200, JSON.stringify(a.body));
+    assert.equal(a.body.data.usuario.rol, 'EMPLEADO');
+    assert.equal(a.body.data.usuario.tienePassword, false);
     assert.equal(n, 1);
   });
 
@@ -107,16 +112,19 @@ describe('Google', () => {
   });
 
   test('una cuenta registrada con el email de otro y sin verificar no se le queda al atacante', async () => {
-    // El atacante registra el email de la víctima con su contraseña y nunca lo confirma.
+    // El atacante pide acceso con el email de la víctima y su propia contraseña, y el admin la habilita
+    // creyendo que es ella (el email nunca se confirmó).
     const email = `victima.${Date.now()}@correo.test`;
     const atacante = await api().post('/api/v1/auth/registro').send({ email, password: 'ClaveDelAtacante1', nombre: 'Eva', apellido: 'Mala' });
-    assert.equal(atacante.status, 201, JSON.stringify(atacante.body));
+    assert.equal(atacante.status, 202, JSON.stringify(atacante.body));
+    await habilitar(email);
+    const sesionAtacante = (await api().post('/api/v1/auth/login').send({ email, password: 'ClaveDelAtacante1' })).body.data;
     // La víctima entra con Google (email verificado por Google): se vincula a esa cuenta.
     const victima = await api().post('/api/v1/auth/social/google').send({ idToken: idTokenGoogle({ sub: `g-victima-${Date.now()}`, email }) });
     assert.equal(victima.status, 200, JSON.stringify(victima.body));
     // La contraseña y la sesión del atacante ya no sirven.
     assert.equal((await api().post('/api/v1/auth/login').send({ email, password: 'ClaveDelAtacante1' })).status, 401);
-    assert.equal((await api().post('/api/v1/auth/refresh').send({ refreshToken: atacante.body.data.refreshToken })).status, 401);
+    assert.equal((await api().post('/api/v1/auth/refresh').send({ refreshToken: sesionAtacante.refreshToken })).status, 401);
     await query('DELETE FROM intentos_login WHERE created_at > UTC_TIMESTAMP() - INTERVAL 1 HOUR AND tipo = ?', ['password']);
   });
 
@@ -148,8 +156,9 @@ describe('GitHub', () => {
     };
     const res = await api().post('/api/v1/auth/social/github')
       .send({ code: 'codigo-github-valido', codeVerifier: verifier, redirectUri: 'burgoscorp://oauth' });
-    assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.equal(res.body.data.usuario.nombre, 'Leo');
+    assert.equal(res.body.error?.codigo, 'CUENTA_PENDIENTE', JSON.stringify(res.body));
+    const [u] = await query('SELECT nombre FROM usuarios WHERE email = ?', [`leo.${id}@github.test`]);
+    assert.equal(u.nombre, 'Leo');
   });
 
   test('redirect URI no registrada → 400 y código inválido → 401', async () => {
@@ -177,8 +186,11 @@ describe('Facebook', () => {
       yo: { id, first_name: 'Sofía', last_name: 'Ruiz', email: `sofia.${id}@facebook.test` },
     };
     const res = await api().post('/api/v1/auth/social/facebook').send({ accessToken: 'EAAtokendeprueba1234567890' });
-    assert.equal(res.status, 200, JSON.stringify(res.body));
-    assert.equal(res.body.data.usuario.apellido, 'Ruiz');
+    assert.equal(res.body.error?.codigo, 'CUENTA_PENDIENTE', JSON.stringify(res.body));
+    await habilitar(`sofia.${id}@facebook.test`);
+    const otraVez = await api().post('/api/v1/auth/social/facebook').send({ accessToken: 'EAAtokendeprueba1234567890' });
+    assert.equal(otraVez.status, 200, JSON.stringify(otraVez.body));
+    assert.equal(otraVez.body.data.usuario.apellido, 'Ruiz');
   });
 
   test('token emitido para OTRA app de Facebook → 401', async () => {
@@ -191,6 +203,8 @@ describe('Facebook', () => {
 describe('desvincular', () => {
   test('no se puede quitar la única forma de entrar', async () => {
     const email = `solo.google.${Date.now()}@gmail.test`;
+    await api().post('/api/v1/auth/social/google').send({ idToken: idTokenGoogle({ sub: `g-${email}`, email }) });
+    await habilitar(email);
     const s = (await api().post('/api/v1/auth/social/google').send({ idToken: idTokenGoogle({ sub: `g-${email}`, email }) })).body.data;
     const res = await api().delete('/api/v1/auth/social/google').set({ Authorization: `Bearer ${s.accessToken}` });
     assert.equal(res.status, 422);

@@ -142,15 +142,49 @@ describe('registro', () => {
     assert.equal(conRol.status, 400);
   });
 
-  test('alta correcta como EMPLEADO y duplicado → 409', async () => {
+  test('la solicitud queda pendiente y la respuesta es igual aunque el email ya exista', async () => {
     const ok = await api().post('/api/v1/auth/registro')
       .send({ email: email.toUpperCase(), password: 'unaClaveLarga123', nombre: 'Ana', apellido: 'Gómez' });
-    assert.equal(ok.status, 201);
-    assert.equal(ok.body.data.usuario.rol, 'EMPLEADO');
-    assert.equal(ok.body.data.usuario.email, email, 'el email se normaliza a minúsculas');
+    assert.equal(ok.status, 202);
+    assert.equal(ok.body.data.accessToken, undefined, 'no entrega sesión');
+    const [u] = await query('SELECT email, estado_cuenta, (SELECT codigo FROM roles WHERE id = rol_id) AS rol FROM usuarios WHERE email = ?', [email]);
+    assert.deepEqual({ ...u }, { email, estado_cuenta: 'pendiente', rol: 'EMPLEADO' }, 'el email se normaliza a minúsculas');
     const dup = await api().post('/api/v1/auth/registro')
-      .send({ email, password: 'unaClaveLarga123', nombre: 'Ana', apellido: 'Gómez' });
-    assert.equal(dup.status, 409);
+      .send({ email, password: 'otraClaveLarga456', nombre: 'Eva', apellido: 'Mala' });
+    assert.deepEqual([dup.status, dup.body], [ok.status, ok.body]);
+  });
+
+  test('pendiente no entra; el admin la habilita con rol y legajo, o la rechaza', async () => {
+    assert.equal((await api().post('/api/v1/auth/login').send({ email, password: 'claveIncorrecta1' })).status, 401);
+    const pendiente = await api().post('/api/v1/auth/login').send({ email, password: 'unaClaveLarga123' });
+    assert.equal(pendiente.status, 403);
+    assert.equal(pendiente.body.error.codigo, 'CUENTA_PENDIENTE');
+
+    const admin = await login('admin@burgoscorp.test');
+    const [{ id }] = await query('SELECT id FROM usuarios WHERE email = ?', [email]);
+    const aviso = await query("SELECT COUNT(*) AS n FROM notificaciones WHERE tipo = 'cuenta_pendiente' AND entidad_id = ?", [id]);
+    assert.ok(aviso[0].n >= 1, 'se avisa a los administradores');
+    const lista = await api().get('/api/v1/usuarios').query({ estado_cuenta: 'pendiente' }).set(conToken(admin.accessToken));
+    assert.ok(lista.body.data.some((x) => x.id === id));
+
+    const jefe = await login('jorge.dominguez@burgoscorp.test');
+    assert.equal((await api().post(`/api/v1/usuarios/${id}/habilitar`).set(conToken(jefe.accessToken)).send({ rol: 'EMPLEADO' })).status, 403);
+    const conLegajoAjeno = await api().post(`/api/v1/usuarios/${id}/habilitar`).set(conToken(admin.accessToken))
+      .send({ rol: 'EMPLEADO', empleado_id: jefe.usuario.empleadoId });
+    assert.equal(conLegajoAjeno.status, 409, 'ese legajo ya tiene cuenta');
+    const hab = await api().post(`/api/v1/usuarios/${id}/habilitar`).set(conToken(admin.accessToken)).send({ rol: 'EMPLEADO' });
+    assert.equal(hab.status, 200, JSON.stringify(hab.body));
+    assert.equal(hab.body.data.estado_cuenta, 'habilitada');
+    const entra = await api().post('/api/v1/auth/login').send({ email, password: 'unaClaveLarga123' });
+    assert.equal(entra.status, 200);
+
+    const otro = `rechazo.${Date.now()}@correo.test`;
+    await api().post('/api/v1/auth/registro').send({ email: otro, password: 'unaClaveLarga123', nombre: 'Rita', apellido: 'Paz' });
+    const [{ id: idOtro }] = await query('SELECT id FROM usuarios WHERE email = ?', [otro]);
+    const rech = await api().post(`/api/v1/usuarios/${idOtro}/rechazar`).set(conToken(admin.accessToken)).send({ motivo: 'No trabaja en la empresa' });
+    assert.equal(rech.status, 200);
+    const rechazada = await api().post('/api/v1/auth/login').send({ email: otro, password: 'unaClaveLarga123' });
+    assert.equal(rechazada.body.error.codigo, 'CUENTA_RECHAZADA');
   });
 });
 

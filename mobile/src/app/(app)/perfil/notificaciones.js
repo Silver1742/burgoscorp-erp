@@ -28,6 +28,7 @@ const ICONO = {
   ot_nueva: ['clipboard', 'gris'],
   no_conformidad: ['alert-circle', 'error'],
   ot_terminada: ['ribbon', 'exito'],
+  cuenta_pendiente: ['person-add', 'aviso'],
 };
 // A dónde lleva cada aviso al tocarlo.
 const DESTINO = {
@@ -51,6 +52,7 @@ const DESTINO = {
   ot_nueva: (n) => `/modulos/produccion/${n.entidad_id}`,
   no_conformidad: (n) => `/tareas/${n.entidad_id}`,
   ot_terminada: (n) => `/modulos/produccion/${n.entidad_id}`,
+  cuenta_pendiente: () => '/modulos/usuarios/solicitudes',
 };
 
 export default function Notificaciones() {

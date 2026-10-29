@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View } from 'react-native';
+import { useRouter } from 'expo-router';
 import AuthLayout from '../../componentes/AuthLayout';
 import VolverAlLogin from '../../componentes/VolverAlLogin';
 import { Campo, CampoContrasena, ChecklistContrasena, Boton } from '../../componentes/ui';
@@ -11,6 +12,7 @@ import { espacio, usePantalla } from '../../tema';
 export default function Registro() {
   const { registrar } = useSesion();
   const toast = useToast();
+  const router = useRouter();
   const { ancho } = usePantalla();
   const [datos, setDatos] = useState({ nombre: '', apellido: '', email: '', password: '', repetir: '' });
   const [errores, setErrores] = useState({});
@@ -34,7 +36,8 @@ export default function Registro() {
         nombre: datos.nombre.trim(), apellido: datos.apellido.trim(),
         email: datos.email.trim(), password: datos.password,
       });
-      toast.info('Cuenta creada. Te enviamos un código para confirmar tu email.');
+      toast.exito('Solicitud enviada. Un administrador tiene que habilitar tu cuenta: te avisamos por email.', { duracion: 7000 });
+      router.replace('/login');
     } catch (err) {
       setErrores(err.porCampo ?? {});
       toast.error(err.message);
@@ -45,7 +48,7 @@ export default function Registro() {
 
   const dosColumnas = ancho >= 420;
   return (
-    <AuthLayout titulo="Crear cuenta" sub="Después vas a confirmar tu email. Un administrador te asigna el área y el rol.">
+    <AuthLayout titulo="Solicitar acceso" sub="Un administrador revisa tu solicitud y habilita la cuenta con tu área y rol. Hasta entonces no vas a poder entrar.">
       <View style={{ flexDirection: dosColumnas ? 'row' : 'column', gap: dosColumnas ? espacio.m : 0 }}>
         <Campo etiqueta="Nombre" value={datos.nombre} onChangeText={cambiar('nombre')} error={errores.nombre} autoComplete="given-name" maxLength={60} estilo={{ flex: 1 }} />
         <Campo etiqueta="Apellido" value={datos.apellido} onChangeText={cambiar('apellido')} error={errores.apellido} autoComplete="family-name" maxLength={60} estilo={{ flex: 1 }} />
@@ -57,7 +60,7 @@ export default function Registro() {
       <ChecklistContrasena valor={datos.password} />
       <CampoContrasena etiqueta="Repetir contraseña" value={datos.repetir} onChangeText={cambiar('repetir')} error={errores.repetir}
         autoComplete="new-password" maxLength={72} onSubmitEditing={enviar} />
-      <Boton titulo="Crear cuenta" onPress={enviar} cargando={enviando} textoCargando="Creando cuenta…" icono="person-add-outline" />
+      <Boton titulo="Enviar solicitud" onPress={enviar} cargando={enviando} textoCargando="Enviando…" icono="person-add-outline" />
       <VolverAlLogin />
     </AuthLayout>
   );

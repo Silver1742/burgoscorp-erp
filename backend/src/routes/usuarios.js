@@ -7,6 +7,8 @@ import { requierePermiso } from '../middlewares/permisos.js';
 import { validar } from '../middlewares/validar.js';
 import { auditar } from '../services/auditoria.js';
 import { revocarTodas } from '../services/tokens.js';
+import { notificar } from '../services/notificaciones.js';
+import { enviarAviso } from '../services/email.js';
 import { paramsId, consultaListado, email, nombrePersona } from '../validators/comunes.js';
 import { usuarioAdmin } from '../validators/catalogos.js';
 import { errores } from '../utils/errores.js';
@@ -16,7 +18,7 @@ router.use(autenticado);
 
 // Nunca se devuelven password_hash ni totp_secret_cifrado.
 const SELECT = `
-  SELECT u.id, u.email, u.nombre, u.apellido, r.codigo AS rol, u.empleado_id, u.activo,
+  SELECT u.id, u.email, u.nombre, u.apellido, r.codigo AS rol, u.empleado_id, u.activo, u.estado_cuenta, u.motivo_rechazo,
          u.email_verificado_at IS NOT NULL AS email_verificado, u.totp_habilitado AS dos_pasos,
          u.ultimo_login_at, u.created_at, e.legajo, a.nombre AS area_nombre,
          (SELECT GROUP_CONCAT(cs.proveedor) FROM cuentas_sociales cs WHERE cs.usuario_id = u.id) AS redes
@@ -30,9 +32,12 @@ router.get('/roles', requierePermiso('SEG', 'ver'), async (req, res) => {
 });
 
 router.get('/', requierePermiso('SEG', 'ver'),
-  validar({ query: consultaListado.extend({ rol: z.enum(['ADMIN', 'GERENCIA', 'JEFE', 'EMPLEADO']).optional() }) }),
+  validar({ query: consultaListado.extend({
+    rol: z.enum(['ADMIN', 'GERENCIA', 'JEFE', 'EMPLEADO']).optional(),
+    estado_cuenta: z.enum(['pendiente', 'habilitada', 'rechazada']).optional(),
+  }) }),
   async (req, res) => {
-    const { pagina, limite, q, rol } = req.validado.query;
+    const { pagina, limite, q, rol, estado_cuenta: estadoCuenta } = req.validado.query;
     const where = ['1=1'];
     const params = [];
     if (q) {
@@ -41,9 +46,10 @@ router.get('/', requierePermiso('SEG', 'ver'),
       params.push(patron, patron, patron);
     }
     if (rol) { where.push('r.codigo = ?'); params.push(rol); }
+    if (estadoCuenta) { where.push('u.estado_cuenta = ?'); params.push(estadoCuenta); }
     const condicion = where.join(' AND ');
     const [filas] = await pool.query(
-      `${SELECT} WHERE ${condicion} ORDER BY u.apellido, u.nombre LIMIT ${Number(limite)} OFFSET ${Number((pagina - 1) * limite)}`,
+      `${SELECT} WHERE ${condicion} ORDER BY u.estado_cuenta = 'pendiente' DESC, u.apellido, u.nombre LIMIT ${Number(limite)} OFFSET ${Number((pagina - 1) * limite)}`,
       params,
     );
     const [{ total }] = await query(
@@ -103,6 +109,79 @@ router.put('/:id', requierePermiso('SEG', 'editar'), validar({ params: paramsId,
 
   await auditar(req, { accion: rol !== undefined && rol !== actual.rol ? 'cambio_rol' : 'editar', entidad: 'usuario', entidadId: id,
     detalle: { rolAnterior: actual.rol, rolNuevo: rol, activo, empleadoId } });
+  res.json({ ok: true, data: await queryOne(`${SELECT} WHERE u.id = ?`, [id]) });
+});
+
+// ---------------------------------------------------------------- solicitudes de acceso (como en R3)
+// Quien se registra queda pendiente: el administrador la habilita (con rol y, si corresponde, el
+// legajo del empleado) o la rechaza con un motivo. En los dos casos se le avisa por email.
+
+const paramsYHabilitar = {
+  params: paramsId,
+  body: z.object({
+    rol: z.enum(['ADMIN', 'GERENCIA', 'JEFE', 'EMPLEADO']),
+    empleado_id: z.coerce.number().int().positive().nullable().optional(),
+  }).strict(),
+};
+
+router.post('/:id/habilitar', requierePermiso('SEG', 'aprobar'), validar(paramsYHabilitar), async (req, res) => {
+  const { id } = req.validado.params;
+  const { rol, empleado_id: empleadoId = null } = req.validado.body;
+  const u = await transaccion(async (conn) => {
+    const [[actual]] = await conn.execute('SELECT id, email, nombre, estado_cuenta FROM usuarios WHERE id = ? FOR UPDATE', [id]);
+    if (!actual) throw errores.noEncontrado();
+    if (actual.estado_cuenta === 'habilitada') throw errores.conflicto('La cuenta ya está habilitada');
+    if (empleadoId) {
+      const [[emp]] = await conn.execute(
+        `SELECT e.id, (SELECT u2.id FROM usuarios u2 WHERE u2.empleado_id = e.id) AS usuario_id
+         FROM empleados e WHERE e.id = ? AND e.estado <> 'baja'`, [empleadoId]);
+      if (!emp) throw errores.validacion([{ campo: 'body.empleado_id', mensaje: 'El legajo no existe o está dado de baja' }]);
+      if (emp.usuario_id) throw errores.conflicto('Ese legajo ya tiene una cuenta vinculada');
+    }
+    await conn.execute(
+      `UPDATE usuarios SET estado_cuenta = 'habilitada', motivo_rechazo = NULL, habilitada_por = ?, habilitada_at = UTC_TIMESTAMP(),
+         rol_id = (SELECT id FROM roles WHERE codigo = ?), empleado_id = ? WHERE id = ?`,
+      [req.usuario.id, rol, empleadoId, id]);
+    return actual;
+  });
+  await auditar(req, { accion: 'cuenta_habilitada', entidad: 'usuario', entidadId: id, detalle: { rol, empleadoId } });
+  await query("UPDATE notificaciones SET leida_at = UTC_TIMESTAMP() WHERE tipo = 'cuenta_pendiente' AND entidad_id = ? AND leida_at IS NULL", [id]);
+  try {
+    await enviarAviso({
+      para: u.email, nombre: u.nombre, asunto: 'Tu cuenta está habilitada',
+      lineas: ['Un administrador habilitó tu cuenta. Ya podés iniciar sesión en la app.'],
+    });
+  } catch (err) {
+    console.error('[usuarios] no se pudo avisar la habilitación', err.message);
+  }
+  res.json({ ok: true, data: await queryOne(`${SELECT} WHERE u.id = ?`, [id]) });
+});
+
+router.post('/:id/rechazar', requierePermiso('SEG', 'aprobar'), validar({
+  params: paramsId,
+  body: z.object({ motivo: z.string().trim().max(255).optional() }).strict(),
+}), async (req, res) => {
+  const { id } = req.validado.params;
+  if (id === req.usuario.id) throw errores.prohibido('No podés rechazar tu propia cuenta');
+  const u = await queryOne('SELECT id, email, nombre, estado_cuenta FROM usuarios WHERE id = ?', [id]);
+  if (!u) throw errores.noEncontrado();
+  // Solo se rechazan solicitudes: a una cuenta ya habilitada se la desactiva (activo = false).
+  if (u.estado_cuenta !== 'pendiente') throw errores.conflicto('Solo se rechazan solicitudes pendientes');
+  await transaccion(async (conn) => {
+    await conn.execute("UPDATE usuarios SET estado_cuenta = 'rechazada', motivo_rechazo = ? WHERE id = ?", [req.validado.body.motivo || null, id]);
+    await revocarTodas(id, conn);
+  });
+  await auditar(req, { accion: 'cuenta_rechazada', entidad: 'usuario', entidadId: id });
+  await query("UPDATE notificaciones SET leida_at = UTC_TIMESTAMP() WHERE tipo = 'cuenta_pendiente' AND entidad_id = ? AND leida_at IS NULL", [id]);
+  try {
+    await enviarAviso({
+      para: u.email, nombre: u.nombre, asunto: 'Tu solicitud de acceso',
+      lineas: ['Tu solicitud de acceso no fue aprobada.', ...(req.validado.body.motivo ? [`Motivo: ${req.validado.body.motivo}`] : []),
+        'Si creés que es un error, hablá con un administrador.'],
+    });
+  } catch (err) {
+    console.error('[usuarios] no se pudo avisar el rechazo', err.message);
+  }
   res.json({ ok: true, data: await queryOne(`${SELECT} WHERE u.id = ?`, [id]) });
 });
 

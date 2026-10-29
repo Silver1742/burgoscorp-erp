@@ -34,6 +34,7 @@ before(async () => {
   }
   // Una cuenta con el email confirmado pero sin legajo (como queda alguien que se registra solo).
   const email = `sin.legajo.${sufijo}@correo.test`;
+  // Una cuenta habilitada por el admin pero todavía sin legajo vinculado.
   await query(`INSERT INTO usuarios (email, password_hash, nombre, apellido, rol_id, email_verificado_at)
     VALUES (?, ?, 'Sin', 'Legajo', (SELECT id FROM roles WHERE codigo = 'EMPLEADO'), UTC_TIMESTAMP())`,
   [email, await bcrypt.hash(PASSWORD, 4)]);

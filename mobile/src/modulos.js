@@ -303,6 +303,7 @@ export const MODULOS = [
   {
     codigo: 'SEG', titulo: 'Usuarios', icono: 'shield-outline',
     descripcion: 'Cuentas, roles y accesos',
+    acciones: [{ titulo: 'Solicitudes de acceso', icono: 'person-add-outline', ruta: () => '/modulos/usuarios/solicitudes', visible: ({ puede }) => puede('SEG', 'aprobar') }],
     recursos: [{
       ruta: 'usuarios', titulo: 'Usuarios',
       titular: (r) => `${r.nombre} ${r.apellido}`,
@@ -310,6 +311,8 @@ export const MODULOS = [
       chips: (r) => [
         { texto: ROLES[r.rol] ?? r.rol },
         ...(r.dos_pasos ? [{ texto: '2FA', tono: 'exito' }] : []),
+        ...(r.estado_cuenta === 'pendiente' ? [{ texto: 'Pendiente', tono: 'aviso' }] : []),
+        ...(r.estado_cuenta === 'rechazada' ? [{ texto: 'Rechazada', tono: 'error' }] : []),
         ...(r.activo ? [] : [{ texto: 'Inactivo', tono: 'error' }]),
       ],
     }],

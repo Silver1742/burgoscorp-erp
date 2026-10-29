@@ -40,6 +40,7 @@ export default function LayoutModulos() {
       <Stack.Screen name="finanzas/index" options={{ title: 'Finanzas' }} />
       <Stack.Screen name="finanzas/[id]" options={{ title: 'Comprobante' }} />
       <Stack.Screen name="tablero" options={{ title: 'Tablero' }} />
+      <Stack.Screen name="usuarios/solicitudes" options={{ title: 'Solicitudes de acceso' }} />
     </Stack>
   );
 }

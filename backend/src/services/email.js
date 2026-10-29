@@ -48,6 +48,13 @@ const TEXTOS = {
   },
 };
 
+/** Aviso de texto simple (cuenta habilitada o rechazada). */
+export async function enviarAviso({ para, nombre, asunto, lineas }) {
+  const texto = `Hola ${nombre}:\n\n${lineas.join('\n')}\n`;
+  const html = `<p>Hola ${escapar(nombre)}:</p>${lineas.map((l) => `<p>${escapar(l)}</p>`).join('')}`;
+  await enviar({ para, asunto: `${asunto} · ${env.APP_NOMBRE}`, texto, html });
+}
+
 /** Manda un código de 6 dígitos. El código nunca se guarda ni se registra en logs de producción. */
 export async function enviarCodigo({ para, nombre, tipo, codigo }) {
   const t = TEXTOS[tipo];

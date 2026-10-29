@@ -10,9 +10,9 @@ import env from '../config/env.js';
 import { query, queryOne, transaccion } from '../config/db.js';
 import { AppError, errores } from '../utils/errores.js';
 import { auditar } from './auditoria.js';
-import { buscarUsuarioPorId } from './usuarios.js';
+import { buscarUsuarioPorId, exigirCuentaHabilitada } from './usuarios.js';
 import { firmarTemporal, revocarTodas } from './tokens.js';
-import { emitirSesion } from './auth.js';
+import { avisarSolicitud, emitirSesion } from './auth.js';
 
 const TIMEOUT_MS = 8000;
 const noConfigurado = (p) => new AppError(503, 'PROVEEDOR_NO_CONFIGURADO', `El inicio de sesión con ${p} no está habilitado`);
@@ -178,6 +178,7 @@ export async function loginSocial(proveedor, datos, req) {
     if (!perfil.email || !perfil.emailVerificado) {
       throw errores.validacion([], `Tu cuenta de ${p.nombre} no tiene un email verificado. Usá otro método para ingresar.`);
     }
+    let nueva = false;
     usuarioId = await transaccion(async (conn) => {
       const [existentes] = await conn.execute('SELECT id FROM usuarios WHERE email = ? FOR UPDATE', [perfil.email]);
       let id = existentes[0]?.id;
@@ -200,22 +201,25 @@ export async function loginSocial(proveedor, datos, req) {
         await conn.execute('UPDATE usuarios SET email_verificado_at = COALESCE(email_verificado_at, UTC_TIMESTAMP()) WHERE id = ?', [id]);
       } else {
         if (!env.registroAbierto) throw errores.prohibido('No hay una cuenta con ese email. Pedile la cuenta a un administrador.');
+        // Primera vez con una red social: es una solicitud de acceso, igual que registrarse.
         const [r] = await conn.execute(
-          `INSERT INTO usuarios (email, nombre, apellido, rol_id, email_verificado_at)
-           VALUES (?, ?, ?, (SELECT id FROM roles WHERE codigo = 'EMPLEADO'), UTC_TIMESTAMP())`,
+          `INSERT INTO usuarios (email, nombre, apellido, rol_id, email_verificado_at, estado_cuenta)
+           VALUES (?, ?, ?, (SELECT id FROM roles WHERE codigo = 'EMPLEADO'), UTC_TIMESTAMP(), 'pendiente')`,
           [perfil.email, perfil.nombre, perfil.apellido],
         );
         id = r.insertId;
+        nueva = true;
       }
       await conn.execute('INSERT INTO cuentas_sociales (usuario_id, proveedor, proveedor_uid, email) VALUES (?, ?, ?, ?)',
         [id, proveedor, perfil.uid, perfil.email]);
       return id;
     });
     await auditar(req, { accion: 'cuenta_social_vinculada', usuarioId, detalle: { proveedor } });
+    if (nueva) await avisarSolicitud(usuarioId, perfil.nombre, perfil.apellido);
   }
 
   const usuario = await buscarUsuarioPorId(usuarioId);
-  if (!usuario.activo) throw errores.prohibido('Tu cuenta está desactivada. Contactá a un administrador.');
+  exigirCuentaHabilitada(usuario);
   if (usuario.totp_habilitado) return { requiere2fa: true, tokenTemporal: await firmarTemporal(usuario.id, '2fa') };
 
   await auditar(req, { accion: 'login_ok', usuarioId, detalle: { metodo: proveedor } });

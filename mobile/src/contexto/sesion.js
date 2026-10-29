@@ -94,9 +94,9 @@ export function SesionProvider({ children }) {
       return procesarRespuestaLogin(r);
     },
 
+    /** Solicitud de acceso: no abre sesión, la cuenta queda pendiente hasta que la habilita un admin. */
     async registrar(datos) {
-      const sesion = await api('/auth/registro', { metodo: 'POST', cuerpo: datos, conToken: false });
-      await abrirSesion(sesion);
+      await api('/auth/registro', { metodo: 'POST', cuerpo: datos, conToken: false });
     },
 
     async completar2fa(metodo, codigo) {

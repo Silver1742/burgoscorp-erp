@@ -19,7 +19,7 @@ export async function autenticar(req, res, next) {
   // Se lee de la base en cada petición: si un admin desactiva la cuenta o
   // cambia el rol, el cambio rige de inmediato y no recién cuando vence el token.
   const usuario = await buscarUsuarioPorId(Number(payload.sub));
-  if (!usuario || !usuario.activo) return next(errores.noAutenticado('Tu cuenta no está activa'));
+  if (!usuario || !usuario.activo || usuario.estado_cuenta !== 'habilitada') return next(errores.noAutenticado('Tu cuenta no está activa'));
 
   req.usuario = usuario;
   next();

@@ -139,15 +139,15 @@ Módulos: `SEG` usuarios · `ORG` organización · `RRHH` · `VEN` ventas · `PR
 
 | Método | Ruta | Auth | Body | Respuesta |
 |---|---|---|---|---|
-| POST | `/auth/registro` | No | `email`, `password`, `nombre`, `apellido` | `201` sesión (rol `EMPLEADO`) · `400` · `409` |
-| POST | `/auth/login` | No | `email`, `password` | `200` sesión · `200 { requiere2fa, tokenTemporal }` si tiene 2FA · `401` · `403` cuenta desactivada · `423` |
+| POST | `/auth/registro` | No | `email`, `password`, `nombre`, `apellido` | `202 { mensaje }`: solicitud de acceso **pendiente** hasta que la habilite un administrador. Misma respuesta si el email ya existe · `400` · `403` si `REGISTRO_ABIERTO=false` |
+| POST | `/auth/login` | No | `email`, `password` | `200` sesión · `200 { requiere2fa, tokenTemporal }` si tiene 2FA · `401` · `403 CUENTA_PENDIENTE` / `CUENTA_RECHAZADA` / `CUENTA_INACTIVA` (solo con la contraseña correcta) · `423` |
 | POST | `/auth/refresh` | No | `refreshToken` | `200` sesión nueva · `401` |
 | POST | `/auth/logout` | No | `refreshToken` | `204` |
 | POST | `/auth/logout-todas` | Sí | — | `204` cierra las sesiones de todos los dispositivos |
 | GET | `/auth/yo` | Sí | — | `200 { usuario, permisos }` |
 | PUT | `/auth/password` | Sí | `actual` (si ya tenía), `nueva` | `200` sesión nueva (cierra las demás) · `400` |
 
-**Sesión** (respuesta de login, registro, refresh y cambio de contraseña):
+**Sesión** (respuesta de login, refresh y cambio de contraseña):
 
 ```json
 {
@@ -174,9 +174,9 @@ Reglas de contraseña: entre 10 caracteres y 72 bytes, con letras y números.
 
 ### Verificación de email · `/auth/email`
 
-Al registrarse se envía un código de 6 dígitos. **Hasta confirmarlo, el usuario solo puede usar
-`/auth/*`**: el resto de la API responde `403 EMAIL_NO_VERIFICADO`. Las cuentas creadas por el
-admin o con una red social ya vienen verificadas.
+Cuando el administrador habilita la cuenta, la primera vez que entra se le manda un código de 6
+dígitos. **Hasta confirmarlo, el usuario solo puede usar `/auth/*`**: el resto de la API responde
+`403 EMAIL_NO_VERIFICADO`. Las cuentas creadas por el admin o con una red social ya vienen verificadas.
 
 | Método | Ruta | Auth | Body | Respuesta |
 |---|---|---|---|---|
@@ -251,12 +251,18 @@ apps OAuth está en [`docs/guia-oauth.md`](../docs/guia-oauth.md).
 | Método | Ruta | Permiso | Parámetros / Body | Respuesta |
 |---|---|---|---|---|
 | GET | `/usuarios/roles` | SEG ver | — | Lista de roles |
-| GET | `/usuarios` | SEG ver | Query: `pagina`, `limite`, `q`, `rol` | Listado paginado |
+| GET | `/usuarios` | SEG ver | Query: `pagina`, `limite`, `q`, `rol`, `estado_cuenta` (`pendiente`, `habilitada`, `rechazada`) | Listado paginado, primero los pendientes |
 | GET | `/usuarios/:id` | SEG ver | — | `200` · `404` |
 | POST | `/usuarios` | SEG crear | `email`, `nombre`, `apellido`, `rol`, `empleado_id?` | `201` (cuenta sin contraseña: entra con red social o recupera contraseña) |
 | PUT | `/usuarios/:id` | SEG editar | `rol?`, `empleado_id?`, `activo?` | `200` · `403` si es la propia cuenta |
+| POST | `/usuarios/:id/habilitar` | SEG aprobar (admin) | `rol`, `empleado_id?` | `200` · `409` si ya estaba habilitada o el legajo ya tiene cuenta. Le avisa por email |
+| POST | `/usuarios/:id/rechazar` | SEG aprobar (admin) | `motivo?` | `200` · `409` si no estaba pendiente. Le avisa por email con el motivo |
 
 Cambiar el rol o desactivar una cuenta cierra todas sus sesiones.
+
+**Solicitudes de acceso** (como en el portal R3): quien se registra en la app, o entra por primera vez
+con Google, GitHub o Facebook, queda `pendiente` y no puede iniciar sesión hasta que un administrador
+la habilita (con rol y legajo) o la rechaza. A los administradores les llega el aviso `cuenta_pendiente`.
 
 ### Recursos CRUD (motor común)
 

@@ -56,8 +56,8 @@ solo en el panel de Railway.
      **No las cambies después**: `TOTP_ENC_KEY` cifra los secretos del 2FA.
    - `SMTP_PASS` es una **contraseña de aplicación** de Google (Cuenta de Google → Seguridad →
      Verificación en dos pasos → Contraseñas de aplicaciones). La cargás vos directamente acá.
-   - El registro libre queda **cerrado** (`REGISTRO_ABIERTO` sin definir en producción): las
-     cuentas las crea RRHH o el administrador.
+   - Quien se registra desde la app queda **pendiente** hasta que el administrador lo habilita en
+     *Usuarios → Solicitudes de acceso*. Con `REGISTRO_ABIERTO=false` solo el administrador crea cuentas.
 7. **Cuentas de prueba (opcional, para mostrar el sistema):** agregá `SEED_PASSWORD` con una
    contraseña de 12 caracteres o más (que no sea la de desarrollo). En el próximo arranque se
    cargan los empleados, usuarios y datos de ejemplo. Después:

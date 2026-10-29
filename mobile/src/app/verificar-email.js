@@ -1,5 +1,6 @@
-// Confirmación del email con el código de 6 dígitos que se envía al registrarse.
-import { useState } from 'react';
+// Confirmación del email con un código de 6 dígitos. Se pide solo al abrir la pantalla (la primera vez
+// que entra alguien cuya cuenta acaba de habilitar el administrador).
+import { useEffect, useRef, useState } from 'react';
 import AuthLayout from '../componentes/AuthLayout';
 import VolverAlLogin from '../componentes/VolverAlLogin';
 import { Campo, Boton } from '../componentes/ui';
@@ -14,6 +15,14 @@ export default function VerificarEmail() {
   const [codigo, setCodigo] = useState('');
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
+  const pedido = useRef(false);
+
+  useEffect(() => {
+    if (pedido.current) return;
+    pedido.current = true;
+    // Si ya se mandó uno hace menos de un minuto la API responde 429: se usa ese.
+    api('/auth/email/enviar', { metodo: 'POST' }).catch(() => {});
+  }, []);
 
   async function verificar() {
     if (!esCodigo6(codigo)) {

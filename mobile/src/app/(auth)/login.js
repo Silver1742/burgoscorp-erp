@@ -54,7 +54,8 @@ export default function Login() {
       setSellado(false);
       setPassword('');
       setErrores(err.porCampo ?? {});
-      if (err.status === 423) toast.aviso(err.message);
+      // Bloqueo por intentos o cuenta todavía no habilitada por el administrador: aviso, no error.
+      if (err.status === 423 || ['CUENTA_PENDIENTE', 'CUENTA_RECHAZADA'].includes(err.codigo)) toast.aviso(err.message, { duracion: 7000 });
       else toast.error(err.message);
     } finally {
       setEnviando(false);
@@ -88,7 +89,7 @@ export default function Login() {
 
       <View style={estilos.pie}>
         <Text style={{ color: t.textoSuave, fontSize: 15 }}>¿Sos nuevo en BurgosCorp? </Text>
-        <Link href="/registro" asChild><Boton titulo="Creá tu cuenta" variante="texto" chico estilo={estilos.enlace} /></Link>
+        <Link href="/registro" asChild><Boton titulo="Pedí acceso" variante="texto" chico estilo={estilos.enlace} /></Link>
       </View>
     </AuthLayout>
   );

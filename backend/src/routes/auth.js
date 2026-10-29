@@ -15,8 +15,9 @@ import { perfilPublico } from '../services/usuarios.js';
 const router = Router();
 
 router.post('/registro', limiteAuth, validar({ body: v.registro }), async (req, res) => {
-  const sesion = await auth.registrar(req.validado.body, req);
-  res.status(201).json({ ok: true, data: sesion });
+  await auth.registrar(req.validado.body, req);
+  // Misma respuesta exista o no el email: la cuenta queda pendiente hasta que la habilite un administrador.
+  res.status(202).json({ ok: true, data: { mensaje: 'Solicitud enviada. Un administrador tiene que habilitar tu cuenta: te avisamos por email.' } });
 });
 
 router.post('/login', limiteAuth, validar({ body: v.login }), async (req, res) => {
