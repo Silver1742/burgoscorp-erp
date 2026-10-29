@@ -293,7 +293,10 @@ export const MODULOS = [
   {
     codigo: 'FIN', titulo: 'Finanzas', icono: 'cash-outline',
     descripcion: 'Facturas, cobros y pagos',
-    acciones: [{ titulo: 'Facturas, cobros y pagos', icono: 'cash-outline', ruta: () => '/modulos/finanzas' }],
+    acciones: [
+      { titulo: 'Facturas, cobros y pagos', icono: 'cash-outline', ruta: () => '/modulos/finanzas' },
+      { titulo: 'Liquidación de sueldos: tardanzas, horas y extras', icono: 'wallet-outline', ruta: () => '/modulos/finanzas/liquidacion', rapido: 'Sueldos' },
+    ],
     recursos: [],
   },
   {

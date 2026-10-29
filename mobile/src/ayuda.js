@@ -88,6 +88,16 @@ export const TEMAS_AYUDA = [
     ],
   },
   {
+    id: 'sueldos', titulo: 'Liquidación de sueldos (Administración)', icono: 'wallet-outline', roles: ['ADMIN', 'GERENCIA'],
+    pasos: [
+      'Módulos → Finanzas → "Liquidación de sueldos" (la ve Administración y Finanzas, gerencia y el administrador).',
+      'Elegí el período (este mes, quincena, mes pasado o fechas) y, si querés, un área.',
+      'Ves llegadas tarde, horas trabajadas, horas extra, ausencias sin justificar y el total a pagar de cada persona.',
+      'Tocá una persona para ver el cálculo y sus días; "Descargar planilla" baja el archivo para Excel.',
+      'La hora de entrada, la tolerancia y los recargos se cambian con "Cambiar".',
+    ],
+  },
+  {
     id: 'gerencia', titulo: 'Si sos de gerencia', icono: 'stats-chart-outline', roles: ['GERENCIA'],
     pasos: [
       'Podés ver todos los módulos, pero no modificar nada.',

@@ -44,7 +44,8 @@ export default function Perfil() {
             <Text style={{ color: t.textoSuave }}>{usuario.email}</Text>
             <View style={estilos.insignias}>
               <InsigniaRol rol={usuario.rol} />
-              {usuario.area ? <Insignia texto={usuario.area.nombre} icono="business-outline" /> : <Insignia texto="Sin área asignada" tono="aviso" />}
+              {usuario.rol === 'ADMIN' ? null
+                : usuario.area ? <Insignia texto={usuario.area.nombre} icono="business-outline" /> : <Insignia texto="Sin área asignada" tono="aviso" />}
             </View>
           </View>
         </View>

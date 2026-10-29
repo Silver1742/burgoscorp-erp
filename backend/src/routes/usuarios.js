@@ -62,9 +62,11 @@ const ubicacion = {
 
 /**
  * Devuelve el id del legajo de la persona: el existente que se eligió o uno nuevo con el área,
- * puesto y habilidades. Solo el administrador puede quedar sin área (no la necesita para ver todo).
+ * puesto y habilidades. El administrador del sistema no lleva legajo: no pertenece a un área y
+ * ve todo igual.
  */
 async function legajoPara(conn, persona, datos, rol) {
+  if (rol === 'ADMIN') return null;
   if (datos.empleado_id) {
     const [[emp]] = await conn.execute(
       `SELECT e.id, (SELECT u2.id FROM usuarios u2 WHERE u2.empleado_id = e.id) AS usuario_id
@@ -73,10 +75,7 @@ async function legajoPara(conn, persona, datos, rol) {
     if (emp.usuario_id && emp.usuario_id !== persona.id) throw errores.conflicto('Ese legajo ya tiene una cuenta vinculada');
     return emp.id;
   }
-  if (!datos.area_id) {
-    if (rol === 'ADMIN') return null;
-    throw errores.validacion([{ campo: 'body.area_id', mensaje: 'Elegí el área donde va a trabajar' }]);
-  }
+  if (!datos.area_id) throw errores.validacion([{ campo: 'body.area_id', mensaje: 'Elegí el área donde va a trabajar' }]);
   const nuevo = await crearLegajo(conn, { ...datos, nombre: persona.nombre, apellido: persona.apellido, email: persona.email }, rol);
   return nuevo.id;
 }
@@ -166,6 +165,7 @@ router.put('/:id/legajo', requierePermiso('SEG', 'editar'), validar({
     const [[u]] = await conn.execute(
       'SELECT u.id, u.nombre, u.apellido, u.email, u.empleado_id, r.codigo AS rol FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.id = ? FOR UPDATE', [id]);
     if (!u) throw errores.noEncontrado();
+    if (u.rol === 'ADMIN') throw errores.conflicto('El administrador del sistema no lleva área ni legajo');
     if (u.empleado_id) {
       await actualizarLegajo(conn, u.empleado_id, req.validado.body, u.rol);
     } else {

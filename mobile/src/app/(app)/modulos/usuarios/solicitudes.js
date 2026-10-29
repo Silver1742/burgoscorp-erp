@@ -139,7 +139,10 @@ export default function SolicitudesAcceso() {
     try {
       await api(`/usuarios/${h.usuario.id}/habilitar`, {
         metodo: 'POST',
-        cuerpo: { rol: h.rol, ...(h.existente ? { empleado_id: h.empleado_id ?? undefined } : cuerpoUbicacion(h.ubicacion)) },
+        cuerpo: {
+          rol: h.rol,
+          ...(h.rol === 'ADMIN' ? {} : h.existente ? { empleado_id: h.empleado_id ?? undefined } : cuerpoUbicacion(h.ubicacion)),
+        },
       });
       toast.exito(`${habilitando.usuario.nombre} ya puede entrar. Le avisamos por email.`);
       cargar();
@@ -191,23 +194,31 @@ export default function SolicitudesAcceso() {
         alConfirmar={habilitar} alCerrar={() => setHabilitando(null)}>
         {habilitando ? (
           <>
-            <VistaPrevia usuario={habilitando.usuario} empleado={habilitando.existente ? habilitando.empleado : null}
-              rol={habilitando.rol} ubicacion={habilitando.ubicacion} />
+            <VistaPrevia usuario={habilitando.usuario} empleado={habilitando.existente && habilitando.rol !== 'ADMIN' ? habilitando.empleado : null}
+              rol={habilitando.rol} ubicacion={habilitando.rol === 'ADMIN' ? null : habilitando.ubicacion} />
             <Text style={[estilos.etiqueta, { color: t.texto }]}>Rol</Text>
             <Opciones opciones={OPCIONES_ROL} valor={habilitando.rol} alCambiar={(rol) => setHabilitando((h) => ({ ...h, rol }))} />
-            {habilitando.existente ? (
-              <Selector etiqueta="Legajo que cargó RRHH" ruta="/empleados" consulta={{ estado: 'activo' }} valor={habilitando.empleado_id}
-                textoValor={habilitando.legajo} placeholder="Elegí el legajo"
-                alCambiar={(id, e) => setHabilitando((h) => ({
-                  ...h, empleado_id: id, empleado: e ?? null, legajo: e ? `${e.legajo} · ${e.apellido}, ${e.nombre}` : null,
-                }))}
-                mapear={(e) => ({ titulo: `${e.apellido}, ${e.nombre}`, sub: `${e.legajo} · ${e.area_nombre}${e.usuario_id ? ' · ya tiene cuenta' : ''}` })} />
+            {habilitando.rol === 'ADMIN' ? (
+              <Text style={{ color: t.textoSuave, fontSize: 13, marginBottom: espacio.m }}>
+                El administrador del sistema no pertenece a un área ni lleva legajo: ve y administra todo.
+              </Text>
             ) : (
-              <UbicacionLaboral valor={habilitando.ubicacion} error={habilitando.errorArea}
-                alCambiar={(ubicacion) => setHabilitando((h) => ({ ...h, ubicacion, errorArea: null }))} />
+              <>
+                {habilitando.existente ? (
+                  <Selector etiqueta="Legajo que cargó RRHH" ruta="/empleados" consulta={{ estado: 'activo' }} valor={habilitando.empleado_id}
+                    textoValor={habilitando.legajo} placeholder="Elegí el legajo"
+                    alCambiar={(id, e) => setHabilitando((h) => ({
+                      ...h, empleado_id: id, empleado: e ?? null, legajo: e ? `${e.legajo} · ${e.apellido}, ${e.nombre}` : null,
+                    }))}
+                    mapear={(e) => ({ titulo: `${e.apellido}, ${e.nombre}`, sub: `${e.legajo} · ${e.area_nombre}${e.usuario_id ? ' · ya tiene cuenta' : ''}` })} />
+                ) : (
+                  <UbicacionLaboral valor={habilitando.ubicacion} error={habilitando.errorArea}
+                    alCambiar={(ubicacion) => setHabilitando((h) => ({ ...h, ubicacion, errorArea: null }))} />
+                )}
+                <Casilla marcada={habilitando.existente} etiqueta="RRHH ya le cargó el legajo (vincular ese en vez de crear uno)"
+                  alCambiar={(existente) => setHabilitando((h) => ({ ...h, existente }))} />
+              </>
             )}
-            <Casilla marcada={habilitando.existente} etiqueta="RRHH ya le cargó el legajo (vincular ese en vez de crear uno)"
-              alCambiar={(existente) => setHabilitando((h) => ({ ...h, existente }))} />
           </>
         ) : null}
       </ConfirmDialog>

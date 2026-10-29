@@ -40,7 +40,7 @@ export default function NuevoUsuario() {
         metodo: 'POST',
         cuerpo: {
           nombre: datos.nombre.trim(), apellido: datos.apellido.trim(), email: datos.email.trim(), rol: datos.rol,
-          ...(ubicacion.area_id ? cuerpoUbicacion(ubicacion) : {}),
+          ...(datos.rol !== 'ADMIN' && ubicacion.area_id ? cuerpoUbicacion(ubicacion) : {}),
         },
       });
       let mensaje = `${datos.nombre} ya tiene cuenta${creado.legajo ? ` y el legajo ${creado.legajo}` : ''}.`;
@@ -73,11 +73,16 @@ export default function NuevoUsuario() {
         <Text style={{ color: t.texto, fontSize: 15, fontWeight: '600', marginBottom: 6 }}>Rol</Text>
         <Opciones opciones={OPCIONES_ROL} valor={datos.rol} alCambiar={cambiar('rol')} />
       </Tarjeta>
-      <Tarjeta titulo="Dónde trabaja" icono="business-outline">
-        <UbicacionLaboral valor={ubicacion} error={errores.area_id}
-          alCambiar={(v) => { setUbicacion(v); setErrores((e) => ({ ...e, area_id: undefined })); }} />
-        {datos.rol === 'ADMIN' ? <Texto suave estilo={{ fontSize: 13 }}>Un administrador puede quedar sin área: igual ve todo.</Texto> : null}
-      </Tarjeta>
+      {datos.rol === 'ADMIN' ? (
+        <Tarjeta>
+          <Texto suave>El administrador del sistema no pertenece a un área ni lleva legajo: ve y administra todo.</Texto>
+        </Tarjeta>
+      ) : (
+        <Tarjeta titulo="Dónde trabaja" icono="business-outline">
+          <UbicacionLaboral valor={ubicacion} error={errores.area_id}
+            alCambiar={(v) => { setUbicacion(v); setErrores((e) => ({ ...e, area_id: undefined })); }} />
+        </Tarjeta>
+      )}
       <Tarjeta>
         <Casilla marcada={mandarCodigo} alCambiar={setMandarCodigo} etiqueta="Mandarle un email con un código para que cree su contraseña" />
         <Texto suave estilo={{ fontSize: 13, marginVertical: espacio.m }}>

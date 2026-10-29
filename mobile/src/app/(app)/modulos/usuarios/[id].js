@@ -106,9 +106,15 @@ export default function Usuario() {
 
       <Tarjeta titulo="Datos" icono="information-circle-outline">
         <View style={estilos.datos}>
-          <Dato etiqueta="Legajo">{u.legajo ?? 'Sin legajo'}</Dato>
-          <Dato etiqueta="Área">{u.area_nombre ?? '—'}</Dato>
-          <Dato etiqueta="Puesto">{u.puesto_nombre ?? '—'}</Dato>
+          {u.rol === 'ADMIN' && !u.legajo ? (
+            <Dato etiqueta="Área">Administración del sistema (no pertenece a un área)</Dato>
+          ) : (
+            <>
+              <Dato etiqueta="Legajo">{u.legajo ?? 'Sin legajo'}</Dato>
+              <Dato etiqueta="Área">{u.area_nombre ?? '—'}</Dato>
+              <Dato etiqueta="Puesto">{u.puesto_nombre ?? '—'}</Dato>
+            </>
+          )}
           <Dato etiqueta="Cómo entra">{metodoIngreso(u.redes)}</Dato>
           <Dato etiqueta="Email">{u.email_verificado ? 'Verificado' : 'Sin verificar'}</Dato>
           <Dato etiqueta="Último ingreso">{u.ultimo_login_at ? haceCuanto(u.ultimo_login_at) : 'Nunca'}</Dato>
@@ -146,11 +152,13 @@ export default function Usuario() {
           <>
             <Boton titulo="Editar nombre o rol" icono="create-outline" variante="secundario"
               onPress={() => { setErroresEdicion({}); setEditando({ nombre: u.nombre, apellido: u.apellido, rol: u.rol }); }} />
-            <Boton titulo="Área, puesto y habilidades" icono="business-outline" variante="secundario"
-              onPress={() => setUbicando({
-                area_id: u.area_id, area_codigo: null, area_nombre: u.area_nombre, puesto_id: u.puesto_id, puesto_nombre: u.puesto_nombre,
-                habilidades: u.habilidades.map((h) => ({ habilidad_id: h.habilidad_id, nombre: h.nombre, nivel: h.nivel, requiere_certificacion: h.requiere_certificacion })),
-              })} />
+            {u.rol !== 'ADMIN' ? (
+              <Boton titulo="Área, puesto y habilidades" icono="business-outline" variante="secundario"
+                onPress={() => setUbicando({
+                  area_id: u.area_id, area_codigo: null, area_nombre: u.area_nombre, puesto_id: u.puesto_id, puesto_nombre: u.puesto_nombre,
+                  habilidades: u.habilidades.map((h) => ({ habilidad_id: h.habilidad_id, nombre: h.nombre, nivel: h.nivel, requiere_certificacion: h.requiere_certificacion })),
+                })} />
+            ) : null}
           </>
         ) : null}
 

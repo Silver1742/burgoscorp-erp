@@ -288,6 +288,9 @@ JOIN categorias_producto c ON c.nombre = p.cat;
 -- ---------------------------------------------------------------------
 -- Numeradores del año en curso
 -- ---------------------------------------------------------------------
+-- Jornada: de 8 a 16 (8 h), 10 minutos de tolerancia, extras al 50 % en días hábiles y al 100 % el fin de semana.
+INSERT INTO jornada_laboral (id) VALUES (1);
+
 INSERT INTO secuencias (codigo, anio, ultimo)
 SELECT s.codigo, YEAR(CURDATE()), 0 FROM (
             SELECT 'SOL' AS codigo UNION ALL SELECT 'PRE' UNION ALL SELECT 'OT'

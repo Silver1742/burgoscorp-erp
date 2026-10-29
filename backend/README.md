@@ -346,6 +346,10 @@ Fichar es personal: alcanza con tener la cuenta vinculada a un legajo (si no, `4
 | Método | Ruta | Permiso | Body / Query | Respuesta |
 |---|---|---|---|---|
 | GET | `/asistencias/hoy` | Sesión | — | `{ dentro, desde, registros, minutosHoy }` |
+| GET | `/jornada` | FIN ver | — | `{ hora_entrada, tolerancia_min, horas_diarias, recargo_extra_habil, recargo_extra_finde }` |
+| PUT | `/jornada` | FIN editar (alcance todo) | los mismos campos | `200` · `403` gerencia |
+| GET | `/liquidacion` | FIN ver | Query: `desde?`, `hasta?` (por defecto el mes en curso, hasta 62 días), `area_id?` | `{ desde, hasta, jornada, empleados: [{ legajo, …, llegadas_tarde, minutos_tarde, horas_trabajadas, horas_extra_habil, horas_extra_finde, horas_faltantes, ausencias, sueldo_base, adicional_extras, descuento_ausencias, descuento_horas, total }], totales }`. Queda en la auditoría |
+| GET | `/liquidacion/:empleadoId` | FIN ver | Query: `desde?`, `hasta?` | Lo mismo para una persona, con `dias` (entrada, salida, horas, tarde, extra, faltante, estado) |
 | GET | `/personal/resumen` | RRHH ver (alcance todo o área) | — | `{ fecha, totales: { personal, activos, en_licencia, vinieron_hoy, trabajando_ahora, sin_cuenta }, areas: [...con jefe], cuentas_sin_area }` · `403` para un empleado |
 | POST | `/asistencias/entrada` | Sesión | — | `201` estado de hoy · `409` ya está dentro |
 | POST | `/asistencias/salida` | Sesión | — | `200` · `409` no registró la entrada |

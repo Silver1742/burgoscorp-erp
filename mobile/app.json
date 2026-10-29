@@ -58,7 +58,8 @@
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "scheme": "burgoscorp",
     "backgroundColor": "#141416",

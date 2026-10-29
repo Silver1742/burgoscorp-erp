@@ -164,6 +164,18 @@ CREATE TABLE empleado_habilidades (
   CONSTRAINT fk_eh_habilidad FOREIGN KEY (habilidad_id) REFERENCES habilidades(id)
 ) ENGINE=InnoDB;
 
+-- Jornada laboral de la empresa (una sola fila). Con esto se calculan llegadas tarde, horas extra,
+-- horas faltantes y ausencias en la liquidación de sueldos.
+CREATE TABLE jornada_laboral (
+  id                  TINYINT UNSIGNED PRIMARY KEY,
+  hora_entrada        TIME NOT NULL DEFAULT '08:00:00',
+  tolerancia_min      TINYINT UNSIGNED NOT NULL DEFAULT 10,      -- después de esto es llegada tarde
+  horas_diarias       DECIMAL(4,2) NOT NULL DEFAULT 8.00,        -- de lunes a viernes
+  recargo_extra_habil TINYINT UNSIGNED NOT NULL DEFAULT 50,      -- % sobre la hora, días hábiles
+  recargo_extra_finde TINYINT UNSIGNED NOT NULL DEFAULT 100,     -- % sobre la hora, sábados y domingos
+  CONSTRAINT ck_jornada_unica CHECK (id = 1)
+) ENGINE=InnoDB;
+
 CREATE TABLE asistencias (
   id          BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   empleado_id INT UNSIGNED NOT NULL,

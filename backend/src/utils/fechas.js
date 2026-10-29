@@ -2,6 +2,19 @@
 const ZONA = process.env.TZ_EMPRESA || 'America/Argentina/Buenos_Aires'; // validada en config/env.js
 const formato = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA, year: 'numeric', month: '2-digit', day: '2-digit' });
 
+const formatoHora = new Intl.DateTimeFormat('en-GB', { timeZone: ZONA, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+
+/** Minutos desde la medianoche, en la hora de la empresa (ej. 08:15 → 495). */
+export function minutosDelDia(instante) {
+  const [h, m] = formatoHora.format(new Date(instante)).split(':').map(Number);
+  return h * 60 + m;
+}
+
+/** Hora de la empresa como 'HH:MM'. */
+export function horaEmpresa(instante) {
+  return formatoHora.format(new Date(instante));
+}
+
 /** Fecha de hoy en la empresa, como 'AAAA-MM-DD'. */
 export function hoy(ahora = new Date()) {
   return formato.format(ahora);

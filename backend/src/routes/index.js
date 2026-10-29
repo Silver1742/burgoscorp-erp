@@ -12,6 +12,7 @@ import mantenimientoRoutes from './mantenimiento.js';
 import ventasRoutes from './ventas.js';
 import calidadRoutes from './calidad.js';
 import finanzasRoutes from './finanzas.js';
+import liquidacionRoutes from './liquidacion.js';
 
 const router = Router();
 
@@ -28,6 +29,7 @@ router.use('/', mantenimientoRoutes);
 router.use('/', ventasRoutes);
 router.use('/', calidadRoutes);
 router.use('/', finanzasRoutes);
+router.use('/', liquidacionRoutes);
 router.use('/', adjuntosRoutes);
 router.use('/', catalogosRoutes);
 

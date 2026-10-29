@@ -46,6 +46,8 @@ ahora usa la app), se puede vincular ese en lugar de crear otro.
 | **Inspeccionar** con **mediciones, tolerancias y fotos**; mandar a retrabajo | Calidad | Calidad → Para inspeccionar |
 | **Resolver fallas** y planes preventivos, con fotos de la reparación y repuestos usados | Mantenimiento | Mantenimiento |
 | **Facturar, cobrar y pagar**, con **foto o PDF** de la factura del proveedor | Administración y Finanzas | Finanzas |
+| **Liquidar sueldos**: llegadas tarde, horas trabajadas, horas extra, faltantes y ausencias; **descargar la planilla** | Administración y Finanzas (y gerencia y el admin, para consultar) | Finanzas → Liquidación de sueldos |
+| **Configurar la jornada** (hora de entrada, tolerancia, horas por día, recargos) | Administración y Finanzas | Liquidación → Cambiar |
 | **Ver el tablero** | Todos: cada uno el suyo; jefes, su área; gerencia y admin, toda la empresa | Tablero |
 | **Ver el personal** (cuántos son, quién vino hoy, por área) | Admin, gerencia (toda la empresa) y jefes (su área) | Recursos humanos → Personal |
 | **Habilitar cuentas**, crear usuarios, cambiar área y habilidades, dar de baja | Administrador | Usuarios |
@@ -60,7 +62,7 @@ no por el nombre, se les borra la ubicación GPS y tienen tope de tamaño y cant
 | Área | Qué hace en el sistema | Jefe (datos de prueba) |
 |---|---|---|
 | **Dirección** | Ve el tablero de toda la empresa | Ricardo Ferreyra (gerente general) |
-| **Administración y Finanzas** | Facturas, cobros, pagos y comprobantes con foto/PDF. El administrador del sistema está en esta área | Natalia Quiroga |
+| **Administración y Finanzas** | Facturas, cobros, pagos y comprobantes con foto/PDF; liquidación de sueldos con la planilla para descargar | Natalia Quiroga |
 | **Recursos Humanos** | Legajos, habilidades y certificaciones, fichajes, aprobación final de licencias, EPP, organigrama | Carolina Méndez |
 | **Comercial** | Clientes, pedidos con descripción y fotos, presupuestos, contacto por WhatsApp | Diego Acosta |
 | **Ingeniería y Diseño** | Pedidos y presupuestos técnicos, planificación de órdenes de trabajo, diseño CAD | Sebastián Molina |
@@ -120,3 +122,6 @@ El **banco de montaje MON-01** no pide ninguna habilidad: cualquiera del área p
 | Ver el personal y el tablero | El suyo | Su área | Toda la empresa | Toda la empresa |
 | Ver todos los módulos | — | Los de su área y consultas | ✅ solo lectura | ✅ |
 | Usuarios: habilitar, crear, editar, dar de baja | — | — | — | ✅ |
+
+El **administrador del sistema** no pertenece a ningún área ni lleva legajo: administra todo desde
+afuera de la estructura de la empresa.

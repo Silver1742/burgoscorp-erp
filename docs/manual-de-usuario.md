@@ -113,14 +113,43 @@ marcá si la máquina quedó parada. Mantenimiento recibe el aviso.
 5. **Calidad → Para inspeccionar**: se cargan las mediciones. Si no pasa, se genera un retrabajo.
 6. **Finanzas**: factura y cobro.
 
-## 7. Para gerencia
+## 7. Liquidación de sueldos (Administración y Finanzas)
+
+**Módulos → Finanzas → Liquidación de sueldos** (o **Sueldos** en Inicio). La ven Administración y
+Finanzas, gerencia y el administrador; la jornada solo la cambia Administración.
+
+1. Elegí el **período**: este mes, la quincena, el mes pasado o las fechas que quieras (hasta 62 días),
+   y si querés, un **área**.
+2. Arriba ves el total de **llegadas tarde**, **horas trabajadas**, **horas extra**, **ausencias sin
+   justificar** y el **total a pagar**.
+3. Abajo, cada persona con sus tardanzas, extras, ausencias y su total. **Tocala** para ver el
+   cálculo y el detalle **día por día** (a qué hora entró y salió).
+4. **Descargar planilla**: baja un archivo que abre Excel con el resumen de sueldos de todos (en el
+   teléfono se abre el menú para guardarlo o mandarlo). En el detalle de una persona también podés
+   descargar sus días.
+
+**Cómo se calcula** (la jornada se cambia con **Cambiar**: hora de entrada, tolerancia, horas por
+día y recargos):
+
+| Concepto | Regla |
+|---|---|
+| Llegada tarde | Entró después de la hora de entrada + la tolerancia (por defecto 08:00 + 10 min) |
+| Sueldo base | Días hábiles del período × horas de la jornada × valor hora del legajo |
+| Horas extra | Lo trabajado de más en un día hábil (+50 %) y todo lo del fin de semana (+100 %), en bloques de media hora |
+| Horas faltantes | Lo que faltó para completar la jornada en un día trabajado: se descuenta |
+| Ausencia sin justificar | Día hábil sin fichaje y sin licencia aprobada: se descuenta la jornada |
+| Licencia aprobada | Se paga como día trabajado |
+
+No incluye feriados, aportes ni retenciones (es el resumen para liquidar, no el recibo legal).
+
+## 8. Para gerencia
 
 Todo se puede consultar y nada se modifica. El **Tablero** resume ventas, producción, compras,
 calidad y finanzas de toda la empresa.
 
 ---
 
-## 8. Para el administrador: usuarios
+## 9. Para el administrador: usuarios
 
 Todo está en **Módulos → Usuarios** (o el botón **Usuarios** en Inicio).
 
@@ -158,19 +187,22 @@ legajo se crea solo). Dejá marcado **"Mandarle un email…"** para que cree su 
 ficharon hoy y están trabajando, quién está de licencia, cada área con su jefe, y las **cuentas sin
 área** para ubicarlas. Los jefes ven solo su área.
 
+El **administrador del sistema no pertenece a ningún área** ni lleva legajo: ve y administra todo.
+Al habilitar o crear a alguien con el rol Administrador no se le pide área.
+
 No podés cambiarte el rol, darte de baja ni eliminarte a vos mismo, y el sistema nunca queda sin
 un administrador activo.
 
 ---
 
-## 9. Seguridad de tu cuenta
+## 10. Seguridad de tu cuenta
 
 - **Perfil → Verificación en dos pasos**: activala con Google Authenticator o con código por email.
   Guardá los **códigos de respaldo** en un lugar seguro.
 - Si perdiste el celular: **Perfil → Cerrar sesión en todos los dispositivos**.
 - Después de varios intentos fallidos la cuenta se bloquea 15 minutos.
 
-## 10. Problemas comunes
+## 11. Problemas comunes
 
 | Problema | Qué hacer |
 |---|---|

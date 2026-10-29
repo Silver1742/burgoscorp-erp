@@ -81,8 +81,8 @@ export default function Inicio() {
   // "¿Qué querés hacer?": las acciones marcadas como rápidas en los módulos que el rol puede ver.
   // Para el administrador, lo primero es Usuarios.
   const atajos = [];
-  // Para administración y gerencia, Usuarios y Personal van primero.
-  const prioridad = (m) => ({ SEG: 2, RRHH: 1 }[m.codigo] ?? 0);
+  // Para administración y gerencia, Usuarios, Personal y Sueldos van primero.
+  const prioridad = (m) => ({ SEG: 3, RRHH: 2, FIN: 1 }[m.codigo] ?? 0);
   const ordenados = ['ADMIN', 'GERENCIA'].includes(usuario.rol) ? [...MODULOS].sort((a, b) => prioridad(b) - prioridad(a)) : MODULOS;
   for (const m of ordenados) {
     if (!permisos[m.codigo]?.ver) continue;
@@ -132,7 +132,9 @@ export default function Inicio() {
         <EncabezadoPagina titulo={`${saludo()}, ${usuario.nombre}`} sub={DESCRIPCION_ROL[usuario.rol]} />
         <View style={[estilos.fila, { marginTop: -espacio.m, marginBottom: espacio.xl }]}>
           <InsigniaRol rol={usuario.rol} />
-          {usuario.area ? <Insignia texto={usuario.area.nombre} icono="business-outline" /> : <Insignia texto="Sin área asignada" tono="aviso" />}
+          {/* El administrador del sistema no pertenece a un área */}
+          {usuario.rol === 'ADMIN' ? null
+            : usuario.area ? <Insignia texto={usuario.area.nombre} icono="business-outline" /> : <Insignia texto="Sin área asignada" tono="aviso" />}
         </View>
 
         {error ? <Tarjeta><ErrorCarga error={error} onReintentar={cargar} /></Tarjeta> : null}
