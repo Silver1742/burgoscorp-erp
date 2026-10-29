@@ -18,6 +18,9 @@ const esquema = z.object({
   DB_PASSWORD: z.string().default(''),
   DB_NAME: z.string().min(1),
   DB_SSL: z.enum(['true', 'false']).default('false'),
+  // Certificado (PEM) de la autoridad del proveedor, si no es una pública (ej. Aiven). Se puede pegar
+  // con saltos de línea reales o con \n.
+  DB_SSL_CA: z.string().default(''),
 
   // Secretos de firma: mínimo 32 caracteres. Generar con:
   // node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
@@ -93,8 +96,14 @@ if (env.NODE_ENV === 'production' && !env.SMTP_HOST) {
 
 const lista = (v) => v.split(',').map((o) => o.trim()).filter(Boolean);
 
+/** Opciones TLS de MySQL: siempre se verifica el certificado del servidor. */
+const dbSsl = env.DB_SSL === 'true'
+  ? { rejectUnauthorized: true, ...(env.DB_SSL_CA ? { ca: env.DB_SSL_CA.replace(/\\n/g, '\n') } : {}) }
+  : undefined;
+
 export default {
   ...env,
+  dbSsl,
   esProduccion: env.NODE_ENV === 'production',
   registroAbierto: env.REGISTRO_ABIERTO === 'true',
   corsOrigins: lista(env.CORS_ORIGINS),

@@ -1,0 +1,56 @@
+# Blueprint de Render para la API (plan gratis). La base MySQL está en Aiven (ver docs/publicar.md).
+# Las claves las genera Render (generateValue); lo marcado con sync: false lo completa el dueño de la
+# cuenta en el panel de Render: nunca se escriben en este archivo ni en el repositorio.
+services:
+  - type: web
+    name: burgoscorp-api
+    runtime: node
+    plan: free
+    region: virginia
+    rootDir: backend
+    buildCommand: npm ci --omit=dev
+    # Crea las tablas si la base está vacía y carga las cuentas de prueba solo si hay SEED_PASSWORD.
+    startCommand: npm run db:init && node scripts/seed.js --forzar --opcional && npm start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY
+        value: "1"
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_TEMP_SECRET
+        generateValue: true
+      - key: CODIGOS_HMAC_KEY
+        generateValue: true
+      # 256 bits en base64 = la clave AES-256 que cifra los secretos del 2FA. No cambiarla después.
+      - key: TOTP_ENC_KEY
+        generateValue: true
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: defaultdb
+      - key: DB_SSL
+        value: "true"
+      - key: DB_SSL_CA
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: SEED_PASSWORD
+        sync: false

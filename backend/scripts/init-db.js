@@ -26,7 +26,7 @@ const conexion = await mysql.createConnection({
   user: env.DB_USER,
   password: env.DB_PASSWORD,
   database: env.DB_NAME,
-  ssl: env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
+  ssl: env.dbSsl,
   multipleStatements: true, // solo en este script, con archivos del repositorio (nunca con datos de usuarios)
   charset: 'utf8mb4',
 });
