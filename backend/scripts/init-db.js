@@ -1,5 +1,5 @@
 // Crea las tablas y carga los catálogos base (db/schema.sql + db/seed.sql) en la base que indica
-// el .env. Pensado para la base de la nube (Railway), donde la base ya existe con otro nombre:
+// el .env. Pensado para la base de la nube (Aiven), donde la base ya existe con otro nombre:
 // se quitan las líneas CREATE DATABASE / USE de los archivos y se usa DB_NAME.
 //
 //   npm run db:init

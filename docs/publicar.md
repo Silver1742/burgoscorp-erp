@@ -1,92 +1,117 @@
 # Publicar BurgosCorp ERP
 
-Cómo poner la API en internet (Railway, con MySQL) y generar el APK de Android (EAS Build).
-Lo que dice **Vos** lo hace el dueño de las cuentas: nunca se pegan contraseñas ni claves en el
-chat ni en el repositorio.
+Cómo está publicado el sistema y cómo repetirlo desde cero. Todo usa planes **gratis**.
 
-## 1. Código en GitHub
+| Pieza | Dónde | Dirección |
+|---|---|---|
+| Código | GitHub (público) | <https://github.com/Silver1742/burgoscorp-erp> |
+| API | Render (Web Service) | <https://burgoscorp-api.onrender.com/api/v1> |
+| Base de datos | Aiven (MySQL) | solo la ve la API, con TLS y certificado verificado |
+| Correo | Brevo (API HTTPS) | remitente: el Gmail del dueño, verificado en Brevo |
+| App web | Render (Static Site) | <https://burgoscorp-erp.onrender.com> |
+| App Android | EAS Build (APK) | enlace de descarga en la página del proyecto en expo.dev |
 
-1. **Vos:** en <https://github.com/new> creá el repositorio `burgoscorp-erp`, **público**, vacío
-   (sin README, sin .gitignore, sin licencia).
-2. Se conecta y se sube:
+Lo que dice **Vos** lo hace el dueño de las cuentas. **Ninguna contraseña ni clave se pega en el
+chat ni en el repositorio**: se cargan directamente en el panel del proveedor.
 
-   ```bash
-   git remote add origin https://github.com/USUARIO/burgoscorp-erp.git
-   git push -u origin main
-   ```
+> Render gratis "duerme" la API después de 15 minutos sin uso: el primer pedido tarda unos 30 a
+> 50 segundos en despertarla. Después responde normal.
 
-   La primera vez Windows abre el navegador para iniciar sesión en GitHub (Git Credential Manager).
+## 1. Base de datos en Aiven
 
-El repositorio no tiene `.env`, claves ni archivos subidos (están en `.gitignore`); los secretos van
-solo en el panel de Railway.
+1. **Vos:** cuenta en <https://aiven.io> → **Create service → MySQL → Free plan**.
+2. En el servicio, pestaña *Overview*: anotar **Host**, **Port**, **User** (`avnadmin`) y descargar el
+   **CA certificate**. La contraseña se copia solo al panel de Render (paso 3).
+3. Aiven exige clave primaria en todas las tablas (`sql_require_primary_key`): el esquema ya cumple.
 
-## 2. API y base de datos en Railway
+## 2. Correo con Brevo
 
-1. **Vos:** entrá a <https://railway.com> con tu cuenta de GitHub.
-2. **New Project → Deploy from GitHub repo →** `burgoscorp-erp`.
-3. En el servicio creado: **Settings → Source → Root Directory:** `backend`. Railway lee
-   `backend/railway.json`: al arrancar crea las tablas si la base está vacía (`npm run db:init`) y
-   después levanta la API. La salud se controla en `/api/v1/health`.
-4. **+ New → Database → MySQL** en el mismo proyecto.
-5. En el servicio de la API, **+ Volume**, montado en `/data` (ahí se guardan las fotos).
-6. **Variables** del servicio de la API (pestaña *Variables → Raw Editor*):
+Render gratis **bloquea los puertos SMTP** (25, 465, 587), así que la API manda los correos por la
+API HTTPS de Brevo cuando tiene `BREVO_API_KEY` (sin la clave, usa SMTP como en desarrollo).
 
-   ```
-   NODE_ENV=production
-   HOST=0.0.0.0
-   TRUST_PROXY=1
-   DB_HOST=${{MySQL.MYSQLHOST}}
-   DB_PORT=${{MySQL.MYSQLPORT}}
-   DB_USER=${{MySQL.MYSQLUSER}}
-   DB_PASSWORD=${{MySQL.MYSQLPASSWORD}}
-   DB_NAME=${{MySQL.MYSQLDATABASE}}
-   JWT_ACCESS_SECRET=${{ secret(64) }}
-   JWT_TEMP_SECRET=${{ secret(64) }}
-   CODIGOS_HMAC_KEY=${{ secret(64) }}
-   TOTP_ENC_KEY=${{ secret(64, "0123456789abcdef") }}
-   UPLOADS_DIR=/data/uploads
-   SMTP_HOST=smtp.gmail.com
-   SMTP_PORT=587
-   SMTP_USER=tu.cuenta@gmail.com
-   SMTP_PASS=
-   SMTP_FROM=BurgosCorp ERP <tu.cuenta@gmail.com>
-   ```
+1. **Vos:** cuenta en <https://www.brevo.com> (con Google es lo más rápido: el Gmail queda como
+   remitente verificado). Si no, *Senders → Add sender* y confirmar el mail que llega.
+2. *SMTP & API → API keys → Generate*: acceso **restringido**, solo **Emails transaccionales**.
+   Brevo pide verificar el teléfono la primera vez. La clave se muestra una sola vez.
 
-   - `${{ secret(...) }}` lo genera Railway: las claves no pasan por ninguna PC ni por el chat.
-     **No las cambies después**: `TOTP_ENC_KEY` cifra los secretos del 2FA.
-   - `SMTP_PASS` es una **contraseña de aplicación** de Google (Cuenta de Google → Seguridad →
-     Verificación en dos pasos → Contraseñas de aplicaciones). La cargás vos directamente acá.
-   - Quien se registra desde la app queda **pendiente** hasta que el administrador lo habilita en
-     *Usuarios → Solicitudes de acceso*. Con `REGISTRO_ABIERTO=false` solo el administrador crea cuentas.
-7. **Cuentas de prueba (opcional, para mostrar el sistema):** agregá `SEED_PASSWORD` con una
-   contraseña de 12 caracteres o más (que no sea la de desarrollo). En el próximo arranque se
-   cargan los empleados, usuarios y datos de ejemplo. Después:
-   - **borrá la variable `SEED_PASSWORD`** (el seed no vuelve a correr si ya hay usuarios, pero así
-     no queda la contraseña en el panel);
-   - entrá con `admin@burgoscorp.test`, **cambiá su contraseña y activá el 2FA** en Perfil.
-8. **Settings → Networking → Generate Domain.** Queda algo como
-   `https://burgoscorp-erp-production.up.railway.app`. Probá
-   `https://…/api/v1/health` en el navegador: tiene que responder `{"ok":true,…}`.
+## 3. API en Render
 
-## 3. APK con EAS Build
+El archivo [`render.yaml`](../render.yaml) describe los dos servicios (API y web). Se puede usar
+como *Blueprint* (**New → Blueprint** en Render) o crear el Web Service a mano con:
 
-1. En `mobile/eas.json`, reemplazá `https://API-DE-RAILWAY` por el dominio del paso 2.8 (queda
-   `https://…up.railway.app/api/v1`). La app se niega a usar `http://` en producción.
-2. **Vos (una sola vez):** `npx eas-cli login` con tu cuenta de Expo.
+- **Build:** `cd backend && npm ci --omit=dev`
+- **Start:** `cd backend && npm run db:init && node scripts/seed.js --forzar --opcional && npm start`
+  - `db:init` crea las tablas si la base está vacía (y reintenta si una carga quedó cortada).
+  - el seed carga las cuentas de prueba **solo** si existe `SEED_PASSWORD` (12+ caracteres).
+  - `npm start` corre antes `restablecer-admin.js`, que solo actúa si existe `ADMIN_RESET_PASSWORD`.
+
+**Variables** (*Environment*):
+
+| Variable | Valor |
+|---|---|
+| `NODE_ENV` | `production` |
+| `HOST` / `TRUST_PROXY` | `0.0.0.0` / `1` |
+| `DB_HOST`, `DB_PORT`, `DB_USER` | los de Aiven |
+| `DB_PASSWORD` | **Vos**, la de Aiven |
+| `DB_NAME` / `DB_SSL` | `defaultdb` / `true` |
+| `DB_SSL_CA` | el certificado CA de Aiven (texto PEM completo) |
+| `JWT_ACCESS_SECRET`, `JWT_TEMP_SECRET`, `CODIGOS_HMAC_KEY`, `TOTP_ENC_KEY` | botón **Generate** de Render. **No cambiar `TOTP_ENC_KEY` después**: cifra los secretos del 2FA |
+| `BREVO_API_KEY` | **Vos**, la clave de Brevo |
+| `SMTP_FROM` | `BurgosCorp ERP <tu.cuenta@gmail.com>` (el remitente verificado en Brevo) |
+| `CORS_ORIGINS` | `https://burgoscorp-erp.onrender.com` (la app web) |
+| `SEED_PASSWORD` | **Vos**, solo para el primer arranque. **Borrarla después** |
+
+Probar `https://burgoscorp-api.onrender.com/api/v1/health` → `{"ok":true,…}`.
+
+**Después del primer arranque:**
+- borrar `SEED_PASSWORD` (las cuentas ya quedaron creadas con esa contraseña);
+- entrar con `admin@burgoscorp.test`, **cambiar la contraseña y activar el 2FA** en Perfil.
+
+**Si se olvida la contraseña del admin** (su email es ficticio, no le llega la recuperación):
+agregar `ADMIN_RESET_PASSWORD` con la nueva (12+ caracteres, letras y números), guardar, esperar
+el arranque (el log dice *"Contraseña de admin@burgoscorp.test restablecida"*) y **borrar la
+variable**.
+
+Quien pide acceso desde la app queda **pendiente** hasta que el administrador lo habilita en
+*Usuarios → Solicitudes de acceso*; en ese momento le llega el aviso por email.
+
+## 4. App web en Render
+
+Static Site con:
+
+- **Build:** `cd mobile && npm ci && npm run build:web` (exporta Expo para la web y renombra el
+  runtime de Metro, que Render no servía con su nombre original).
+- **Publish directory:** `mobile/dist`
+- **Variable:** `EXPO_PUBLIC_API_URL=https://burgoscorp-api.onrender.com/api/v1`
+- **Redirects/Rewrites:** `/*` → `/index.html`, acción **Rewrite** (para poder recargar cualquier
+  pantalla).
+
+En la web la sesión vive en memoria (no se guardan tokens en el navegador): al recargar la página
+hay que volver a entrar.
+
+## 5. APK con EAS Build
+
+1. `mobile/eas.json` ya apunta a la API publicada (`EXPO_PUBLIC_API_URL`). La app se niega a usar
+   `http://` en producción.
+2. **Vos (una sola vez):** `npx eas-cli login` con la cuenta de Expo.
 3. Desde `mobile/`:
 
    ```bash
    npx eas-cli build -p android --profile preview
    ```
 
-   La primera vez pregunta si crea el proyecto en Expo y la clave de firma (keystore): aceptá que
-   EAS la genere y la guarde (no se sube al repo). Al terminar da un enlace para bajar el `.apk`.
-4. Instalá el APK en el teléfono (hay que permitir "instalar apps de origen desconocido").
+   La primera vez crea el proyecto en Expo y la clave de firma (la guarda EAS, no se sube al repo).
+   Al terminar da el enlace del `.apk`.
+4. Instalar el APK en el teléfono (permitir "instalar apps de origen desconocido").
 
-## 4. Antes de entregar
+Los cambios de ícono, splash o del comportamiento del teclado (`app.json`) solo se ven en un APK
+nuevo; los cambios de pantallas también, porque el APK lleva el código adentro.
 
-- [ ] `https://…/api/v1/health` responde y el login funciona desde el APK.
-- [ ] La contraseña del admin ya no es la de `SEED_PASSWORD` y tiene 2FA.
+## 6. Antes de entregar
+
+- [ ] `/api/v1/health` responde, y el login funciona desde el APK y desde la web.
+- [ ] `SEED_PASSWORD` y `ADMIN_RESET_PASSWORD` ya no están en Render.
+- [ ] La contraseña del admin no es la del seed y tiene 2FA.
 - [ ] `npm audit` en `backend/` (0 vulnerabilidades) y en `mobile/` (las alertas de `@expo/cli`
       son de la herramienta de compilación y no van en el APK).
-- [ ] El `.zip` de entrega se arma **sin** `.env`, `node_modules`, `uploads/` ni `.expo/`.
+- [ ] El `.zip` de entrega se arma **sin** `.env`, `node_modules`, `uploads/`, `dist/` ni `.expo/`.

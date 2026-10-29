@@ -545,7 +545,7 @@ encontró 15 problemas: 2 altos (cualquiera que se registrara solo podía leer d
 máquinas; robo de cuenta a través del login con Google), 3 medios (adivinar el 2FA sin límite,
 facturar una OT salteando Calidad, datos personales y de salud a la vista de más) y 10 bajos.
 Se corrigieron todos, con un test por cada uno en [`tests/seguridad.test.js`](../backend/tests/seguridad.test.js),
-y una segunda revisión confirmó las correcciones y marcó 3 detalles más (proxy de Railway, DNI
+y una segunda revisión confirmó las correcciones y marcó 3 detalles más (proxy del hosting, DNI
 buscable, motivo de las licencias por enfermedad), que también se corrigieron.
 
 La skill y el agente que revisan esto durante el desarrollo están en
@@ -558,7 +558,7 @@ La skill y el agente que revisan esto durante el desarrollo están en
 
 | Qué | Cómo | Dónde |
 |---|---|---|
-| API | 134 tests automáticos: login, tokens, permisos, 2FA, las correcciones de la auditoría de seguridad, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje, el circuito de licencias, órdenes de trabajo, tareas, fotos adjuntas, stock y reservas, órdenes de compra, mantenimiento, escaneo y el recorrido completo de un pedido (solicitud → presupuesto → OT → calidad con retrabajo → factura y cobro) | [`backend/tests/`](../backend/tests) |
+| API | 135 tests automáticos: login, tokens, permisos, 2FA, las correcciones de la auditoría de seguridad, códigos, redes sociales simuladas, inyección SQL, legajos, fichaje, el circuito de licencias, órdenes de trabajo, tareas, fotos adjuntas, stock y reservas, órdenes de compra, mantenimiento, escaneo y el recorrido completo de un pedido (solicitud → presupuesto → OT → calidad con retrabajo → factura y cobro) | [`backend/tests/`](../backend/tests) |
 | App | Probada en el navegador, con tamaño de celular y de escritorio, con usuarios de distintos roles | — |
 
 Para correr los tests: `cd backend && npm test` (con una base de prueba, porque modifican datos).
@@ -577,5 +577,5 @@ Para correr los tests: `cd backend && npm test` (con una base de prueba, porque 
 | 6 | Producción y Tareas, y fotos con la cámara (tareas y certificados) | ✅ |
 | 7 | Inventario, Compras y Mantenimiento: stock y reserva de material de la OT, orden de compra y recepción, fallas de máquina; QR de la OT y escaneo con la cámara | ✅ |
 | 8 | Ventas, Calidad, Finanzas y Tablero: solicitud con foto → presupuesto → OT, inspección con fotos y no conformidad (retrabajo), factura y cobro, tablero | ✅ |
-| 9 | Publicar la API, generar el APK, auditoría de seguridad | 🔶 Auditoría y correcciones listas; publicación preparada ([guía](publicar.md)), falta subir a GitHub, Railway y el APK |
+| 9 | Publicar la API, generar el APK, auditoría de seguridad | ✅ API en Render con MySQL en Aiven, correo por Brevo, versión web y APK con EAS ([guía](publicar.md)) |
 | 10 | Manual de usuario y documentación final | ⏳ |

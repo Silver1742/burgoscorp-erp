@@ -1,4 +1,5 @@
-# Blueprint de Render para la API (plan gratis). La base MySQL está en Aiven (ver docs/publicar.md).
+# Blueprint de Render: la API y la versión web de la app (plan gratis). La base MySQL está en Aiven
+# y el correo sale por Brevo (ver docs/publicar.md).
 # Las claves las genera Render (generateValue); lo marcado con sync: false lo completa el dueño de la
 # cuenta en el panel de Render: nunca se escriben en este archivo ni en el repositorio.
 services:
@@ -52,5 +53,25 @@ services:
         sync: false
       - key: SMTP_FROM
         sync: false
+      # Render gratis bloquea SMTP: con esta clave el correo sale por la API HTTPS de Brevo.
+      - key: BREVO_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://burgoscorp-erp.onrender.com
+      # Solo para el primer arranque (cuentas de prueba); después se borra.
       - key: SEED_PASSWORD
         sync: false
+
+  # Versión web de la app (Expo exportado como sitio estático).
+  - type: web
+    name: burgoscorp-erp
+    runtime: static
+    buildCommand: cd mobile && npm ci && npm run build:web
+    staticPublishPath: mobile/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: EXPO_PUBLIC_API_URL
+        value: https://burgoscorp-api.onrender.com/api/v1
