@@ -56,6 +56,17 @@
     ],
     "scheme": "burgoscorp",
     "backgroundColor": "#141416",
-    "primaryColor": "#C8102E"
+    "primaryColor": "#C8102E",
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "f71db92c-c9df-4f31-ba30-961c971e6e92"
+      }
+    },
+    "owner": "silver1011"
   }
 }
