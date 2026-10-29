@@ -8,6 +8,7 @@ import { espacio, radio, sombra, useTema } from '../tema';
 
 export default function ConfirmDialog({
   visible, titulo, mensaje, textoConfirmar = 'Confirmar', variante = 'peligro', alConfirmar, alCerrar, children,
+  deshabilitado = false,
 }) {
   const t = useTema();
   const [ocupado, setOcupado] = useState(false);
@@ -38,7 +39,8 @@ export default function ConfirmDialog({
           </ScrollView>
           <View style={[estilos.pie, { borderTopColor: t.borde }]}>
             <Boton titulo="Cancelar" variante="secundario" onPress={alCerrar} deshabilitado={ocupado} chico estilo={{ marginBottom: 0 }} />
-            <Boton titulo={textoConfirmar} variante={variante} onPress={confirmar} cargando={ocupado} chico estilo={{ marginBottom: 0 }} />
+            <Boton titulo={textoConfirmar} variante={variante} onPress={confirmar} cargando={ocupado} deshabilitado={deshabilitado}
+              chico estilo={{ marginBottom: 0 }} />
           </View>
         </Pressable>
       </Pressable>
