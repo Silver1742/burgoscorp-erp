@@ -1,7 +1,7 @@
 // Esquemas de los datos maestros. `.strict()` rechaza campos de más (evita asignación masiva,
 // por ejemplo que alguien mande `id` o `activo` donde no corresponde).
 import { z } from 'zod';
-import { id, texto, textoOpcional, email, importe, booleano, cuit } from './comunes.js';
+import { id, texto, textoOpcional, email, importe, booleano, cuit, nombrePersona } from './comunes.js';
 
 const codigo = (max) => z.string().trim().toUpperCase().min(1).max(max)
   .regex(/^[A-Z0-9_-]+$/, 'Solo letras, números, guion y guion bajo');
@@ -109,6 +109,8 @@ export const centroTrabajo = z.object({
 
 // Administración de usuarios: solo estos campos se pueden cambiar desde el panel.
 export const usuarioAdmin = z.object({
+  nombre: nombrePersona.optional(),
+  apellido: nombrePersona.optional(),
   rol: z.enum(['ADMIN', 'GERENCIA', 'JEFE', 'EMPLEADO']).optional(),
   empleado_id: opcional(id),
   activo: booleano.optional(),

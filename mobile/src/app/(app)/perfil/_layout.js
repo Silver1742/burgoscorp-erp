@@ -10,6 +10,7 @@ export default function LayoutPerfil() {
       <Stack.Screen name="index" options={{ title: 'Perfil' }} />
       <Stack.Screen name="dos-pasos" options={{ title: 'Verificación en dos pasos' }} />
       <Stack.Screen name="notificaciones" options={{ title: 'Avisos' }} />
+      <Stack.Screen name="ayuda" options={{ title: 'Ayuda' }} />
     </Stack>
   );
 }

@@ -74,6 +74,12 @@ const TEXTOS = {
     asunto: 'Código de inicio de sesión',
     intro: 'Tu código para completar el inicio de sesión en',
   },
+  // Lo manda el administrador (el código es de tipo recuperar_password).
+  crear_password: {
+    asunto: 'Creá tu contraseña',
+    intro: 'Un administrador te mandó este código para que crees tu contraseña en',
+    pasos: 'En la app tocá "¿Olvidaste tu contraseña?" → "Ya tengo un código" e ingresá tu email, este código y tu nueva contraseña.',
+  },
 };
 
 /** Aviso de texto simple (cuenta habilitada o rechazada). */
@@ -83,14 +89,20 @@ export async function enviarAviso({ para, nombre, asunto, lineas }) {
   await enviar({ para, asunto: `${asunto} · ${env.APP_NOMBRE}`, texto, html });
 }
 
-/** Manda un código de 6 dígitos. El código nunca se guarda ni se registra en logs de producción. */
-export async function enviarCodigo({ para, nombre, tipo, codigo }) {
-  const t = TEXTOS[tipo];
+/**
+ * Manda un código de 6 dígitos. El código nunca se guarda ni se registra en logs de producción.
+ * `plantilla` elige el texto cuando no es el del tipo (ej. el admin manda un código de recuperación
+ * para que la persona cree su contraseña).
+ */
+export async function enviarCodigo({ para, nombre, tipo, codigo, plantilla = tipo }) {
+  const t = TEXTOS[plantilla];
   const texto = `Hola ${nombre}:\n\n${t.intro} ${env.APP_NOMBRE}:\n\n    ${codigo}\n\n`
+    + (t.pasos ? `${t.pasos}\n` : '')
     + 'Vence en 10 minutos y sirve una sola vez.\n'
     + 'Si no fuiste vos, ignorá este mensaje y, si se repite, cambiá tu contraseña.\n';
   const html = `<p>Hola ${escapar(nombre)}:</p><p>${escapar(t.intro)} ${escapar(env.APP_NOMBRE)}:</p>`
     + `<p style="font-size:28px;font-weight:bold;letter-spacing:6px">${escapar(codigo)}</p>`
+    + (t.pasos ? `<p>${escapar(t.pasos)}</p>` : '')
     + '<p>Vence en 10 minutos y sirve una sola vez.</p>'
     + '<p style="color:#666">Si no fuiste vos, ignorá este mensaje y, si se repite, cambiá tu contraseña.</p>';
   await enviar({ para, asunto: `${t.asunto} · ${env.APP_NOMBRE}`, texto, html });

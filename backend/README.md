@@ -251,10 +251,12 @@ apps OAuth está en [`docs/guia-oauth.md`](../docs/guia-oauth.md).
 | Método | Ruta | Permiso | Parámetros / Body | Respuesta |
 |---|---|---|---|---|
 | GET | `/usuarios/roles` | SEG ver | — | Lista de roles |
-| GET | `/usuarios` | SEG ver | Query: `pagina`, `limite`, `q`, `rol`, `estado_cuenta` (`pendiente`, `habilitada`, `rechazada`) | Listado paginado, primero los pendientes |
+| GET | `/usuarios` | SEG ver | Query: `pagina`, `limite`, `q` (nombre, email o legajo), `rol`, `estado` (`activos`, `inactivos`, `pendientes`, `rechazados`), `estado_cuenta`, `area_id`, `orden` (`nombre`, `rol`, `area`, `ultimo_ingreso`, `alta`) | Listado paginado, primero los pendientes |
 | GET | `/usuarios/:id` | SEG ver | — | `200` · `404` |
 | POST | `/usuarios` | SEG crear | `email`, `nombre`, `apellido`, `rol`, `empleado_id?` | `201` (cuenta sin contraseña: entra con red social o recupera contraseña) |
-| PUT | `/usuarios/:id` | SEG editar | `rol?`, `empleado_id?`, `activo?` | `200` · `403` si es la propia cuenta |
+| PUT | `/usuarios/:id` | SEG editar | `nombre?`, `apellido?`, `rol?`, `empleado_id?`, `activo?` (`false` = dar de baja) | `200` · `403` si cambia su propio rol o se da de baja · `409` si deja el sistema sin administrador activo |
+| POST | `/usuarios/:id/restablecer-password` | SEG editar | — | `200`: le manda por email un código para crear su contraseña (el admin nunca lo ve) · `409` si la cuenta no está activa |
+| DELETE | `/usuarios/:id` | SEG borrar | — | `200` · `403` la propia cuenta · `409` si tiene actividad registrada (hay que darla de baja) |
 | POST | `/usuarios/:id/habilitar` | SEG aprobar (admin) | `rol`, `empleado_id?` | `200` · `409` si ya estaba habilitada o el legajo ya tiene cuenta. Le avisa por email |
 | POST | `/usuarios/:id/rechazar` | SEG aprobar (admin) | `motivo?` | `200` · `409` si no estaba pendiente. Le avisa por email con el motivo |
 

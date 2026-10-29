@@ -37,6 +37,9 @@ export default function Olvide() {
       <Campo etiqueta="Email de tu cuenta" value={email} onChangeText={setEmail} error={error}
         keyboardType="email-address" autoCapitalize="none" autoComplete="email" maxLength={254} onSubmitEditing={enviar} />
       <Boton titulo="Enviar código" onPress={enviar} cargando={enviando} textoCargando="Enviando…" icono="mail-outline" />
+      {/* Si el administrador ya le mandó un código por email (cuenta nueva), va directo a usarlo */}
+      <Boton titulo="Ya tengo un código" variante="secundario" icono="keypad-outline"
+        onPress={() => router.push({ pathname: '/restablecer', params: email.trim() ? { email: email.trim() } : {} })} />
       <VolverAlLogin />
     </AuthLayout>
   );

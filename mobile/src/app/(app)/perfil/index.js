@@ -58,6 +58,11 @@ export default function Perfil() {
         <Opcion icono="notifications-outline" titulo="Avisos" sub="Licencias, aprobaciones y tareas" onPress={() => router.push('/perfil/notificaciones')} ultima />
       </Tarjeta>
 
+      <Tarjeta titulo="Ayuda" icono="help-circle-outline" sinRelleno>
+        <Opcion icono="book-outline" titulo="Guía rápida de uso" sub="Paso a paso de lo que podés hacer con tu rol"
+          onPress={() => router.push('/perfil/ayuda')} ultima />
+      </Tarjeta>
+
       <Tarjeta titulo="Apariencia" icono="color-palette-outline">
         <Text style={{ color: t.textoSuave, marginBottom: espacio.m }}>Elegí el modo de color de la app. Se recuerda en este dispositivo.</Text>
         <SelectorTema />

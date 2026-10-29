@@ -138,7 +138,7 @@ export const MODULOS = [
     descripcion: 'Órdenes de trabajo y máquinas',
     acciones: [
       { titulo: 'Órdenes de trabajo', icono: 'clipboard-outline', ruta: () => '/modulos/produccion' },
-      { titulo: 'Nueva orden de trabajo', icono: 'add-circle-outline', ruta: () => '/modulos/produccion/nueva', visible: ({ puede }) => puede('PROD', 'crear') },
+      { titulo: 'Nueva orden de trabajo', icono: 'add-circle-outline', ruta: () => '/modulos/produccion/nueva', visible: ({ puede }) => puede('PROD', 'crear'), rapido: 'Nueva OT' },
     ],
     recursos: [{
       ruta: 'centros-trabajo', titulo: 'Máquinas y centros de trabajo',
@@ -152,9 +152,9 @@ export const MODULOS = [
     codigo: 'TAR', titulo: 'Tareas', icono: 'checkbox-outline',
     descripcion: 'Asignación y seguimiento',
     acciones: [
-      { titulo: 'Mis tareas', icono: 'person-outline', ruta: () => '/tareas', visible: ({ usuario }) => Boolean(usuario.empleadoId) },
+      { titulo: 'Mis tareas', icono: 'person-outline', ruta: () => '/tareas', visible: ({ usuario }) => Boolean(usuario.empleadoId), rapido: 'Mis tareas' },
       { titulo: 'Tareas del área', icono: 'people-outline', ruta: () => '/modulos/tareas', visible: ({ puede }) => puede('TAR', 'aprobar') },
-      { titulo: 'Nueva tarea', icono: 'add-circle-outline', ruta: () => '/modulos/tareas/nueva', visible: ({ puede }) => puede('TAR', 'crear') },
+      { titulo: 'Nueva tarea', icono: 'add-circle-outline', ruta: () => '/modulos/tareas/nueva', visible: ({ puede }) => puede('TAR', 'crear'), rapido: 'Asignar tarea' },
     ],
     recursos: [],
   },
@@ -162,7 +162,7 @@ export const MODULOS = [
     codigo: 'VEN', titulo: 'Ventas', icono: 'briefcase-outline',
     descripcion: 'Clientes, solicitudes y presupuestos',
     acciones: [
-      { titulo: 'Nueva solicitud (con foto)', icono: 'add-circle-outline', ruta: () => '/modulos/ventas/nueva', visible: ({ puede }) => puede('VEN', 'crear') },
+      { titulo: 'Nueva solicitud (con foto)', icono: 'add-circle-outline', ruta: () => '/modulos/ventas/nueva', visible: ({ puede }) => puede('VEN', 'crear'), rapido: 'Nuevo pedido' },
       { titulo: 'Solicitudes y presupuestos', icono: 'briefcase-outline', ruta: () => '/modulos/ventas' },
     ],
     recursos: [
@@ -185,7 +185,7 @@ export const MODULOS = [
     descripcion: 'Materiales, insumos y stock',
     acciones: [
       { titulo: 'Stock: disponible y reservado', icono: 'cube-outline', ruta: () => '/modulos/inventario' },
-      { titulo: 'Escanear un material', icono: 'qr-code-outline', ruta: () => '/modulos/escanear' },
+      { titulo: 'Escanear un material', icono: 'qr-code-outline', ruta: () => '/modulos/escanear', rapido: 'Escanear QR' },
     ],
     recursos: [
       {
@@ -204,7 +204,7 @@ export const MODULOS = [
     descripcion: 'Proveedores y órdenes de compra',
     acciones: [
       { titulo: 'Órdenes de compra', icono: 'cart-outline', ruta: () => '/modulos/compras' },
-      { titulo: 'Nueva orden de compra', icono: 'add-circle-outline', ruta: () => '/modulos/compras/nueva', visible: ({ puede }) => puede('COM', 'crear') },
+      { titulo: 'Nueva orden de compra', icono: 'add-circle-outline', ruta: () => '/modulos/compras/nueva', visible: ({ puede }) => puede('COM', 'crear'), rapido: 'Pedir compra' },
       { titulo: 'Recibir mercadería (escanear)', icono: 'qr-code-outline', ruta: () => '/modulos/escanear', visible: ({ puede }) => puede('COM', 'editar') },
     ],
     recursos: [{
@@ -220,8 +220,8 @@ export const MODULOS = [
     // Accesos a pantallas propias del módulo (además de los listados).
     acciones: [
       { titulo: 'Mi legajo', icono: 'id-card-outline', ruta: (u) => `/modulos/rrhh/legajo/${u.empleadoId}`, visible: ({ usuario }) => Boolean(usuario.empleadoId) },
-      { titulo: 'Mis licencias y vacaciones', icono: 'airplane-outline', ruta: () => '/modulos/rrhh/licencias', visible: ({ usuario }) => Boolean(usuario.empleadoId) },
-      { titulo: 'Aprobar licencias', icono: 'checkmark-done-outline', ruta: () => '/modulos/rrhh/aprobaciones', visible: ({ puede }) => puede('RRHH', 'aprobar') },
+      { titulo: 'Mis licencias y vacaciones', icono: 'airplane-outline', ruta: () => '/modulos/rrhh/licencias', visible: ({ usuario }) => Boolean(usuario.empleadoId), rapido: 'Pedir licencia' },
+      { titulo: 'Aprobar licencias', icono: 'checkmark-done-outline', ruta: () => '/modulos/rrhh/aprobaciones', visible: ({ puede }) => puede('RRHH', 'aprobar'), rapido: 'Aprobar licencias' },
     ],
     recursos: [
       {
@@ -270,7 +270,7 @@ export const MODULOS = [
     codigo: 'MANT', titulo: 'Mantenimiento', icono: 'build-outline',
     descripcion: 'Fallas de máquinas y preventivos',
     acciones: [
-      { titulo: 'Reportar una falla', icono: 'warning-outline', ruta: () => '/modulos/mantenimiento/nueva', visible: ({ puede }) => puede('MANT', 'crear') },
+      { titulo: 'Reportar una falla', icono: 'warning-outline', ruta: () => '/modulos/mantenimiento/nueva', visible: ({ puede }) => puede('MANT', 'crear'), rapido: 'Reportar falla' },
       { titulo: 'Escanear una máquina', icono: 'qr-code-outline', ruta: () => '/modulos/escanear' },
       { titulo: 'Órdenes de mantenimiento', icono: 'build-outline', ruta: () => '/modulos/mantenimiento' },
     ],
@@ -285,7 +285,7 @@ export const MODULOS = [
   {
     codigo: 'CAL', titulo: 'Calidad', icono: 'ribbon-outline',
     descripcion: 'Inspecciones y no conformidades',
-    acciones: [{ titulo: 'Para inspeccionar e inspecciones', icono: 'ribbon-outline', ruta: () => '/modulos/calidad' }],
+    acciones: [{ titulo: 'Para inspeccionar e inspecciones', icono: 'ribbon-outline', ruta: () => '/modulos/calidad', visible: ({ puede }) => puede('CAL', 'ver'), rapido: 'Calidad' }],
     recursos: [],
   },
   {
@@ -297,25 +297,18 @@ export const MODULOS = [
   {
     codigo: 'TAB', titulo: 'Tablero', icono: 'stats-chart-outline',
     descripcion: 'Los números del día',
-    acciones: [{ titulo: 'Ver tablero', icono: 'stats-chart-outline', ruta: () => '/modulos/tablero' }],
+    acciones: [{ titulo: 'Ver tablero', icono: 'stats-chart-outline', ruta: () => '/modulos/tablero', rapido: 'Tablero' }],
     recursos: [],
   },
   {
     codigo: 'SEG', titulo: 'Usuarios', icono: 'shield-outline',
     descripcion: 'Cuentas, roles y accesos',
-    acciones: [{ titulo: 'Solicitudes de acceso', icono: 'person-add-outline', ruta: () => '/modulos/usuarios/solicitudes', visible: ({ puede }) => puede('SEG', 'aprobar') }],
-    recursos: [{
-      ruta: 'usuarios', titulo: 'Usuarios',
-      titular: (r) => `${r.nombre} ${r.apellido}`,
-      detalle: (r) => [r.email, r.area_nombre].filter(Boolean).join(' · '),
-      chips: (r) => [
-        { texto: ROLES[r.rol] ?? r.rol },
-        ...(r.dos_pasos ? [{ texto: '2FA', tono: 'exito' }] : []),
-        ...(r.estado_cuenta === 'pendiente' ? [{ texto: 'Pendiente', tono: 'aviso' }] : []),
-        ...(r.estado_cuenta === 'rechazada' ? [{ texto: 'Rechazada', tono: 'error' }] : []),
-        ...(r.activo ? [] : [{ texto: 'Inactivo', tono: 'error' }]),
-      ],
-    }],
+    acciones: [
+      { titulo: 'Usuarios: ver, editar y dar de baja', icono: 'people-outline', ruta: () => '/modulos/usuarios', rapido: 'Usuarios' },
+      { titulo: 'Nuevo usuario', icono: 'person-add-outline', ruta: () => '/modulos/usuarios/nuevo', visible: ({ puede }) => puede('SEG', 'crear') },
+      { titulo: 'Solicitudes de acceso', icono: 'hourglass-outline', ruta: () => '/modulos/usuarios/solicitudes', visible: ({ puede }) => puede('SEG', 'aprobar') },
+    ],
+    recursos: [],
   },
 ];
 
