@@ -84,7 +84,14 @@ export function verificarTotp(secretoBase32, codigo, ultimoPaso = null, ahora = 
 
 // ---------------------------------------------------------------- cifrado del secreto
 
-const clave = () => Buffer.from(env.TOTP_ENC_KEY, /^[0-9a-fA-F]{64}$/.test(env.TOTP_ENC_KEY) ? 'hex' : 'base64');
+/** 64 hex o 32 bytes en base64 se usan tal cual; cualquier otro valor largo se pasa por SHA-256. */
+function clave() {
+  const v = env.TOTP_ENC_KEY;
+  if (/^[0-9a-fA-F]{64}$/.test(v)) return Buffer.from(v, 'hex');
+  const b64 = Buffer.from(v, 'base64');
+  if (b64.length === 32 && /^[A-Za-z0-9+/]+={0,2}$/.test(v)) return b64;
+  return crypto.createHash('sha256').update(v, 'utf8').digest();
+}
 
 export function cifrar(texto) {
   const iv = crypto.randomBytes(12);

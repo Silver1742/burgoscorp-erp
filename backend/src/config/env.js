@@ -43,10 +43,10 @@ const esquema = z.object({
   // Orígenes web permitidos por CORS (la app nativa no envía Origin). Separados por coma.
   CORS_ORIGINS: z.string().default(''),
 
-  // Clave AES-256 (32 bytes en base64) para cifrar los secretos 2FA en la base.
-  // Clave AES-256: 32 bytes en base64, o 64 caracteres hexadecimales.
-  TOTP_ENC_KEY: z.string().refine((v) => /^[0-9a-fA-F]{64}$/.test(v) || Buffer.from(v, 'base64').length === 32,
-    'TOTP_ENC_KEY debe ser 32 bytes en base64 o 64 caracteres hexadecimales'),
+  // Clave AES-256 para cifrar los secretos 2FA en la base: 32 bytes en base64, 64 caracteres
+  // hexadecimales, o un valor aleatorio de 32+ caracteres (ej. "Generate" de Render), del que se
+  // deriva la clave con SHA-256.
+  TOTP_ENC_KEY: z.string().min(32, 'TOTP_ENC_KEY debe tener al menos 32 caracteres'),
   APP_NOMBRE: z.string().max(40).default('BurgosCorp ERP'),
   // Carpeta de las fotos y archivos subidos (fuera de cualquier carpeta pública).
   UPLOADS_DIR: z.string().default('uploads'),
