@@ -7,11 +7,11 @@
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://API-DE-RAILWAY/api/v1" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://burgoscorp-api.onrender.com/api/v1" }
     },
     "production": {
       "android": { "buildType": "app-bundle" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://API-DE-RAILWAY/api/v1" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://burgoscorp-api.onrender.com/api/v1" }
     }
   }
 }
