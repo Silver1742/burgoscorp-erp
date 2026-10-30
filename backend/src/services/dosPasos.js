@@ -9,7 +9,7 @@ import bcrypt from 'bcryptjs';
 import { query, queryOne } from '../config/db.js';
 import { errores } from '../utils/errores.js';
 import { generarCodigo, verificarCodigo } from './codigos.js';
-import { enviarCodigo } from './email.js';
+import { enviarCodigo, entregaReal } from './email.js';
 import { auditar } from './auditoria.js';
 import { verificarTemporal, fallarPaso2, consumirPaso2 } from './tokens.js';
 import { buscarUsuarioPorId } from './usuarios.js';
@@ -28,6 +28,9 @@ export function enmascararEmail(email) {
 
 /** Manda el código para activar o desactivar la verificación. */
 export async function enviarCodigoConfiguracion(usuario) {
+  if (entregaReal && /\.(test|example|invalid|localhost)$/i.test(usuario.email)) {
+    throw errores.conflicto('Tu email es de prueba y no recibe correos: no se puede usar la verificación en dos pasos');
+  }
   const codigo = await generarCodigo(usuario.id, 'config_2fa');
   await enviarCodigo({
     para: usuario.email, nombre: usuario.nombre, tipo: 'config_2fa', codigo,

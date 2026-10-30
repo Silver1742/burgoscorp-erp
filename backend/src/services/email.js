@@ -17,6 +17,9 @@ export const ADJUNTOS = {
 
 export const bandejaDePrueba = [];
 
+/** true si los correos salen de verdad (Brevo o SMTP); en desarrollo y tests no. */
+export const entregaReal = Boolean(env.BREVO_API_KEY || env.SMTP_HOST);
+
 const transporte = env.SMTP_HOST
   ? nodemailer.createTransport({
     host: env.SMTP_HOST,

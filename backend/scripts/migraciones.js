@@ -158,6 +158,15 @@ async function dosPasosPorEmail(conn) {
     'UPDATE usuarios SET totp_secret_cifrado = NULL, totp_ultimo_paso = NULL WHERE totp_secret_cifrado IS NOT NULL');
   await conn.execute('DELETE FROM codigos_respaldo_2fa');
   if (r.affectedRows) console.log(`Migración: ${r.affectedRows} cuenta(s) pasan a la verificación en dos pasos por email.`);
+  // Un email ficticio (dominios reservados, ej. admin@burgoscorp.test) no recibe el código: con la
+  // verificación activa esa cuenta no podría entrar nunca. Se le desactiva.
+  if (!process.env.BREVO_API_KEY && !process.env.SMTP_HOST) return; // en desarrollo los códigos salen por consola
+  const [sinCorreo] = await conn.execute(
+    `UPDATE usuarios SET totp_habilitado = 0
+     WHERE totp_habilitado = 1 AND email REGEXP '[.](test|example|invalid|localhost)$'`);
+  if (sinCorreo.affectedRows) {
+    console.log(`Migración: se desactivó la verificación en dos pasos de ${sinCorreo.affectedRows} cuenta(s) con email de prueba (no les llega el código).`);
+  }
 }
 
 export async function migrar(conn) {
