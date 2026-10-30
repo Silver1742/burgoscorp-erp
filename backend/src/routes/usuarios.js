@@ -14,6 +14,7 @@ import { crearLegajo, actualizarLegajo } from '../services/legajos.js';
 import { paramsId, consultaListado, email, nombrePersona } from '../validators/comunes.js';
 import { usuarioAdmin } from '../validators/catalogos.js';
 import { errores } from '../utils/errores.js';
+import env from '../config/env.js';
 
 const router = Router();
 router.use(autenticado);
@@ -273,7 +274,12 @@ router.post('/:id/habilitar', requierePermiso('SEG', 'aprobar'), validar(paramsY
   try {
     await enviarAviso({
       para: u.email, nombre: u.nombre, asunto: 'Tu cuenta está habilitada',
-      lineas: ['Un administrador habilitó tu cuenta. Ya podés iniciar sesión en la app.'],
+      lineas: [
+        'Un administrador habilitó tu cuenta. Ya podés iniciar sesión en la app.',
+        ...(env.WEB_URL ? [`Desde el navegador: ${env.WEB_URL}`] : []),
+        'Te adjuntamos el manual de usuario: explica cómo entrar, moverte en la app y lo que podés hacer según tu rol.',
+      ],
+      adjuntar: ['manual'],
     });
   } catch (err) {
     console.error('[usuarios] no se pudo avisar la habilitación', err.message);

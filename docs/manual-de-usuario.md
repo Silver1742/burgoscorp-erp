@@ -18,7 +18,8 @@ dentro de la app en **Perfil → Ayuda** (y en Inicio, "¿Cómo se usa?").
 ### Si no tenés cuenta
 1. En la pantalla de ingreso tocá **"Pedí acceso"**.
 2. Completá nombre, apellido, email y una contraseña (10 caracteres o más, con letras y números).
-3. Tu cuenta queda **pendiente**. Un administrador la revisa y la habilita; **te avisamos por email**.
+3. Tu cuenta queda **pendiente**. Un administrador la revisa y la habilita; **te avisamos por email**
+   y en ese correo te llega **este manual en PDF**.
 4. Cuando entres por primera vez te llega un **código de 6 dígitos** al email para confirmarlo.
 
 ### Si el administrador te creó la cuenta
@@ -241,5 +242,5 @@ un administrador activo.
 | No me llega el email | Revisá **Spam**. Los códigos vencen a los 10 minutos: pedí otro. |
 | "Tu cuenta está pendiente" | Un administrador todavía no la habilitó. |
 | Tarda en cargar | La primera vez del día el servidor tarda unos 30 segundos en despertar. |
-| En el navegador, al recargar me pide entrar de nuevo | Es a propósito: por seguridad la sesión no se guarda en el navegador. |
+| No me llega el código para entrar | Revisá Spam. Si pasó un minuto, tocá **Reenviar código**. |
 | La cámara no lee el QR | Más luz, más cerca, o escribí el código a mano. |

@@ -188,6 +188,10 @@ describe('registro', () => {
        FROM empleados e JOIN areas a ON a.id = e.area_id WHERE e.legajo = ?`, [hab.body.data.legajo]);
     assert.equal(emp.supervisor_id, emp.jefe_empleado_id, 'queda a cargo del jefe del área');
     assert.equal(Number(emp.habs), 1);
+    const bienvenida = bandejaDePrueba.filter((c) => c.para === email).at(-1);
+    assert.match(bienvenida.asunto, /Tu cuenta está habilitada/);
+    assert.equal(bienvenida.adjuntos[0]?.nombre, 'Manual de usuario - BurgosCorp ERP.pdf', 'le llega el manual en PDF');
+    assert.ok(bienvenida.adjuntos[0].bytes > 5000);
     const entra = await api().post('/api/v1/auth/login').send({ email, password: 'unaClaveLarga123' });
     assert.equal(entra.status, 200);
 

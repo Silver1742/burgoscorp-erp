@@ -2,8 +2,18 @@
 // usa ese servidor; sin ninguno de los dos:
 //   - en desarrollo muestra el correo en la consola (para probar sin cuenta de correo),
 //   - en test lo guarda en memoria (`bandejaDePrueba`) para que los tests lean el código.
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import nodemailer from 'nodemailer';
 import env from '../config/env.js';
+
+// Archivos fijos que se pueden adjuntar (nunca una ruta que venga de una petición).
+const ASSETS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../assets');
+export const ADJUNTOS = {
+  // Lo genera docs/generar-manual-pdf.py a partir de docs/manual-de-usuario.md.
+  manual: { nombre: 'Manual de usuario - BurgosCorp ERP.pdf', ruta: path.join(ASSETS, 'manual-de-usuario.pdf'), tipo: 'application/pdf' },
+};
 
 export const bandejaDePrueba = [];
 
@@ -27,7 +37,7 @@ function remitente(from) {
   return m ? { name: m[1] || undefined, email: m[2] } : { email: from.trim() };
 }
 
-async function enviarPorBrevo({ para, asunto, texto, html }) {
+async function enviarPorBrevo({ para, asunto, texto, html, adjuntos }) {
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: { 'api-key': env.BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
@@ -37,6 +47,7 @@ async function enviarPorBrevo({ para, asunto, texto, html }) {
       subject: asunto,
       textContent: texto,
       htmlContent: html ?? `<pre>${escapar(texto)}</pre>`,
+      ...(adjuntos.length ? { attachment: adjuntos.map((a) => ({ name: a.nombre, content: a.contenido.toString('base64') })) } : {}),
     }),
     signal: AbortSignal.timeout(15_000),
   });
@@ -44,21 +55,40 @@ async function enviarPorBrevo({ para, asunto, texto, html }) {
   if (!res.ok) throw new Error(`Brevo respondió ${res.status}`);
 }
 
-async function enviar({ para, asunto, texto, html }) {
+/** Lee los adjuntos pedidos. Si falta un archivo, el correo sale igual sin él (y queda en el log). */
+async function leerAdjuntos(claves = []) {
+  const leidos = [];
+  for (const clave of claves) {
+    const a = ADJUNTOS[clave];
+    try {
+      leidos.push({ ...a, contenido: await readFile(a.ruta) });
+    } catch (err) {
+      console.error(`[email] no se encontró el adjunto "${clave}":`, err.message);
+    }
+  }
+  return leidos;
+}
+
+async function enviar({ para, asunto, texto, html, adjuntar }) {
+  const adjuntos = await leerAdjuntos(adjuntar);
   if (env.BREVO_API_KEY) {
-    await enviarPorBrevo({ para, asunto, texto, html });
+    await enviarPorBrevo({ para, asunto, texto, html, adjuntos });
     return;
   }
   if (env.NODE_ENV === 'test' && !transporte) {
-    bandejaDePrueba.push({ para, asunto, texto });
+    bandejaDePrueba.push({ para, asunto, texto, adjuntos: adjuntos.map((a) => ({ nombre: a.nombre, bytes: a.contenido.length })) });
     return;
   }
   if (!transporte) {
     // Solo en desarrollo: no hay servidor de correo, se muestra en consola.
-    console.log(`\n[email de desarrollo] Para: ${para}\nAsunto: ${asunto}\n${texto}\n`);
+    const extra = adjuntos.length ? `\n[adjuntos: ${adjuntos.map((a) => a.nombre).join(', ')}]` : '';
+    console.log(`\n[email de desarrollo] Para: ${para}\nAsunto: ${asunto}\n${texto}${extra}\n`);
     return;
   }
-  await transporte.sendMail({ from: env.SMTP_FROM, to: para, subject: asunto, text: texto, html });
+  await transporte.sendMail({
+    from: env.SMTP_FROM, to: para, subject: asunto, text: texto, html,
+    attachments: adjuntos.map((a) => ({ filename: a.nombre, content: a.contenido, contentType: a.tipo })),
+  });
 }
 
 const TEXTOS = {
@@ -91,11 +121,11 @@ const TEXTOS = {
   },
 };
 
-/** Aviso de texto simple (cuenta habilitada o rechazada). */
-export async function enviarAviso({ para, nombre, asunto, lineas }) {
+/** Aviso de texto simple (cuenta habilitada o rechazada). `adjuntar`: claves de ADJUNTOS. */
+export async function enviarAviso({ para, nombre, asunto, lineas, adjuntar }) {
   const texto = `Hola ${nombre}:\n\n${lineas.join('\n')}\n`;
   const html = `<p>Hola ${escapar(nombre)}:</p>${lineas.map((l) => `<p>${escapar(l)}</p>`).join('')}`;
-  await enviar({ para, asunto: `${asunto} · ${env.APP_NOMBRE}`, texto, html });
+  await enviar({ para, asunto: `${asunto} · ${env.APP_NOMBRE}`, texto, html, adjuntar });
 }
 
 /**

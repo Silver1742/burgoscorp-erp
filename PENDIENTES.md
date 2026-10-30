@@ -119,6 +119,11 @@ panel; nunca van en el chat ni en el repo.**
 - `npm audit` en `backend/` y `mobile/` antes de entregar; reportar lo que aparezca.
 - Pasar el agente `revisor-owasp` sobre todo el proyecto antes de la entrega (solo informe).
 
+### 5.5 bis Manual en PDF
+- El email "Tu cuenta está habilitada" adjunta `backend/assets/manual-de-usuario.pdf`. Se genera con
+  `python docs/generar-manual-pdf.py` (reportlab) desde `docs/manual-de-usuario.md`: **volver a
+  generarlo cada vez que cambie el manual** y commitear el PDF.
+
 ### 5.6 Mejoras conocidas (no bloquean)
 - Liquidación de sueldos: no hay calendario de **feriados** ni aportes/retenciones (es el resumen
   para liquidar, no el recibo).
