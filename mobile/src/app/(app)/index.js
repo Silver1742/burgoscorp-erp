@@ -213,7 +213,7 @@ export default function Inicio() {
             {usuario.empleadoId ? <Fichaje /> : null}
             {!usuario.dosPasosActivo ? (
               <Tarjeta titulo="Protegé tu cuenta" icono="shield-checkmark-outline">
-                <Texto suave estilo={{ marginBottom: espacio.m }}>Activá la verificación en dos pasos con Google Authenticator o un código por email.</Texto>
+                <Texto suave estilo={{ marginBottom: espacio.m }}>Activá la verificación en dos pasos: al entrar te pedimos un código que llega a tu email.</Texto>
                 <Boton titulo="Activar ahora" variante="oscuro" chico icono="shield-checkmark" estilo={{ alignSelf: 'flex-start' }}
                   onPress={() => router.push('/perfil/dos-pasos', { withAnchor: true })} />
               </Tarjeta>

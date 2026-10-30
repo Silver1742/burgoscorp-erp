@@ -238,7 +238,7 @@ CREATE TABLE usuarios (
   empleado_id         INT UNSIGNED NULL UNIQUE,     -- vínculo con el legajo
   email_verificado_at DATETIME NULL,
   totp_secret_cifrado VARCHAR(255) NULL,            -- AES-256-GCM (iv:tag:dato en base64)
-  totp_habilitado     BOOLEAN NOT NULL DEFAULT 0,
+  totp_habilitado     BOOLEAN NOT NULL DEFAULT 0,       -- verificación en dos pasos (por email) activa
   totp_ultimo_paso    BIGINT UNSIGNED NULL,         -- último intervalo de 30 s usado (evita reusar un código)
   intentos_fallidos   TINYINT UNSIGNED NOT NULL DEFAULT 0,
   bloqueado_hasta     DATETIME NULL,
@@ -315,7 +315,7 @@ CREATE TABLE pasos_2fa (
 CREATE TABLE codigos_verificacion (
   id          BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   usuario_id  INT UNSIGNED NOT NULL,
-  tipo        ENUM('verificar_email','recuperar_password','login_email') NOT NULL,
+  tipo        ENUM('verificar_email','recuperar_password','login_email','config_2fa') NOT NULL,
   codigo_hash CHAR(64) NOT NULL,
   intentos    TINYINT UNSIGNED NOT NULL DEFAULT 0,
   expira_at   DATETIME NOT NULL,

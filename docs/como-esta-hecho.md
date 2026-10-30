@@ -53,7 +53,7 @@ Ideas clave:
 - **Nada se borra de verdad.** Clientes, productos o máquinas se *desactivan* (`activo = 0`),
   así no se pierde la historia.
 - **Lo sensible nunca se guarda en claro.** Las contraseñas, los tokens y los códigos se guardan
-  como hash (una huella que no se puede revertir), y el secreto del 2FA va cifrado.
+  como hash (una huella que no se puede revertir), igual que los códigos que se mandan por email.
 - **Numeración tipo SAP.** La tabla `secuencias` genera números como `OT-2026-0001`.
 
 | Módulo | Tablas principales |
@@ -138,14 +138,15 @@ Otras protecciones del login:
 | **Solicitud de acceso** | Como en el portal R3: quien se registra (o entra por primera vez con una red social) queda pendiente y no puede iniciar sesión hasta que un administrador lo habilita con su rol y legajo, o lo rechaza. En los dos casos le llega un email | [`services/auth.js`](../backend/src/services/auth.js), [`routes/usuarios.js`](../backend/src/routes/usuarios.js), [`modulos/usuarios/solicitudes.js`](../mobile/src/app/(app)/modulos/usuarios/solicitudes.js) |
 | **Verificar email** | La primera vez que entra, le llega un código de 6 dígitos; hasta confirmarlo solo se puede usar la parte de login | [`services/verificacion.js`](../backend/src/services/verificacion.js) |
 | **Recuperar contraseña** | Se pide un código por email y con él se define una contraseña nueva | mismo archivo |
-| **Verificación en dos pasos (2FA)** | Además de la contraseña, un código de una app autenticadora (Google Authenticator), uno por email o uno de respaldo | [`services/dosPasos.js`](../backend/src/services/dosPasos.js) y [`services/totp.js`](../backend/src/services/totp.js) |
+| **Verificación en dos pasos (2FA)** | Además de la contraseña, un código de 6 dígitos que llega al email en cada ingreso | [`services/dosPasos.js`](../backend/src/services/dosPasos.js) |
 | Códigos de un solo uso | Vencen en 10 minutos, admiten 5 intentos, se guardan como hash | [`services/codigos.js`](../backend/src/services/codigos.js) |
 | Envío de correos | En desarrollo se muestran en la consola; en producción salen por SMTP | [`services/email.js`](../backend/src/services/email.js) |
 
-**Cómo funciona el código de la app autenticadora:** al activarlo, el servidor y el celular
-comparten una clave secreta (la que va en el QR). Cada 30 segundos, los dos calculan el mismo
-número de 6 dígitos a partir de esa clave y de la hora. Si coinciden, sos vos. El servidor
-recuerda el último código usado para que no se pueda usar dos veces.
+**Cómo funciona la verificación en dos pasos:** para activarla, la persona pide un código y lo
+escribe (así se comprueba que el email le llega). Desde ahí, cuando pone bien la contraseña, la API
+no entrega la sesión: manda un código nuevo al email y devuelve un token temporal de 5 minutos que
+no sirve para nada más. La sesión se entrega recién con el código correcto. Tres errores invalidan
+el token temporal y los fallos cuentan para el bloqueo de la cuenta.
 
 ### 4.4 Login con Google, GitHub y Facebook
 
@@ -528,7 +529,7 @@ necesita ningún permiso.
 | Robo de contraseñas o sesión (A07) | bcrypt; bloqueo por email e IP (5 fallos por IP o 20 en total en 15 min, igual exista o no la cuenta); el segundo paso no reinicia el contador y su token sirve una vez con 3 intentos; sesiones de 30 días como máximo; reusar un refresh token cierra todas las sesiones; desactivar el 2FA pide la contraseña | `services/intentos.js`, `auth.js`, `tokens.js`, `dosPasos.js` |
 | Cuentas nuevas (A01) | Toda cuenta nueva queda pendiente hasta que la habilita el administrador; una cuenta sin legajo no ve ningún módulo; el registro responde igual exista o no el email; el login social no se queda con cuentas creadas por otro sin verificar | `services/permisos.js`, `auth.js`, `social.js`, `routes/usuarios.js` |
 | Datos personales y de salud | DNI, CUIL, nacimiento, domicilio y costo solo para RRHH y el propio empleado; el certificado y el motivo de una licencia por enfermedad, solo para RRHH | `routes/rrhh.js`, `services/licencias.js` |
-| Claves (A04) | Códigos por email y de respaldo con HMAC y una clave propia (`CODIGOS_HMAC_KEY`); duración del JWT validada (máx. 60 min) | `services/codigos.js`, `config/env.js` |
+| Claves (A04) | Códigos por email con HMAC y una clave propia (`CODIGOS_HMAC_KEY`); duración del JWT validada (máx. 60 min) | `services/codigos.js`, `config/env.js` |
 | Inyección SQL (A05) | Consultas con parámetros y columnas en lista blanca | `utils/crud.js` |
 | Abuso de recursos (A06) | Límite de pedidos y de tamaño, timeouts | `middlewares/limites.js`, `server.js` |
 | Falta de registros (A09) | Tabla `auditoria`: logins, bloqueos, accesos denegados | `services/auditoria.js` |

@@ -40,8 +40,6 @@ Editar `.env`:
 - `DB_USER` / `DB_PASSWORD`: el usuario creado en el paso anterior.
 - `JWT_ACCESS_SECRET` y `JWT_TEMP_SECRET`: dos valores distintos generados con
   `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`.
-- `TOTP_ENC_KEY`: clave para cifrar el 2FA, generada con
-  `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
 - Correo (opcional en desarrollo): sin `SMTP_HOST`, los códigos de verificación se muestran en
   la consola donde corre `npm run dev`. Para mandarlos de verdad con Gmail: `SMTP_HOST=smtp.gmail.com`,
   `SMTP_USER` = tu Gmail y `SMTP_PASS` = una

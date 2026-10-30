@@ -55,7 +55,7 @@ como *Blueprint* (**New → Blueprint** en Render) o crear el Web Service a mano
 | `DB_PASSWORD` | **Vos**, la de Aiven |
 | `DB_NAME` / `DB_SSL` | `defaultdb` / `true` |
 | `DB_SSL_CA` | el certificado CA de Aiven (texto PEM completo) |
-| `JWT_ACCESS_SECRET`, `JWT_TEMP_SECRET`, `CODIGOS_HMAC_KEY`, `TOTP_ENC_KEY` | botón **Generate** de Render. **No cambiar `TOTP_ENC_KEY` después**: cifra los secretos del 2FA |
+| `JWT_ACCESS_SECRET`, `JWT_TEMP_SECRET`, `CODIGOS_HMAC_KEY` | botón **Generate** de Render |
 | `BREVO_API_KEY` | **Vos**, la clave de Brevo |
 | `SMTP_FROM` | `BurgosCorp ERP <tu.cuenta@gmail.com>` (el remitente verificado en Brevo) |
 | `CORS_ORIGINS` | `https://burgoscorp-erp.onrender.com` (la app web) |

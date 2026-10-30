@@ -22,7 +22,7 @@ Argentina, ARS, IVA. Es el **proyecto final de una materia**.
 | Requisito | Estado |
 |---|---|
 | Login social con 3 redes, **Google obligatorio** | ⚠️ **Falta en la app** (la API ya lo tiene) |
-| 2FA | ✅ TOTP (Google Authenticator) o código por email, con códigos de respaldo |
+| 2FA | ✅ Código por email en cada ingreso (se activa confirmando un código; sin app autenticadora ni QR, a pedido del usuario) |
 | 3 roles | ✅ (hay 4) |
 | JWT con access y refresh | ✅ refresh rotativo con detección de reuso |
 | CRUD | ✅ |

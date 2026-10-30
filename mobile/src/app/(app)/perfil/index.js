@@ -53,7 +53,7 @@ export default function Perfil() {
 
       <Tarjeta titulo="Seguridad" icono="shield-checkmark-outline" sinRelleno>
         <Opcion icono="key-outline" titulo="Verificación en dos pasos"
-          sub={usuario.dosPasosActivo ? 'App autenticadora, email o códigos de respaldo' : 'Recomendamos activarla'}
+          sub={usuario.dosPasosActivo ? 'Activada: al entrar te llega un código al email' : 'Recomendamos activarla'}
           derecha={<Insignia texto={usuario.dosPasosActivo ? 'Activada' : 'Desactivada'} tono={usuario.dosPasosActivo ? 'exito' : 'gris'} />}
           onPress={() => router.push('/perfil/dos-pasos')} />
         <Opcion icono="notifications-outline" titulo="Avisos" sub="Licencias, aprobaciones y tareas" onPress={() => router.push('/perfil/notificaciones')} ultima />

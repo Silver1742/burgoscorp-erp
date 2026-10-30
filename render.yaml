@@ -26,9 +26,6 @@ services:
         generateValue: true
       - key: CODIGOS_HMAC_KEY
         generateValue: true
-      # 256 bits en base64 = la clave AES-256 que cifra los secretos del 2FA. No cambiarla después.
-      - key: TOTP_ENC_KEY
-        generateValue: true
       - key: DB_HOST
         sync: false
       - key: DB_PORT

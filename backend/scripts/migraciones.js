@@ -140,7 +140,28 @@ async function cuentasSinArea(conn) {
   }
 }
 
+/**
+ * La verificación en dos pasos pasó a ser solo por email: se agrega el tipo de código para
+ * activarla/desactivarla y se borran los secretos de la app autenticadora y los códigos de
+ * respaldo. Quien la tenía activa la sigue teniendo (ahora le llega el código al email).
+ */
+async function dosPasosPorEmail(conn) {
+  const [[col]] = await conn.execute(
+    `SELECT COLUMN_TYPE AS tipo FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'codigos_verificacion' AND COLUMN_NAME = 'tipo'`);
+  if (!col.tipo.includes('config_2fa')) {
+    await conn.query(`ALTER TABLE codigos_verificacion
+      MODIFY tipo ENUM('verificar_email','recuperar_password','login_email','config_2fa') NOT NULL`);
+    console.log('Migración: códigos por email para activar la verificación en dos pasos.');
+  }
+  const [r] = await conn.execute(
+    'UPDATE usuarios SET totp_secret_cifrado = NULL, totp_ultimo_paso = NULL WHERE totp_secret_cifrado IS NOT NULL');
+  await conn.execute('DELETE FROM codigos_respaldo_2fa');
+  if (r.affectedRows) console.log(`Migración: ${r.affectedRows} cuenta(s) pasan a la verificación en dos pasos por email.`);
+}
+
 export async function migrar(conn) {
+  await dosPasosPorEmail(conn);
   await dniOpcional(conn);
   await jornadaLaboral(conn);
   await fichajesDeEjemplo(conn);

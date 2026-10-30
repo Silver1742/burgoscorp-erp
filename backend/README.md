@@ -198,31 +198,28 @@ guardan como HMAC (nunca en claro).
 
 ### Verificación en dos pasos · `/auth/2fa`
 
-Primer factor: la contraseña o una red social. Segundo factor, a elección del usuario:
+Primer factor: la contraseña o una red social. Segundo factor: **un código de 6 dígitos que se
+manda al email** cada vez que se ingresa.
 
-- **App autenticadora (TOTP):** Google Authenticator, Microsoft Authenticator, Authy.
-- **Código por email.**
-- **Código de respaldo:** 10 códigos de un solo uso, para cuando se pierde el celular.
-
-Activación (con sesión iniciada):
+Activación y desactivación (con sesión iniciada):
 
 | Método | Ruta | Body | Respuesta |
 |---|---|---|---|
-| POST | `/auth/2fa/configurar` | — | `200 { secreto, otpauthUri }`: la app muestra el QR de `otpauthUri` · `409` si ya está activa |
-| POST | `/auth/2fa/activar` | `codigo` (de la app autenticadora) | `200 { codigosRespaldo: [10] }` (**se muestran una sola vez**) · `400` |
-| POST | `/auth/2fa/desactivar` | `codigo` (TOTP o de respaldo) | `200` · `400` |
-| POST | `/auth/2fa/codigos-respaldo` | `codigo` (TOTP o de respaldo) | `200 { codigosRespaldo }`: invalida los anteriores |
+| POST | `/auth/2fa/codigo` | — | Manda el código al email · `200 { email: "ur***@gmail.com" }` · `429` si se pidió hace menos de un minuto |
+| POST | `/auth/2fa/activar` | `codigo` | `200` · `400` código incorrecto o vencido · `409` si ya está activa |
+| POST | `/auth/2fa/desactivar` | `codigo`, `password` (si la cuenta tiene) | `200` · `400` |
 
 Login con 2FA:
 
-1. `POST /auth/login` (o `/auth/social/:proveedor`) responde `{ requiere2fa: true, tokenTemporal }`.
-   El `tokenTemporal` dura 5 minutos y **no sirve como sesión**.
-2. Opcional: `POST /auth/2fa/email { tokenTemporal }` envía el código por email.
-3. `POST /auth/2fa/verificar { tokenTemporal, metodo, codigo }` con `metodo` = `totp` | `email`
-   | `respaldo` → `200` sesión · `400` código incorrecto · `423` bloqueada.
+1. `POST /auth/login` (o `/auth/social/:proveedor`) **manda el código al email** y responde
+   `{ requiere2fa: true, tokenTemporal, email, codigoEnviado }`. El `tokenTemporal` dura 5 minutos
+   y **no sirve como sesión**.
+2. Para reenviar: `POST /auth/2fa/email { tokenTemporal }` (uno por minuto).
+3. `POST /auth/2fa/verificar { tokenTemporal, codigo }` → `200` sesión · `400` código incorrecto
+   · `401` el token venció o hubo 3 errores (volver a poner la contraseña) · `423` bloqueada.
 
-Los fallos del segundo paso cuentan para el mismo bloqueo que la contraseña (5 intentos). Un
-código TOTP no se puede usar dos veces. El secreto TOTP se guarda cifrado con AES-256-GCM.
+Los fallos del segundo paso cuentan para el mismo bloqueo que la contraseña (5 intentos). Los
+códigos vencen a los 10 minutos, sirven una sola vez y se guardan como HMAC.
 
 ### Redes sociales · `/auth/social`
 
@@ -567,7 +564,7 @@ Medidas aplicadas según OWASP Top 10:
   sin `X-Powered-By`, `Cache-Control: no-store`, CORS cerrado, `.env` validado al arrancar.
 - **Autenticación (A07):** bcrypt (costo 12), bloqueo después de 5 intentos, el mismo mensaje
   para un email inexistente que para una contraseña incorrecta, JWT solo HS256 con `iss`/`aud`,
-  refresh tokens rotativos guardados como hash y con detección de reutilización. 2FA TOTP
+  refresh tokens rotativos guardados como hash y con detección de reutilización. 2FA por email
   (RFC 6238) que no acepta reusar un código, con el secreto cifrado (AES-256-GCM); códigos por
   email de un solo uso guardados como HMAC; "olvidé mi contraseña" sin revelar si el email existe.
 - **OAuth:** verificación del `id_token` de Google (firma RS256 contra las claves de Google,

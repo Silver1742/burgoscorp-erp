@@ -8,6 +8,7 @@ import { buscarUsuarioPorId, perfilPublico, exigirCuentaHabilitada } from './usu
 import { firmarAcceso, firmarTemporal, emitirRefresh, rotarRefresh, revocarFamilia, revocarTodas } from './tokens.js';
 import * as intentos from './intentos.js';
 import { notificar } from './notificaciones.js';
+import { iniciarSegundoPaso } from './dosPasos.js';
 import { enviarAviso } from './email.js';
 
 const COSTO_BCRYPT = 12;
@@ -125,10 +126,9 @@ export async function login({ email, password }, req) {
     throw err;
   }
 
-  // Con 2FA, los fallos acumulados NO se borran todavía: recién al completar el segundo paso.
-  if (fila.totp_habilitado) {
-    return { requiere2fa: true, tokenTemporal: await firmarTemporal(fila.id, '2fa') };
-  }
+  // Con 2FA se manda el código al email. Los fallos acumulados NO se borran todavía: recién al
+  // completar el segundo paso.
+  if (fila.totp_habilitado) return iniciarSegundoPaso(await buscarUsuarioPorId(fila.id), firmarTemporal);
 
   await intentos.limpiar(clave, req);
   await auditar(req, { accion: 'login_ok', usuarioId: fila.id, detalle: { metodo: 'password' } });

@@ -120,8 +120,8 @@ export const TEMAS_AYUDA = [
   {
     id: 'seguridad', titulo: 'Proteger tu cuenta', icono: 'shield-checkmark-outline', roles: [],
     pasos: [
-      'Perfil → "Verificación en dos pasos": activala con Google Authenticator o con un código por email.',
-      'Guardá los códigos de respaldo en un lugar seguro.',
+      'Perfil → "Verificación en dos pasos" → "Mandarme el código": escribí el código que te llega al email y queda activada.',
+      'Desde ahí, cada vez que entrás con tu contraseña te llega un código al email para terminar de entrar.',
       'Si perdiste el teléfono, Perfil → "Cerrar sesión en todos los dispositivos".',
     ],
   },

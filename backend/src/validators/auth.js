@@ -33,18 +33,18 @@ export const restablecer = z.object({
 // Acepta un código TOTP (6 dígitos) o uno de respaldo (XXXX-XXXX), más la contraseña actual
 // (obligatoria si la cuenta tiene; la exige el servicio).
 export const segundoFactor = z.object({
-  codigo: z.string().trim().min(6).max(12),
+  codigo: codigoSeisDigitos,
   password: z.string().max(200).optional(),
 }).strict();
 
-export const totpActivar = z.object({ codigo: codigoSeisDigitos }).strict();
+export const codigoActivar = z.object({ codigo: codigoSeisDigitos }).strict();
 
 export const dosPasosEmail = z.object({ tokenTemporal: z.string().min(20).max(1000) }).strict();
 
 export const dosPasosVerificar = z.object({
   tokenTemporal: z.string().min(20).max(1000),
-  metodo: z.enum(['totp', 'email', 'respaldo']),
-  codigo: z.string().trim().min(6).max(12),
+  metodo: z.enum(['email']).optional(), // el único que queda; se acepta por compatibilidad
+  codigo: codigoSeisDigitos,
 }).strict();
 
 export const proveedorSocial = z.object({ proveedor: z.enum(['google', 'github', 'facebook']) });

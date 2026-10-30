@@ -10,7 +10,7 @@ const inicial = {
   cargando: true,       // restaurando la sesión al abrir la app
   usuario: null,
   permisos: {},
-  pendiente2fa: null,   // { tokenTemporal } cuando el login pide el segundo paso
+  pendiente2fa: null,   // { tokenTemporal, email, codigoEnviado } cuando el login pide el código del email
 };
 
 function reducer(estado, accion) {
@@ -20,7 +20,7 @@ function reducer(estado, accion) {
     case 'PERFIL':
       return { ...estado, usuario: accion.usuario, permisos: accion.permisos };
     case 'REQUIERE_2FA':
-      return { ...estado, pendiente2fa: { tokenTemporal: accion.tokenTemporal } };
+      return { ...estado, pendiente2fa: { tokenTemporal: accion.tokenTemporal, email: accion.email, codigoEnviado: accion.codigoEnviado } };
     case 'CANCELAR_2FA':
       return { ...estado, pendiente2fa: null };
     case 'CERRADA':
@@ -75,7 +75,7 @@ export function SesionProvider({ children }) {
    */
   const procesarRespuestaLogin = useCallback(async (respuesta, antesDeEntrar) => {
     if (respuesta.requiere2fa) {
-      despachar({ tipo: 'REQUIERE_2FA', tokenTemporal: respuesta.tokenTemporal });
+      despachar({ tipo: 'REQUIERE_2FA', tokenTemporal: respuesta.tokenTemporal, email: respuesta.email, codigoEnviado: respuesta.codigoEnviado });
       return { requiere2fa: true };
     }
     await antesDeEntrar?.();
@@ -99,10 +99,11 @@ export function SesionProvider({ children }) {
       await api('/auth/registro', { metodo: 'POST', cuerpo: datos, conToken: false });
     },
 
-    async completar2fa(metodo, codigo) {
+    /** Segundo paso del login: el código que llegó al email. */
+    async completar2fa(codigo) {
       const sesion = await api('/auth/2fa/verificar', {
         metodo: 'POST',
-        cuerpo: { tokenTemporal: estado.pendiente2fa?.tokenTemporal, metodo, codigo },
+        cuerpo: { tokenTemporal: estado.pendiente2fa?.tokenTemporal, codigo },
         conToken: false,
       });
       await abrirSesion(sesion);

@@ -226,8 +226,10 @@ un administrador activo.
 
 ## 11. Seguridad de tu cuenta
 
-- **Perfil → Verificación en dos pasos**: activala con Google Authenticator o con código por email.
-  Guardá los **códigos de respaldo** en un lugar seguro.
+- **Perfil → Verificación en dos pasos**: tocá **"Mandarme el código"**, escribí el código que te
+  llega al email y queda activada. Desde ahí, cada vez que ingresás con tu contraseña te llega un
+  código nuevo al email para terminar de entrar (vence en 10 minutos; si no lo ves, revisá Spam).
+- Para desactivarla te pedimos otro código del email y tu contraseña.
 - Si perdiste el celular: **Perfil → Cerrar sesión en todos los dispositivos**.
 - Después de varios intentos fallidos la cuenta se bloquea 15 minutos.
 

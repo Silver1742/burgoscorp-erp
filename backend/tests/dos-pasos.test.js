@@ -6,7 +6,6 @@ import request from 'supertest';
 import { crearApp } from '../src/app.js';
 import { pool, query } from '../src/config/db.js';
 import { bandejaDePrueba } from '../src/services/email.js';
-import { hotp, base32Decodificar, pasoActual, verificarTotp, cifrar, descifrar } from '../src/services/totp.js';
 import { claveDe } from '../src/services/intentos.js';
 
 const app = crearApp();
@@ -42,37 +41,6 @@ async function registrar() {
   await api().post('/api/v1/auth/email/enviar').set(conToken(sesion.body.data.accessToken));
   return { email, ...sesion.body.data };
 }
-
-describe('TOTP (RFC 6238)', () => {
-  test('vectores de prueba oficiales (SHA-1)', () => {
-    const secreto = Buffer.from('12345678901234567890');
-    // El RFC da 8 dígitos; con 6 dígitos son los últimos 6.
-    assert.equal(hotp(secreto, Math.floor(59 / 30)), '287082');
-    assert.equal(hotp(secreto, Math.floor(1111111109 / 30)), '081804');
-    assert.equal(hotp(secreto, Math.floor(1234567890 / 30)), '005924');
-    assert.equal(hotp(secreto, Math.floor(2000000000 / 30)), '279037');
-  });
-
-  test('no acepta reusar un código ni códigos de más de un intervalo de distancia', () => {
-    const secreto = 'JBSWY3DPEHPK3PXP';
-    const ahora = Date.now();
-    const codigo = hotp(base32Decodificar(secreto), pasoActual(ahora));
-    const paso = verificarTotp(secreto, codigo, null, ahora);
-    assert.equal(paso, pasoActual(ahora));
-    assert.equal(verificarTotp(secreto, codigo, paso, ahora), null, 'reuso');
-    const viejo = hotp(base32Decodificar(secreto), pasoActual(ahora) - 3);
-    assert.equal(verificarTotp(secreto, viejo, null, ahora), null, 'fuera de ventana');
-  });
-
-  test('el cifrado AES-GCM detecta alteraciones', () => {
-    const guardado = cifrar('SECRETO');
-    assert.equal(descifrar(guardado), 'SECRETO');
-    const [iv, tag, datos] = guardado.split(':');
-    const alterado = [iv, tag, Buffer.from('OTRO').toString('base64')].join(':');
-    assert.notEqual(datos, Buffer.from('OTRO').toString('base64'));
-    assert.throws(() => descifrar(alterado));
-  });
-});
 
 describe('verificación de email', () => {
   test('hasta confirmar el email no se accede a los módulos', async () => {
@@ -146,55 +114,70 @@ describe('recuperación de contraseña', () => {
   });
 });
 
-describe('verificación en dos pasos', () => {
+describe('verificación en dos pasos por email', () => {
   const email = 'julian.cabrera@burgoscorp.test';
-  let secreto;
-  let respaldo;
-  let pasoActivacion; // intervalo de 30 s del código usado al activar
+  let accessToken;
 
   // Si una corrida anterior se cortó a la mitad, Julián puede haber quedado con 2FA activo.
   before(async () => {
-    await query('UPDATE usuarios SET totp_habilitado = 0, totp_secret_cifrado = NULL, totp_ultimo_paso = NULL WHERE email = ?', [email]);
-    await query('DELETE FROM codigos_respaldo_2fa WHERE usuario_id = (SELECT id FROM usuarios WHERE email = ?)', [email]);
+    await query('UPDATE usuarios SET totp_habilitado = 0 WHERE email = ?', [email]);
     await query('DELETE FROM intentos_login WHERE clave = ?', [claveDe(email)]);
   });
+  // Cada prueba pide códigos nuevos: se saltea la espera de un minuto entre envíos.
+  const sinEspera = () => query(`UPDATE codigos_verificacion SET created_at = created_at - INTERVAL 2 MINUTE
+    WHERE usuario_id = (SELECT id FROM usuarios WHERE email = ?)`, [email]);
+  const otroQue = (c) => (c === '000000' ? '111111' : '000000');
 
-  const codigoDelPaso = (paso) => hotp(base32Decodificar(secreto), paso);
+  test('activar: llega un código al email y hay que escribirlo', async () => {
+    accessToken = (await api().post('/api/v1/auth/login').send({ email, password: PASSWORD })).body.data.accessToken;
+    await sinEspera();
+    limpiarBandeja();
+    const pedido = await api().post('/api/v1/auth/2fa/codigo').set(conToken(accessToken));
+    assert.equal(pedido.status, 200);
+    assert.equal(pedido.body.data.email, 'ju***@burgoscorp.test', 'dice a dónde lo mandó, sin mostrar todo el email');
+    const codigo = await ultimoCodigo(email);
+    assert.match(bandejaDePrueba.at(-1).asunto, /Activá la verificación en dos pasos/);
 
-  test('configurar y activar con la app autenticadora', async () => {
-    const { accessToken } = (await api().post('/api/v1/auth/login').send({ email, password: PASSWORD })).body.data;
-    const conf = await api().post('/api/v1/auth/2fa/configurar').set(conToken(accessToken));
-    assert.equal(conf.status, 200);
-    secreto = conf.body.data.secreto;
-    assert.match(conf.body.data.otpauthUri, /^otpauth:\/\/totp\/.+secret=[A-Z2-7]+&issuer=/);
+    const mal = await api().post('/api/v1/auth/2fa/activar').set(conToken(accessToken)).send({ codigo: otroQue(codigo) });
+    assert.equal(mal.status, 400);
+    const [antes] = await query('SELECT totp_habilitado FROM usuarios WHERE email = ?', [email]);
+    assert.equal(antes.totp_habilitado, 0, 'con un código incorrecto no se activa');
 
-    const [fila] = await query('SELECT totp_secret_cifrado, totp_habilitado FROM usuarios WHERE email = ?', [email]);
-    assert.ok(!fila.totp_secret_cifrado.includes(secreto), 'el secreto se guarda cifrado');
-    assert.equal(fila.totp_habilitado, 0, 'no se activa hasta confirmar un código');
-
-    pasoActivacion = pasoActual();
-    const act = await api().post('/api/v1/auth/2fa/activar').set(conToken(accessToken)).send({ codigo: codigoDelPaso(pasoActivacion) });
-    assert.equal(act.status, 200);
-    respaldo = act.body.data.codigosRespaldo;
-    assert.equal(respaldo.length, 10);
+    const ok = await api().post('/api/v1/auth/2fa/activar').set(conToken(accessToken)).send({ codigo });
+    assert.equal(ok.status, 200);
+    const yo = await api().get('/api/v1/auth/yo').set(conToken(accessToken));
+    assert.equal(yo.body.data.usuario.dosPasosActivo, true);
   });
 
-  test('el login pide el segundo paso y el token temporal no sirve como sesión', async () => {
+  test('el login manda el código solo y el token temporal no sirve como sesión', async () => {
+    await sinEspera();
+    limpiarBandeja();
     const res = await api().post('/api/v1/auth/login').send({ email, password: PASSWORD });
     assert.equal(res.status, 200);
     assert.equal(res.body.data.requiere2fa, true);
+    assert.equal(res.body.data.codigoEnviado, true);
     assert.equal(res.body.data.accessToken, undefined);
     assert.equal((await api().get('/api/v1/auth/yo').set(conToken(res.body.data.tokenTemporal))).status, 401);
+
+    const codigo = await ultimoCodigo(email);
+    assert.match(bandejaDePrueba.at(-1).asunto, /Tu código para ingresar/);
+    const ok = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal: res.body.data.tokenTemporal, codigo });
+    assert.equal(ok.status, 200);
+    assert.ok(ok.body.data.accessToken);
+    const otraVez = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal: res.body.data.tokenTemporal, codigo });
+    assert.equal(otraVez.status, 401, 'el token temporal sirve una sola vez');
   });
 
-  test('el token del segundo paso sirve una sola vez y admite 3 errores', async () => {
+  test('el segundo paso admite 3 errores; después hay que volver a poner la contraseña', async () => {
+    await sinEspera();
+    limpiarBandeja();
     const { tokenTemporal } = (await api().post('/api/v1/auth/login').send({ email, password: PASSWORD })).body.data;
+    const codigo = await ultimoCodigo(email);
     for (let i = 0; i < 3; i++) {
-      const mal = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, metodo: 'totp', codigo: '000000' });
+      const mal = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, codigo: otroQue(codigo) });
       assert.equal(mal.status, 400);
     }
-    // Al cuarto, aunque el código fuera correcto, hay que volver a poner la contraseña.
-    const vencido = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, metodo: 'totp', codigo: codigoDelPaso(pasoActivacion + 1) });
+    const vencido = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, codigo });
     assert.equal(vencido.status, 401);
     // Acertar la contraseña no borra los fallos del segundo paso (se borran al completar el login).
     const fallos = await query('SELECT COUNT(*) AS n FROM intentos_login WHERE clave = ?', [claveDe(email)]);
@@ -202,49 +185,25 @@ describe('verificación en dos pasos', () => {
     await query('DELETE FROM intentos_login WHERE clave = ?', [claveDe(email)]);
   });
 
-  test('segundo paso con TOTP: un código ya usado no sirve', async () => {
+  test('reenviar el código del login respeta la espera de un minuto', async () => {
+    await sinEspera();
     const { tokenTemporal } = (await api().post('/api/v1/auth/login').send({ email, password: PASSWORD })).body.data;
-    // El código de la activación ya se usó: sirve el del intervalo siguiente. Se toman los intervalos
-    // fijos de la activación para que la prueba no falle si justo cambia el código de 30 segundos.
-    const reuso = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, metodo: 'totp', codigo: codigoDelPaso(pasoActivacion) });
-    assert.equal(reuso.status, 400);
-    const ok = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, metodo: 'totp', codigo: codigoDelPaso(pasoActivacion + 1) });
-    assert.equal(ok.status, 200);
-    assert.ok(ok.body.data.accessToken);
-  });
-
-  test('segundo paso con código de respaldo (un solo uso)', async () => {
-    const { tokenTemporal } = (await api().post('/api/v1/auth/login').send({ email, password: PASSWORD })).body.data;
-    const ok = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, metodo: 'respaldo', codigo: respaldo[0].toLowerCase() });
-    assert.equal(ok.status, 200);
-    const t2 = (await api().post('/api/v1/auth/login').send({ email, password: PASSWORD })).body.data.tokenTemporal;
-    const otraVez = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal: t2, metodo: 'respaldo', codigo: respaldo[0] });
-    assert.equal(otraVez.status, 400);
-    await query('DELETE FROM intentos_login WHERE clave = ?', [claveDe(email)]);
-  });
-
-  test('segundo paso con código por email', async () => {
-    limpiarBandeja();
-    // Si los tests se repiten seguido, evita el límite de un código por minuto.
-    await query(`UPDATE codigos_verificacion SET created_at = created_at - INTERVAL 2 MINUTE
-                 WHERE usuario_id = (SELECT id FROM usuarios WHERE email = ?)`, [email]);
-    const { tokenTemporal } = (await api().post('/api/v1/auth/login').send({ email, password: PASSWORD })).body.data;
+    assert.equal((await api().post('/api/v1/auth/2fa/email').send({ tokenTemporal })).status, 429);
+    await sinEspera();
     assert.equal((await api().post('/api/v1/auth/2fa/email').send({ tokenTemporal })).status, 200);
-    const codigo = await ultimoCodigo(email);
-    const ok = await api().post('/api/v1/auth/2fa/verificar').send({ tokenTemporal, metodo: 'email', codigo });
-    assert.equal(ok.status, 200);
   });
 
-  test('desactivar exige el segundo factor', async () => {
-    const { tokenTemporal } = (await api().post('/api/v1/auth/login').send({ email, password: PASSWORD })).body.data;
-    const { accessToken } = (await api().post('/api/v1/auth/2fa/verificar')
-      .send({ tokenTemporal, metodo: 'respaldo', codigo: respaldo[1] })).body.data;
-    const sinPassword = await api().post('/api/v1/auth/2fa/desactivar').set(conToken(accessToken)).send({ codigo: respaldo[2] });
+  test('desactivar pide la contraseña y un código nuevo del email', async () => {
+    await sinEspera();
+    limpiarBandeja();
+    await api().post('/api/v1/auth/2fa/codigo').set(conToken(accessToken));
+    const codigo = await ultimoCodigo(email);
+    const sinPassword = await api().post('/api/v1/auth/2fa/desactivar').set(conToken(accessToken)).send({ codigo });
     assert.equal(sinPassword.status, 400, 'también pide la contraseña');
-    const sinCodigo = await api().post('/api/v1/auth/2fa/desactivar').set(conToken(accessToken)).send({ codigo: '000000', password: PASSWORD });
-    assert.equal(sinCodigo.status, 400);
+    const malCodigo = await api().post('/api/v1/auth/2fa/desactivar').set(conToken(accessToken)).send({ codigo: otroQue(codigo), password: PASSWORD });
+    assert.equal(malCodigo.status, 400);
     await query('DELETE FROM intentos_login WHERE clave = ?', [claveDe(email)]);
-    const ok = await api().post('/api/v1/auth/2fa/desactivar').set(conToken(accessToken)).send({ codigo: respaldo[2], password: PASSWORD });
+    const ok = await api().post('/api/v1/auth/2fa/desactivar').set(conToken(accessToken)).send({ codigo, password: PASSWORD });
     assert.equal(ok.status, 200);
     const login = await api().post('/api/v1/auth/login').send({ email, password: PASSWORD });
     assert.ok(login.body.data.accessToken, 'sin 2FA el login vuelve a ser directo');

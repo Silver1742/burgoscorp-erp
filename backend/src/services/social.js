@@ -13,6 +13,7 @@ import { auditar } from './auditoria.js';
 import { buscarUsuarioPorId, exigirCuentaHabilitada } from './usuarios.js';
 import { firmarTemporal, revocarTodas } from './tokens.js';
 import { avisarSolicitud, emitirSesion } from './auth.js';
+import { iniciarSegundoPaso } from './dosPasos.js';
 
 const TIMEOUT_MS = 8000;
 const noConfigurado = (p) => new AppError(503, 'PROVEEDOR_NO_CONFIGURADO', `El inicio de sesión con ${p} no está habilitado`);
@@ -220,7 +221,7 @@ export async function loginSocial(proveedor, datos, req) {
 
   const usuario = await buscarUsuarioPorId(usuarioId);
   exigirCuentaHabilitada(usuario);
-  if (usuario.totp_habilitado) return { requiere2fa: true, tokenTemporal: await firmarTemporal(usuario.id, '2fa') };
+  if (usuario.totp_habilitado) return iniciarSegundoPaso(usuario, firmarTemporal);
 
   await auditar(req, { accion: 'login_ok', usuarioId, detalle: { metodo: proveedor } });
   return emitirSesion(usuario, req);

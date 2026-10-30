@@ -46,7 +46,8 @@ const esquema = z.object({
   // Clave AES-256 para cifrar los secretos 2FA en la base: 32 bytes en base64, 64 caracteres
   // hexadecimales, o un valor aleatorio de 32+ caracteres (ej. "Generate" de Render), del que se
   // deriva la clave con SHA-256.
-  TOTP_ENC_KEY: z.string().min(32, 'TOTP_ENC_KEY debe tener al menos 32 caracteres'),
+  // Ya no se usa (la verificación en dos pasos es por email). Se acepta para no romper configuraciones viejas.
+  TOTP_ENC_KEY: z.string().optional(),
   APP_NOMBRE: z.string().max(40).default('BurgosCorp ERP'),
   // Carpeta de las fotos y archivos subidos (fuera de cualquier carpeta pública).
   UPLOADS_DIR: z.string().default('uploads'),

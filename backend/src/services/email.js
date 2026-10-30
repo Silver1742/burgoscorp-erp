@@ -71,8 +71,17 @@ const TEXTOS = {
     intro: 'Pediste restablecer tu contraseña en',
   },
   login_email: {
-    asunto: 'Código de inicio de sesión',
-    intro: 'Tu código para completar el inicio de sesión en',
+    asunto: 'Tu código para ingresar',
+    intro: 'Alguien ingresó tu contraseña. Para terminar de entrar, escribí este código en',
+  },
+  activar_2fa: {
+    asunto: 'Activá la verificación en dos pasos',
+    intro: 'Escribí este código en la app para activar la verificación en dos pasos en',
+    pasos: 'Desde que la actives, cada vez que ingreses con tu contraseña te vamos a mandar un código como este.',
+  },
+  desactivar_2fa: {
+    asunto: 'Desactivar la verificación en dos pasos',
+    intro: 'Pediste desactivar la verificación en dos pasos en',
   },
   // Lo manda el administrador (el código es de tipo recuperar_password).
   crear_password: {
