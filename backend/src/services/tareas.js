@@ -109,7 +109,7 @@ async function cargar(usuario, id) {
  * Jefes del área con cuenta activa: el titular (areas.jefe_empleado_id) primero y después los
  * demás con rol de jefe en esa área. Son quienes reciben las tareas para asignar.
  */
-async function jefesDelArea(areaId) {
+export async function jefesDelArea(areaId) {
   return query(`
     SELECT u.id AS usuario_id, CONCAT(e.nombre, ' ', e.apellido) AS nombre
     FROM empleados e
@@ -186,6 +186,14 @@ export async function crearOperacion(usuario, otId, datos, req) {
     return insertarTarea(conn, { ...d, area_id: d.area_maquina ?? ot.area_id, orden_trabajo_id: otId, secuencia: siguiente, creado_por: usuario.id });
   });
   await auditar(req, { accion: 'crear', entidad: 'tarea', entidadId: id, detalle: { ot: ot.numero } });
+  // Si la operación es en una máquina de otra área, la asigna el jefe de esa área: se le avisa.
+  const areaTarea = d.area_maquina ?? ot.area_id;
+  if (areaTarea !== usuario.area_id) {
+    await notificar((await jefesDelArea(areaTarea)).map((j) => j.usuario_id).filter((u) => u !== usuario.id), {
+      tipo: 'tarea_para_asignar', titulo: `Tarea para asignar: ${d.titulo}`.slice(0, 120),
+      mensaje: `Operación de ${ot.numero}. Asignala a alguien de tu equipo.`, entidad: 'tarea', entidadId: id,
+    });
+  }
   return obtener(usuario, id);
 }
 

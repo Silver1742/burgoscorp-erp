@@ -69,12 +69,18 @@ export default function DetalleSolicitud() {
           <Dato etiqueta="Fecha">{fechaHoraCorta(s.created_at)}</Dato>
         </View>
         <Contacto telefono={s.cliente_telefono} mensaje={saludo} />
-        {s.puede_editar ? (
-          <Selector etiqueta="Analiza (Ingeniería o Comercial)" ruta="/solicitudes/analistas" valor={null} textoValor={s.asignada_a_nombre}
+        {/* El análisis lo asigna el jefe de Ingeniería a alguien de su equipo. */}
+        {s.puede_asignar ? (
+          <Selector etiqueta="Analiza (Ingeniería)" ruta="/solicitudes/analistas" valor={null} textoValor={s.asignada_a_nombre}
             placeholder="Asignar a…" estilo={{ marginTop: espacio.l }}
             alCambiar={(empleadoId) => empleadoId && editar({ asignada_a: empleadoId }, 'Asignada. Le llegó el aviso.').catch(() => {})}
-            mapear={(e) => ({ titulo: `${e.apellido}, ${e.nombre}`, sub: `${e.area_nombre} · ${e.abiertas} abiertas` })} />
-        ) : s.asignada_a_nombre ? <Text style={{ color: t.textoSuave, marginTop: espacio.m }}>Analiza: {s.asignada_a_nombre}</Text> : null}
+            mapear={(e) => ({ titulo: `${e.apellido}, ${e.nombre}`, sub: `${e.abiertas} ${Number(e.abiertas) === 1 ? 'pedido abierto' : 'pedidos abiertos'}` })} />
+        ) : (
+          <Text style={{ color: t.textoSuave, marginTop: espacio.m }}>
+            {s.asignada_a_nombre ? `Analiza: ${s.asignada_a_nombre}`
+              : s.jefe_ingenieria ? `Lo asigna ${s.jefe_ingenieria}, jefe de Ingeniería.` : 'Sin asignar.'}
+          </Text>
+        )}
         <View style={[estilos.fila, { marginTop: espacio.m }]}>
           {s.puede_presupuestar ? (
             <Boton titulo="Presupuestar" icono="calculator-outline" chico estilo={{ marginBottom: 0 }}

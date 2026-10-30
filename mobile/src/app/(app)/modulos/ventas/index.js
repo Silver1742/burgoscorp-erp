@@ -12,6 +12,7 @@ import { espacio, useTema, usePantalla } from '../../../../tema';
 const VISTAS = [
   { valor: 'solicitudes', titulo: 'Solicitudes' },
   { valor: 'mias', titulo: 'A mi cargo' },
+  { valor: 'sin_asignar', titulo: 'Para asignar' },
   { valor: 'presupuestos', titulo: 'Presupuestos' },
 ];
 
@@ -30,7 +31,7 @@ export default function Ventas() {
 
   const [ruta, consulta] = useMemo(() => (vista === 'presupuestos'
     ? ['/presupuestos', { limite: 50, q: busqueda.trim() || undefined }]
-    : ['/solicitudes', { limite: 50, q: busqueda.trim() || undefined, mias: vista === 'mias' ? 1 : undefined }]), [vista, busqueda]);
+    : ['/solicitudes', { limite: 50, q: busqueda.trim() || undefined, mias: vista === 'mias' ? 1 : undefined, sin_asignar: vista === 'sin_asignar' ? 1 : undefined }]), [vista, busqueda]);
 
   const cargar = useCallback(async () => {
     const id = ++pedido.current;

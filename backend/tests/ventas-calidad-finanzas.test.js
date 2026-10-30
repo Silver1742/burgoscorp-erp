@@ -14,6 +14,7 @@ const EMAILS = {
   florencia: 'florencia.rios@burgoscorp.test',   // Comercial (empleada)
   diego: 'diego.acosta@burgoscorp.test',         // jefe Comercial
   valentina: 'valentina.castro@burgoscorp.test', // Ingeniería (presupuesta)
+  sebastian: 'sebastian.molina@burgoscorp.test', // jefe de Ingeniería (asigna los pedidos)
   marcelo: 'marcelo.ibanez@burgoscorp.test',     // jefe de Soldadura
   claudio: 'claudio.ortiz@burgoscorp.test',      // soldador
   ramon: 'ramon.gimenez@burgoscorp.test',        // tornero (otra área)
@@ -79,12 +80,23 @@ describe('ventas', () => {
     assert.equal(f.status, 201, JSON.stringify(f.body));
   });
 
-  test('el jefe la asigna a Ingeniería', async () => {
-    assert.equal((await api().put(`/api/v1/solicitudes/${solicitudId}`).set(como('diego')).send({ asignada_a: s.claudio.usuario.empleadoId })).status, 400);
-    const r = await api().put(`/api/v1/solicitudes/${solicitudId}`).set(como('diego')).send({ asignada_a: s.valentina.usuario.empleadoId });
+  test('el pedido le llega al jefe de Ingeniería y él lo asigna a su equipo', async () => {
+    const aviso = async () => (await query(
+      "SELECT leida_at FROM notificaciones WHERE usuario_id = ? AND tipo = 'solicitud_nueva' AND entidad_id = ?",
+      [s.sebastian.usuario.id, solicitudId]))[0];
+    assert.ok(await aviso(), 'le llegó el aviso "Pedido nuevo para asignar"');
+    const pendientes = await api().get('/api/v1/solicitudes').query({ sin_asignar: 1 }).set(como('sebastian'));
+    assert.ok(pendientes.body.data.some((x) => x.id === solicitudId), 'aparece en "Para asignar"');
+
+    const ajeno = await api().put(`/api/v1/solicitudes/${solicitudId}`).set(como('diego')).send({ asignada_a: s.valentina.usuario.empleadoId });
+    assert.equal(ajeno.status, 403, 'Comercial carga el pedido pero no lo asigna');
+    assert.match(ajeno.body.error.mensaje, /Sebastián Molina/);
+    assert.equal((await api().put(`/api/v1/solicitudes/${solicitudId}`).set(como('sebastian')).send({ asignada_a: s.claudio.usuario.empleadoId })).status, 400);
+    const r = await api().put(`/api/v1/solicitudes/${solicitudId}`).set(como('sebastian')).send({ asignada_a: s.valentina.usuario.empleadoId });
     assert.equal(r.status, 200, JSON.stringify(r.body));
     assert.equal(r.body.data.estado, 'en_analisis');
     assert.equal(r.body.data.asignada_a_nombre, 'Valentina Castro');
+    assert.ok((await aviso()).leida_at, 'el aviso del pedido nuevo queda resuelto');
   });
 
   test('Ingeniería presupuesta: los importes los calcula el servidor', async () => {

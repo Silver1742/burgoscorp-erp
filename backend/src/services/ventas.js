@@ -1,6 +1,10 @@
 // Ventas (módulo VEN, equivalente a SAP SD): solicitud del cliente → presupuesto → orden de trabajo.
 //
 //   Solicitud:   nueva ──▶ en_analisis (Ingeniería) ──▶ presupuestada ──▶ aprobada | rechazada
+//
+// Cada pedido nuevo le llega al jefe de Ingeniería, que lo asigna a alguien de su equipo para
+// analizarlo y presupuestarlo (si Ingeniería no tiene jefe, lo asigna el administrador). Al crearse
+// la OT, a cada jefe con operaciones en su área le llega el aviso para asignarlas.
 //                  └────────────── cancelada
 //   Presupuesto: borrador ──▶ enviado ──▶ aprobado (el cliente aceptó) | rechazado
 //
@@ -13,8 +17,8 @@ import { siguienteNumero } from '../utils/secuencias.js';
 import { hoy, sumarDias } from '../utils/fechas.js';
 import { resolverPermiso } from './permisos.js';
 import { auditar } from './auditoria.js';
-import { notificar, usuarioJefeDeArea, usuariosDeArea } from './notificaciones.js';
-import { insertarTarea, completarConMaquina } from './tareas.js';
+import { notificar, usuariosDeArea } from './notificaciones.js';
+import { insertarTarea, completarConMaquina, jefesDelArea } from './tareas.js';
 import * as stock from './stock.js';
 import * as ordenes from './ordenes.js';
 
@@ -46,6 +50,7 @@ export async function listarSolicitudes(usuario, f) {
   if (f.estado) { where.push('s.estado = ?'); params.push(f.estado); }
   if (f.abiertas) where.push(`s.estado NOT IN ('aprobada','rechazada','cancelada')`);
   if (f.mias) { where.push('s.asignada_a = ?'); params.push(usuario.empleado_id ?? 0); }
+  if (f.sin_asignar) where.push("s.asignada_a IS NULL AND s.estado = 'nueva'");
   if (f.cliente_id) { where.push('s.cliente_id = ?'); params.push(f.cliente_id); }
   const condicion = where.join(' AND ');
   const offset = (f.pagina - 1) * f.limite;
@@ -63,8 +68,11 @@ export async function obtenerSolicitud(usuario, id) {
   const presupuestos = await query(
     'SELECT id, numero, estado, total, fecha FROM presupuestos WHERE solicitud_id = ? ORDER BY id DESC', [id]);
   const abierta = !SOL_CERRADAS.includes(s.estado);
+  const { puede: asigna, jefe } = await quienAsigna(usuario);
   return {
     ...s, presupuestos,
+    puede_asignar: asigna && abierta,
+    jefe_ingenieria: jefe,
     puede_editar: editar.permitido && abierta,
     puede_presupuestar: crear.permitido && abierta && !presupuestos.some((p) => ['borrador', 'enviado'].includes(p.estado)),
   };
@@ -77,6 +85,23 @@ export async function accesoSolicitud(usuario, id) {
   if (!s) throw errores.noEncontrado('La solicitud no existe');
   const editar = await resolverPermiso(usuario, 'VEN', 'editar');
   return { puedeEscribir: editar.permitido && !SOL_CERRADAS.includes(s.estado), puedeGestionar: editar.permitido };
+}
+
+async function areaIngenieria() {
+  return queryOne("SELECT id, nombre FROM areas WHERE codigo = 'ING' AND activo = 1");
+}
+
+/**
+ * El análisis de un pedido lo asigna un jefe de Ingeniería. El administrador (alcance de toda la
+ * empresa) solo si Ingeniería no tiene jefe con cuenta activa.
+ */
+async function quienAsigna(usuario) {
+  const ing = await areaIngenieria();
+  const jefes = ing ? await jefesDelArea(ing.id) : [];
+  const esJefe = jefes.some((j) => j.usuario_id === usuario.id);
+  const permiso = await resolverPermiso(usuario, 'VEN', 'editar');
+  const admin = permiso.permitido && permiso.alcance === 'todo' && usuario.rol === 'ADMIN';
+  return { puede: esJefe || (admin && !jefes.length), jefe: jefes[0]?.nombre ?? null, jefes, ing };
 }
 
 async function clienteActivo(conn, clienteId) {
@@ -96,6 +121,16 @@ export async function crearSolicitud(usuario, d, req) {
     return r.insertId;
   });
   await auditar(req, { accion: 'crear', entidad: 'solicitud', entidadId: id });
+  // Le llega directo al jefe de Ingeniería para que lo asigne (sin jefe: a los administradores).
+  const { jefes } = await quienAsigna(usuario);
+  const destino = jefes.length ? jefes.map((j) => j.usuario_id)
+    : (await query(`SELECT u.id FROM usuarios u JOIN roles r ON r.id = u.rol_id
+        WHERE r.codigo = 'ADMIN' AND u.activo = 1 AND u.estado_cuenta = 'habilitada'`)).map((f) => f.id);
+  const s = await queryOne('SELECT numero, titulo FROM solicitudes WHERE id = ?', [id]);
+  await notificar(destino.filter((u) => u !== usuario.id), {
+    tipo: 'solicitud_nueva', titulo: `Pedido nuevo para asignar: ${s.numero}`, mensaje: s.titulo,
+    entidad: 'solicitud', entidadId: id,
+  });
   return obtenerSolicitud(usuario, id);
 }
 
@@ -106,9 +141,11 @@ export async function editarSolicitud(usuario, id, d, req) {
   if (SOL_CERRADAS.includes(s.estado)) throw errores.conflicto('La solicitud ya está cerrada');
   const cambios = { ...d };
   if (cambios.asignada_a) {
+    const { puede, jefe } = await quienAsigna(usuario);
+    if (!puede) throw errores.prohibido(jefe ? `El pedido lo asigna ${jefe}, jefe de Ingeniería` : 'Solo el jefe de Ingeniería asigna los pedidos');
     const e = await queryOne(`SELECT e.id FROM empleados e JOIN areas a ON a.id = e.area_id
-      WHERE e.id = ? AND e.estado = 'activo' AND a.codigo IN ('ING','COM')`, [cambios.asignada_a]);
-    if (!e) throw errores.validacion([{ campo: 'body.asignada_a', mensaje: 'Elegí a alguien de Ingeniería o Comercial' }]);
+      WHERE e.id = ? AND e.estado = 'activo' AND a.codigo = 'ING'`, [cambios.asignada_a]);
+    if (!e) throw errores.validacion([{ campo: 'body.asignada_a', mensaje: 'Elegí a alguien de Ingeniería' }]);
     if (s.estado === 'nueva') cambios.estado = 'en_analisis';
   }
   if (cambios.estado === 'cancelada' && s.estado === 'presupuestada') {
@@ -120,16 +157,18 @@ export async function editarSolicitud(usuario, id, d, req) {
   if (d.asignada_a && d.asignada_a !== s.asignada_a) {
     const u = await queryOne('SELECT id FROM usuarios WHERE empleado_id = ? AND activo = 1', [d.asignada_a]);
     await notificar(u?.id, { tipo: 'solicitud_asignada', titulo: `Analizar ${s.numero}`, mensaje: s.titulo, entidad: 'solicitud', entidadId: id });
+    // El aviso de "pedido nuevo" ya se resolvió.
+    await query("UPDATE notificaciones SET leida_at = UTC_TIMESTAMP() WHERE tipo = 'solicitud_nueva' AND entidad_id = ? AND leida_at IS NULL", [id]);
   }
   return obtenerSolicitud(usuario, id);
 }
 
-/** A quién se le puede asignar una solicitud: Ingeniería y Comercial. */
+/** A quién se le puede asignar un pedido: la gente de Ingeniería, primero la que tiene menos abiertos. */
 export async function analistas() {
   return query(`SELECT e.id, e.nombre, e.apellido, e.legajo, a.nombre AS area_nombre,
                   (SELECT COUNT(*) FROM solicitudes s WHERE s.asignada_a = e.id AND s.estado IN ('nueva','en_analisis')) AS abiertas
                 FROM empleados e JOIN areas a ON a.id = e.area_id
-                WHERE e.estado = 'activo' AND a.codigo IN ('ING','COM') ORDER BY a.codigo DESC, e.apellido`);
+                WHERE e.estado = 'activo' AND a.codigo = 'ING' ORDER BY abiertas, e.apellido`);
 }
 
 // ---------------------------------------------------------------- presupuestos
@@ -338,9 +377,20 @@ export async function aprobarPresupuesto(usuario, id, d, req) {
   });
 
   await auditar(req, { accion: 'aprobar', entidad: 'presupuesto', entidadId: id, detalle: { ot: r.numero } });
-  await notificar(await usuarioJefeDeArea(area.id), {
+  // A los jefes del área de la OT, y a los de cada área que tiene operaciones (máquinas de otra área):
+  // cada uno asigna las suyas a su equipo.
+  await notificar((await jefesDelArea(area.id)).map((j) => j.usuario_id), {
     tipo: 'ot_nueva', titulo: `Nueva ${r.numero} (${r.presupuesto} aprobado)`, mensaje: 'Revisá las operaciones y asigná al equipo.', entidad: 'orden_trabajo', entidadId: r.otId,
   });
+  const porArea = await query(`SELECT area_id, MIN(id) AS primera, COUNT(*) AS n FROM tareas
+    WHERE orden_trabajo_id = ? AND area_id <> ? GROUP BY area_id`, [r.otId, area.id]);
+  for (const g of porArea) {
+    await notificar((await jefesDelArea(g.area_id)).map((j) => j.usuario_id), {
+      tipo: 'tarea_para_asignar',
+      titulo: `${r.numero}: ${g.n} ${g.n === 1 ? 'tarea' : 'tareas'} para tu área`.slice(0, 120),
+      mensaje: 'Asignalas a tu equipo (Tareas del área → Para asignar).', entidad: 'tarea', entidadId: g.primera,
+    });
+  }
   if (r.faltantes.length) {
     await notificar(await usuariosDeArea('ABA'), {
       tipo: 'material_faltante', titulo: `Falta material para ${r.numero}`, mensaje: r.faltantes.join(' · ').slice(0, 500), entidad: 'orden_trabajo', entidadId: r.otId,

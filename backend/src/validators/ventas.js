@@ -34,6 +34,7 @@ export const filtroSolicitudes = z.object({
   estado: z.enum(ESTADOS_SOLICITUD).optional(),
   abiertas: z.enum(['1']).optional(),
   mias: z.enum(['1']).optional(),
+  sin_asignar: z.enum(['1']).optional(),
   cliente_id: id.optional(),
 }).strict();
 

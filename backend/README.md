@@ -488,11 +488,11 @@ una orden preventiva, el plan se reprograma (`proxima_fecha` = hoy + frecuencia)
 
 | Método | Ruta | Permiso | Descripción |
 |---|---|---|---|
-| GET | `/solicitudes` | VEN ver | Filtros: `estado`, `abiertas=1`, `mias=1` (asignadas a mí), `cliente_id`, `q`. Trae `fotos` (cantidad) y el teléfono del cliente |
-| GET | `/solicitudes/:id` | VEN ver | Detalle con sus presupuestos, `puede_editar` y `puede_presupuestar` |
-| GET | `/solicitudes/analistas` | VEN editar | Empleados de Ingeniería y Comercial con sus solicitudes abiertas |
-| POST | `/solicitudes` | VEN crear | `cliente_id`\*, `titulo`\*, `tipo_trabajo`\*, `descripcion`, `cantidad`, `fecha_requerida`. Número `SOL-AAAA-NNNN` |
-| PUT | `/solicitudes/:id` | VEN editar | `titulo`, `descripcion`, `cantidad`, `fecha_requerida`, `asignada_a` (pasa a `en_analisis` y avisa) o `estado: "cancelada"` |
+| GET | `/solicitudes` | VEN ver | Filtros: `estado`, `abiertas=1`, `mias=1` (asignadas a mí), `sin_asignar=1` (nuevas sin asignar), `cliente_id`, `q`. Trae `fotos` (cantidad) y el teléfono del cliente |
+| GET | `/solicitudes/:id` | VEN ver | Detalle con sus presupuestos, `puede_editar`, `puede_presupuestar`, `puede_asignar` y `jefe_ingenieria` |
+| GET | `/solicitudes/analistas` | VEN editar | Gente de Ingeniería, primero la que tiene menos pedidos abiertos |
+| POST | `/solicitudes` | VEN crear | `cliente_id`\*, `titulo`\*, `tipo_trabajo`\*, `descripcion`, `cantidad`, `fecha_requerida`. Número `SOL-AAAA-NNNN`. Avisa a los jefes de Ingeniería (`solicitud_nueva`) |
+| PUT | `/solicitudes/:id` | VEN editar | `titulo`, `descripcion`, `cantidad`, `fecha_requerida`, `asignada_a` (solo un jefe de Ingeniería —o el admin si no hay—, a alguien de Ingeniería: pasa a `en_analisis` y avisa; `403` si no) o `estado: "cancelada"` |
 | GET | `/presupuestos` | VEN ver | Filtros: `estado`, `abiertos=1`, `q` |
 | GET | `/presupuestos/:id` | VEN ver | Detalle con líneas, `vence`, la OT generada (`puede_ver_ot`) y, si se puede aprobar, `areas_produccion` |
 | POST | `/presupuestos` | VEN crear | `solicitud_id` o `cliente_id`, `items`\* (`tipo`: `maquina`, `material`, `mano_obra`, `tercerizado` u `otro`; `descripcion`\*, `cantidad`\*, `unidad`, `precio_unitario`\*, `centro_trabajo_id`, `producto_id`), `plazo_entrega_dias`, `validez_dias`, `observaciones`. Una solicitud tiene un solo presupuesto en curso (`409`) |

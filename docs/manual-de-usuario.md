@@ -111,8 +111,11 @@ marcá si la máquina quedó parada. Mantenimiento recibe el aviso.
 ## 5. Para jefes de área
 
 - **Asignar tarea**: creá la tarea y elegí a alguien con la habilidad necesaria.
-- **Tareas que te manda el administrador**: te llega el aviso *"Tarea para asignar"*. Tocalo (o
-  entrá a **Tareas del área → Para asignar**) y asignala a alguien de tu equipo con **Asignar**.
+- **Tareas que te llegan**: del administrador, o de una orden de trabajo de otra área que usa
+  máquinas tuyas. Te llega el aviso *"Tarea para asignar"*: tocalo (o entrá a **Tareas del área →
+  Para asignar**) y asignala a alguien de tu equipo con **Asignar**.
+- **Jefe de Ingeniería**: te llega cada **pedido nuevo** de los clientes. Asignalo a alguien de tu
+  equipo en **"Analiza"** (o desde **Ventas → Para asignar**).
 - **Tareas del área**: aprobá o rechazá (con motivo) las tareas terminadas.
 - **Aprobar licencias**: aceptá o rechazá los pedidos de tu equipo.
 - **Órdenes de trabajo**: desde una OT podés reservar material y **pedir compras**.
@@ -121,12 +124,19 @@ marcá si la máquina quedó parada. Mantenimiento recibe el aviso.
 
 ## 6. Ventas, producción y calidad (el recorrido de un pedido)
 
-1. **Nuevo pedido** (Ventas): cliente, qué necesita y fotos de la pieza.
-2. **Presupuestar**: trabajo de máquinas y materiales. Se envía al cliente.
-3. Si el cliente acepta, **se crea sola la orden de trabajo** con sus operaciones y materiales.
-4. Producción trabaja la OT con tareas.
-5. **Calidad → Para inspeccionar**: se cargan las mediciones. Si no pasa, se genera un retrabajo.
-6. **Finanzas**: factura y cobro.
+1. **Nuevo pedido** (Comercial, en Ventas): cliente, qué necesita y fotos de la pieza.
+2. **Le llega solo al jefe de Ingeniería** (aviso *"Pedido nuevo para asignar"*). El jefe lo abre
+   (o entra a **Ventas → Para asignar**) y en **"Analiza"** elige a alguien de su equipo; primero
+   aparecen los que tienen menos pedidos abiertos.
+3. Esa persona **presupuesta** (horas de máquina y materiales) y lo manda al cliente.
+4. Si el cliente acepta, **"Aceptado: crear OT"**: se crea sola la orden de trabajo con sus
+   operaciones y materiales.
+5. **A cada jefe le llegan las tareas de su área**: el del área de la OT recibe *"Nueva OT"*, y si
+   hay operaciones en máquinas de otra área, a ese jefe le llega *"Tareas para tu área"*. Cada jefe
+   las asigna a su equipo; nadie de afuera asigna gente de otra área.
+6. Producción trabaja las tareas y el jefe las aprueba.
+7. **Calidad → Para inspeccionar**: se cargan las mediciones. Si no pasa, se genera un retrabajo.
+8. **Finanzas**: factura y cobro.
 
 ## 7. Liquidación de sueldos (Administración y Finanzas)
 

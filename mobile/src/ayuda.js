@@ -66,7 +66,8 @@ export const TEMAS_AYUDA = [
     id: 'jefe', titulo: 'Si sos jefe de área', icono: 'id-card-outline', roles: ['JEFE'],
     pasos: [
       '"Asignar tarea": creá la tarea y elegí a alguien con la habilidad necesaria.',
-      'Si te llega "Tarea para asignar", es una tarea que mandó el administrador: abrila y tocá "Asignar".',
+      'Si te llega "Tarea para asignar" (del administrador o de una OT de otra área), abrila y tocá "Asignar".',
+      'Si sos jefe de Ingeniería, te llega cada pedido nuevo: asignalo en "Analiza" o desde Ventas → Para asignar.',
       'En "Tareas del área" aprobás o rechazás las tareas terminadas.',
       '"Aprobar licencias": aceptá o rechazá los pedidos de tu equipo.',
       'Desde una orden de trabajo podés reservar material y pedir compras. Una compra la aprueba otra persona, nunca quien la pidió.',
@@ -77,6 +78,7 @@ export const TEMAS_AYUDA = [
     id: 'ventas', titulo: 'Ventas: del pedido a la orden de trabajo', icono: 'briefcase-outline', roles: ['JEFE', 'EMPLEADO'],
     pasos: [
       '"Nuevo pedido": elegí el cliente, contá qué necesita y sacá fotos de la pieza.',
+      'El pedido le llega solo al jefe de Ingeniería, que lo asigna a alguien de su equipo para presupuestarlo.',
       'Desde el pedido, "Presupuestar": cargá el trabajo de las máquinas y los materiales.',
       'Cuando el cliente acepta el presupuesto, se crea sola la orden de trabajo para producción.',
     ],

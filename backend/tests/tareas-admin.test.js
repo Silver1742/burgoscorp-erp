@@ -122,6 +122,21 @@ describe('tareas del administrador', () => {
     assert.equal(ajena.status, 403);
   });
 
+  test('una operación en una máquina de otra área le avisa al jefe de esa área', async () => {
+    const ot = await api().post('/api/v1/ordenes-trabajo').set(como('jorge')).send({ titulo: 'Eje con brida soldada', tipo_trabajo: 'fabricacion', prioridad: 'media', cantidad: 1 });
+    assert.equal(ot.status, 201, JSON.stringify(ot.body));
+    const [sol] = await query("SELECT id FROM centros_trabajo WHERE codigo = 'SOL-01'");
+    const op = await api().post(`/api/v1/ordenes-trabajo/${ot.body.data.id}/operaciones`).set(como('jorge'))
+      .send({ titulo: 'Soldar la brida', centro_trabajo_id: sol.id });
+    assert.equal(op.status, 201, JSON.stringify(op.body));
+    assert.equal(op.body.data.area_id, await area('SOL'));
+    assert.equal(await avisos(s.marcelo.usuario.id, op.body.data.id), 1, 'Marcelo (Soldadura) recibe la tarea para asignar');
+    const [tor] = await query("SELECT id FROM centros_trabajo WHERE codigo = 'TOR-01'");
+    const propia = await api().post(`/api/v1/ordenes-trabajo/${ot.body.data.id}/operaciones`).set(como('jorge'))
+      .send({ titulo: 'Tornear el eje', centro_trabajo_id: tor.id });
+    assert.equal(await avisos(s.marcelo.usuario.id, propia.body.data.id), 0, 'la de su propia área la asigna Jorge');
+  });
+
   test('los errores de validación dicen qué campo y en castellano', async () => {
     const r = await api().post('/api/v1/tareas').set(como('jorge')).send({ titulo: '', horas_estimadas: -2, prioridad: 'altisima' });
     assert.equal(r.status, 400);
