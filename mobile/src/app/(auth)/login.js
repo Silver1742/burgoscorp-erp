@@ -88,8 +88,8 @@ export default function Login() {
       )}
 
       <View style={estilos.pie}>
-        <Text style={{ color: t.textoSuave, fontSize: 15 }}>¿Sos nuevo en BurgosCorp? </Text>
-        <Link href="/registro" asChild><Boton titulo="Pedí acceso" variante="texto" chico estilo={estilos.enlace} /></Link>
+        <Text style={{ color: t.textoSuave, fontSize: 14 }}>¿Sos nuevo en BurgosCorp? </Text>
+        <Link href="/registro" asChild><Boton titulo="Pedí acceso" variante="texto" chico estilo={estilos.enlacePie} /></Link>
       </View>
     </AuthLayout>
   );
@@ -98,6 +98,8 @@ export default function Login() {
 const estilos = StyleSheet.create({
   filaOpciones: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: espacio.s },
   enlace: { borderWidth: 0, minHeight: 0, paddingVertical: 0, marginBottom: espacio.l },
+  // En la fila del pie, sin margen abajo: si no, queda más alto que el texto de al lado.
+  enlacePie: { borderWidth: 0, minHeight: 0, paddingVertical: 0, marginBottom: 0 },
   verificado: { minHeight: 44, borderRadius: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: espacio.m },
   verificadoTexto: { color: '#ffffff', fontSize: 16, fontWeight: '500' },
   pie: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', marginTop: espacio.xl },
