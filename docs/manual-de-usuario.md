@@ -30,6 +30,18 @@ contraseña. El código vence a los 10 minutos.
 **"¿Olvidaste tu contraseña?"** → escribí tu email → te llega un código → escribilo junto con la
 contraseña nueva.
 
+### Cuentas de prueba (una por rol)
+Para mostrar el sistema sin usar cuentas reales:
+
+| Rol | Email | Qué ve |
+|---|---|---|
+| Administrador | `admin@burgoscorp.test` | Todo, usuarios y tareas para mandar a las áreas |
+| Gerencia | `gerencia@burgoscorp.test` | Todos los módulos, sin modificar |
+| Jefe de área | `jefe@burgoscorp.test` | Mecanizado: asigna y aprueba tareas, aprueba licencias |
+| Empleado | `empleado@burgoscorp.test` | Mecanizado (tornero): sus tareas, fichaje y licencias |
+
+La contraseña de las tres últimas es la que se cargó en `PASSWORD_PRUEBA` en Render.
+
 ---
 
 ## 2. La pantalla de la app
@@ -98,6 +110,8 @@ marcá si la máquina quedó parada. Mantenimiento recibe el aviso.
 ## 5. Para jefes de área
 
 - **Asignar tarea**: creá la tarea y elegí a alguien con la habilidad necesaria.
+- **Tareas que te manda el administrador**: te llega el aviso *"Tarea para asignar"*. Tocalo (o
+  entrá a **Tareas del área → Para asignar**) y asignala a alguien de tu equipo con **Asignar**.
 - **Tareas del área**: aprobá o rechazá (con motivo) las tareas terminadas.
 - **Aprobar licencias**: aceptá o rechazá los pedidos de tu equipo.
 - **Órdenes de trabajo**: desde una OT podés reservar material y **pedir compras**.
@@ -149,7 +163,22 @@ calidad y finanzas de toda la empresa.
 
 ---
 
-## 9. Para el administrador: usuarios
+## 9. Para el administrador: tareas
+
+El administrador **no asigna personas**: manda la tarea al área y la asigna el **jefe de esa área**,
+que conoce a su equipo.
+
+1. **Módulos → Tareas → Nueva tarea** (o **Asignar tarea** en Inicio). Escribí qué hay que hacer.
+2. Si elegís una **máquina**, la tarea va al área de la máquina. Si elegís una **habilidad**, la app
+   **sugiere** el área que más gente tiene con esa habilidad vigente.
+3. En **"¿A qué área va?"** confirmá la sugerencia o elegí otras. Cada área muestra quién la va a
+   asignar y cuántas personas pueden hacerla. **Todas las áreas** manda una copia a cada una (ej.
+   "Orden y limpieza 5S").
+4. Tocá **Enviar al jefe**: se crea una tarea por área y a cada jefe le llega el aviso.
+
+Si un área **no tiene jefe**, la tarea la asignás vos desde su ficha.
+
+## 10. Para el administrador: usuarios
 
 Todo está en **Módulos → Usuarios** (o el botón **Usuarios** en Inicio).
 
@@ -195,14 +224,14 @@ un administrador activo.
 
 ---
 
-## 10. Seguridad de tu cuenta
+## 11. Seguridad de tu cuenta
 
 - **Perfil → Verificación en dos pasos**: activala con Google Authenticator o con código por email.
   Guardá los **códigos de respaldo** en un lugar seguro.
 - Si perdiste el celular: **Perfil → Cerrar sesión en todos los dispositivos**.
 - Después de varios intentos fallidos la cuenta se bloquea 15 minutos.
 
-## 11. Problemas comunes
+## 12. Problemas comunes
 
 | Problema | Qué hacer |
 |---|---|

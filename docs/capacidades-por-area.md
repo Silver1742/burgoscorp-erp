@@ -39,6 +39,7 @@ ahora usa la app), se puede vincular ese en lugar de crear otro.
 | **Llamar o mandar WhatsApp** al cliente o proveedor | Quien ve el pedido o la compra | Botones de contacto |
 | **Presupuestar** (horas de máquina y materiales) | Comercial e Ingeniería | Ventas → Presupuestar |
 | **Crear órdenes de trabajo** y **asignar tareas** según habilidades | Jefes de las áreas productivas | Producción / Tareas |
+| **Mandar tareas a una o varias áreas** (la app sugiere el área por la máquina o la habilidad) | Administrador; las asigna el jefe de cada área | Tareas → Nueva tarea |
 | **Reservar material** para una OT | Jefes de las áreas productivas | La OT → Materiales |
 | **Registrar el material usado** | Quien trabaja la OT | La OT → Registrar material usado |
 | **Hacer órdenes de compra** y **recibir mercadería** (con QR y foto del remito) | Abastecimiento; la aprueba otra persona, nunca quien la pidió | Compras |

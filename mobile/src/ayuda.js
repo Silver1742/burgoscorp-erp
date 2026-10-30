@@ -66,6 +66,7 @@ export const TEMAS_AYUDA = [
     id: 'jefe', titulo: 'Si sos jefe de área', icono: 'id-card-outline', roles: ['JEFE'],
     pasos: [
       '"Asignar tarea": creá la tarea y elegí a alguien con la habilidad necesaria.',
+      'Si te llega "Tarea para asignar", es una tarea que mandó el administrador: abrila y tocá "Asignar".',
       'En "Tareas del área" aprobás o rechazás las tareas terminadas.',
       '"Aprobar licencias": aceptá o rechazá los pedidos de tu equipo.',
       'Desde una orden de trabajo podés reservar material y pedir compras. Una compra la aprueba otra persona, nunca quien la pidió.',
@@ -107,6 +108,7 @@ export const TEMAS_AYUDA = [
   {
     id: 'admin', titulo: 'Administrar usuarios', icono: 'people-outline', roles: ['ADMIN'],
     pasos: [
+      '"Asignar tarea": elegí a qué área va (la app sugiere una por la máquina o la habilidad). El jefe de esa área recibe el aviso y la asigna a alguien de su equipo.',
       '"Solicitudes de acceso": revisá quién pidió entrar y elegí su rol, área, puesto y habilidades.',
       'Tocá "Habilitar": el legajo se crea solo. Si no corresponde, "Rechazar" con un motivo.',
       '"Personal": cuántas personas trabajan, quién vino hoy y cada área con su jefe.',
@@ -130,6 +132,7 @@ export const TEMAS_AYUDA = [
       '"Olvidé mi contraseña": en el ingreso, "¿Olvidaste tu contraseña?". Te llega un código por email.',
       '"No me llega el email": revisá Spam. El código vence a los 10 minutos.',
       '"Tarda en cargar": la primera consulta del día puede tardar unos 30 segundos.',
+      'Si un formulario no se guarda, el campo con problema queda en rojo y el aviso dice cuál es.',
     ],
   },
 ];

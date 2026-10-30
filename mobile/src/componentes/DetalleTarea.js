@@ -145,6 +145,8 @@ export default function DetalleTarea({ id }) {
   const cerrada = ['aprobada', 'cancelada'].includes(tarea.estado);
   const yo = tarea.es_asignado;
   const jefe = tarea.puede_gestionar;
+  // Asignar lo hace el jefe del área; el administrador solo si el área no tiene jefe.
+  const asigna = tarea.puede_asignar;
   const maquinaParada = tarea.centro_trabajo_id && tarea.centro_estado !== 'operativo';
   const puedeTildar = (yo || jefe) && !['aprobada', 'cancelada', 'en_revision'].includes(tarea.estado);
   const dosColumnas = columnas >= 3;
@@ -209,8 +211,11 @@ export default function DetalleTarea({ id }) {
       <View style={[{ gap: espacio.m }, dosColumnas && { flexDirection: 'row', alignItems: 'flex-start' }]}>
         <View style={columna}>
           <Tarjeta titulo="Asignados" icono="people-outline" sinRelleno
-            derecha={jefe && !cerrada ? <Boton titulo="Asignar" icono="person-add" chico onPress={() => setDialogo('asignar')} /> : null}>
-            {tarea.asignados_detalle.length === 0 ? <Vacio icono="person-outline" titulo="Sin asignar" texto={jefe ? 'Asigná a alguien con la habilidad necesaria.' : null} /> : null}
+            derecha={asigna && !cerrada ? <Boton titulo="Asignar" icono="person-add" chico onPress={() => setDialogo('asignar')} /> : null}>
+            {tarea.asignados_detalle.length === 0 ? (
+              <Vacio icono="person-outline" titulo="Sin asignar"
+                texto={asigna ? 'Asigná a alguien con la habilidad necesaria.' : tarea.jefe_area ? `La asigna ${tarea.jefe_area}, jefe de ${tarea.area_nombre}.` : null} />
+            ) : null}
             {tarea.asignados_detalle.map((a, i) => (
               <FilaLista key={a.id} ultima={i === tarea.asignados_detalle.length - 1}>
                 <Avatar nombre={`${a.nombre} ${a.apellido}`} tamano={32} />
@@ -218,7 +223,7 @@ export default function DetalleTarea({ id }) {
                   <Text style={{ color: t.texto, fontWeight: '600' }}>{a.apellido}, {a.nombre}</Text>
                   <Text style={{ color: t.textoSuave, fontSize: 12 }}>{a.legajo} · asignado {fechaHoraCorta(a.asignado_at)}</Text>
                 </View>
-                {jefe && !cerrada ? (
+                {asigna && !cerrada ? (
                   <Boton titulo="Quitar" variante="texto" chico onPress={() => setDialogo({ quitar: a })} estilo={{ borderWidth: 0 }} />
                 ) : null}
               </FilaLista>

@@ -60,6 +60,9 @@ como *Blueprint* (**New → Blueprint** en Render) o crear el Web Service a mano
 | `SMTP_FROM` | `BurgosCorp ERP <tu.cuenta@gmail.com>` (el remitente verificado en Brevo) |
 | `CORS_ORIGINS` | `https://burgoscorp-erp.onrender.com` (la app web) |
 | `SEED_PASSWORD` | **Vos**, solo para el primer arranque. **Borrarla después** |
+| `PASSWORD_PRUEBA` | Opcional, **vos**: crea `gerencia@`, `jefe@` y `empleado@burgoscorp.test` con esa contraseña (12+ caracteres, letras y números). Se puede dejar |
+| `EMAIL_AVISOS` | Correo(s) que reciben el aviso de cada solicitud de acceso, separados por coma |
+| `WEB_URL` | `https://burgoscorp-erp.onrender.com` (para el enlace de los avisos) |
 
 Probar `https://burgoscorp-api.onrender.com/api/v1/health` → `{"ok":true,…}`.
 

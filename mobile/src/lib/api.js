@@ -6,10 +6,12 @@
 //    mensaje en castellano listo para mostrar.
 import { API_URL, TIMEOUT_MS } from './config';
 import { leerRefresh, guardarRefresh, borrarRefresh } from './almacen';
+import { describirErrores } from './campos';
 
 export class ApiError extends Error {
   constructor(status, codigo, mensaje, detalles = []) {
-    super(mensaje);
+    // Datos inválidos: el aviso dice qué campo revisar (además de marcarlo en el formulario).
+    super((codigo === 'VALIDACION' && describirErrores(detalles)) || mensaje);
     this.status = status;
     this.codigo = codigo;
     this.detalles = detalles;

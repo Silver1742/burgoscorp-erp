@@ -55,7 +55,18 @@ const tareaBase = {
 export const operacion = z.object(tareaBase).strict();
 
 /** Tarea suelta (no ligada a una OT). */
-export const tarea = z.object({ ...tareaBase, area_id: id.optional() }).strict();
+// area_ids: el administrador puede mandar la misma tarea a varias áreas (una tarea por área).
+export const tarea = z.object({
+  ...tareaBase,
+  area_id: id.optional(),
+  area_ids: z.array(id).min(1, 'Elegí al menos un área').max(20).optional(),
+}).strict();
+
+/** Para sugerir a qué área mandar una tarea nueva. */
+export const destinosTarea = z.object({
+  centro_trabajo_id: id.optional(),
+  habilidad_requerida_id: id.optional(),
+}).strict();
 
 export const tareaEditar = z.object(tareaBase).omit({ checklist: true }).partial().strict()
   .refine((d) => Object.keys(d).length > 0, 'No se envió ningún campo para modificar');
@@ -67,6 +78,7 @@ export const filtroTareas = z.object({
   estado: z.enum(ESTADOS_TAREA).optional(),
   abiertas: z.enum(['1']).optional(),
   mias: z.enum(['1']).optional(),
+  sin_asignar: z.enum(['1']).optional(),
   orden_trabajo_id: id.optional(),
   area_id: id.optional(),
 }).strict();

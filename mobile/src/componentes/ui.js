@@ -1,7 +1,7 @@
 // Componentes de interfaz con el estilo del portal R3 (Bootstrap 5 + identidad BurgosCorp).
 // No hay cajas de alerta: los resultados se informan con toasts (contexto/toast.js),
 // los errores de un campo aparecen debajo del campo y los de carga, como estado vacío con "Reintentar".
-import { forwardRef, useEffect, useRef, useState } from 'react';
+import { createContext, forwardRef, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView,
   StyleSheet, Text, TextInput, View,
@@ -12,16 +12,70 @@ import { useTema, espacio, radio, sombra } from '../tema';
 
 // ---------------------------------------------------------------- estructura
 
+// Cuando un formulario marca errores, la pantalla se desplaza hasta el primero que aparece más
+// arriba, para que se vea dónde está el problema aunque el campo haya quedado fuera de la vista.
+const ContextoErrores = createContext(null);
+
+/** Devuelve el ref para el contenedor de un campo: cuando `error` aparece, la pantalla lo muestra. */
+export function useMostrarError(error) {
+  const ref = useRef(null);
+  const avisar = useContext(ContextoErrores);
+  useEffect(() => {
+    if (error && avisar) avisar(ref);
+  }, [error, avisar]);
+  return ref;
+}
+
 /** Contenedor de pantalla: zona segura, scroll, teclado y ancho máximo en pantallas grandes. */
 export function Pantalla({ children, scroll = true, anchoMax = 720, bordes = ['bottom'], estilo, refreshControl }) {
   const t = useTema();
+  const scrollRef = useRef(null);
+  const desplazamiento = useRef(0);
+  const pendientes = useRef([]);
+
+  // Junta los errores que aparecen juntos (validación de todo el formulario) y va al de más arriba.
+  const avisar = useCallback((ref) => {
+    pendientes.current.push(ref);
+    if (pendientes.current.length > 1) return;
+    setTimeout(() => {
+      const refs = pendientes.current.map((r) => r.current).filter(Boolean);
+      pendientes.current = [];
+      if (!refs.length) return;
+      if (Platform.OS === 'web') {
+        const nodo = refs.reduce((a, b) => (b.getBoundingClientRect().top < a.getBoundingClientRect().top ? b : a));
+        nodo.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+        return;
+      }
+      scrollRef.current?.measureInWindow?.((_x, ys) => {
+        let minimo = Infinity;
+        let restantes = refs.length;
+        for (const nodo of refs) {
+          nodo.measureInWindow((_x2, y) => {
+            minimo = Math.min(minimo, y);
+            restantes -= 1;
+            if (restantes === 0) {
+              scrollRef.current?.scrollTo({ y: Math.max(0, desplazamiento.current + minimo - ys - espacio.xl), animated: true });
+            }
+          });
+        }
+      });
+    }, 60);
+  }, []);
+
   const contenido = <View style={[estilos.centrado, { maxWidth: anchoMax }, estilo]}>{children}</View>;
   return (
     <SafeAreaView edges={bordes} style={{ flex: 1, backgroundColor: t.fondo }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {scroll
-          ? <ScrollView contentContainerStyle={estilos.scroll} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}>{contenido}</ScrollView>
-          : <View style={[estilos.scroll, { flex: 1 }]}>{contenido}</View>}
+        <ContextoErrores.Provider value={scroll ? avisar : null}>
+          {scroll
+            ? (
+              <ScrollView ref={scrollRef} contentContainerStyle={estilos.scroll} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}
+                scrollEventThrottle={64} onScroll={(e) => { desplazamiento.current = e.nativeEvent.contentOffset.y; }}>
+                {contenido}
+              </ScrollView>
+            )
+            : <View style={[estilos.scroll, { flex: 1 }]}>{contenido}</View>}
+        </ContextoErrores.Provider>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -98,8 +152,9 @@ export const Campo = forwardRef(function Campo({ etiqueta, error, ayuda, estilo,
   const t = useTema();
   const [foco, setFoco] = useState(false);
   const colorBorde = error ? t.error : foco ? t.primario : t.borde;
+  const contenedor = useMostrarError(error);
   return (
-    <View style={[{ marginBottom: espacio.l }, estilo]}>
+    <View ref={contenedor} style={[{ marginBottom: espacio.l }, estilo]}>
       {etiqueta ? <Text style={[estilos.etiqueta, { color: t.texto }]}>{etiqueta}</Text> : null}
       <View style={[estilos.inputCaja, {
         backgroundColor: t.superficie, borderColor: colorBorde,
@@ -189,20 +244,29 @@ export function Casilla({ marcada, alCambiar, etiqueta }) {
 }
 
 /** Opciones tipo botonera (.btn-group): una seleccionada. */
-export function Opciones({ opciones, valor, alCambiar }) {
+export function Opciones({ opciones, valor, alCambiar, error }) {
   const t = useTema();
+  const contenedor = useMostrarError(error);
   return (
-    <View style={estilos.opciones} accessibilityRole="radiogroup">
-      {opciones.map((o) => {
-        const activa = o.valor === valor;
-        return (
-          <Pressable key={o.valor} onPress={() => alCambiar(o.valor)} accessibilityRole="radio" accessibilityState={{ selected: activa }}
-            style={[estilos.opcion, { borderColor: activa ? t.primario : t.borde, backgroundColor: activa ? t.primario : t.superficie }]}>
-            {o.icono ? <Ionicons name={o.icono} size={15} color={activa ? '#ffffff' : t.textoSuave} style={{ marginRight: 4 }} /> : null}
-            <Text style={{ fontSize: 14, color: activa ? '#ffffff' : t.texto, fontWeight: activa ? '600' : '400' }}>{o.titulo}</Text>
-          </Pressable>
-        );
-      })}
+    <View ref={contenedor}>
+      <View style={[estilos.opciones, error && { marginBottom: 4 }]} accessibilityRole="radiogroup">
+        {opciones.map((o) => {
+          const activa = o.valor === valor;
+          return (
+            <Pressable key={o.valor} onPress={() => alCambiar(o.valor)} accessibilityRole="radio" accessibilityState={{ selected: activa }}
+              style={[estilos.opcion, { borderColor: activa ? t.primario : error ? t.error : t.borde, backgroundColor: activa ? t.primario : t.superficie }]}>
+              {o.icono ? <Ionicons name={o.icono} size={15} color={activa ? '#ffffff' : t.textoSuave} style={{ marginRight: 4 }} /> : null}
+              <Text style={{ fontSize: 14, color: activa ? '#ffffff' : t.texto, fontWeight: activa ? '600' : '400' }}>{o.titulo}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {error ? (
+        <View style={[estilos.filaError, { marginBottom: espacio.m }]}>
+          <Ionicons name="alert-circle" size={14} color={t.error} />
+          <Text style={[estilos.ayuda, { color: t.error, marginTop: 0 }]} accessibilityLiveRegion="polite">{error}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }

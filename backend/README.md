@@ -410,11 +410,12 @@ las que tienen alguna operación suya.
 
 | Método | Ruta | Permiso | Descripción |
 |---|---|---|---|
-| GET | `/tareas` | TAR ver | Filtros: `mias`, `abiertas`, `estado`, `orden_trabajo_id`, `area_id`, `q` |
+| GET | `/tareas` | TAR ver | Filtros: `mias`, `abiertas`, `sin_asignar`, `estado`, `orden_trabajo_id`, `area_id`, `q` |
+| GET | `/tareas/destinos` | TAR crear (alcance todo) | Query: `centro_trabajo_id?`, `habilidad_requerida_id?`. Áreas con su jefe y cuántos pueden hacerla, la sugerida (`sugeridas`) y el `motivo` |
 | GET | `/tareas/:id` | TAR ver | Detalle con asignados, lista de control, comentarios, historial y horas |
-| POST | `/tareas` | TAR crear | Tarea suelta (sin OT): `titulo`\*, `area_id`, `centro_trabajo_id`, `prioridad`, `fecha_limite`, `horas_estimadas`, `checklist` |
+| POST | `/tareas` | TAR crear | Tarea suelta (sin OT): `titulo`\*, `area_ids` (solo el administrador: una tarea por área; con máquina, el área de la máquina), `centro_trabajo_id`, `habilidad_requerida_id`, `prioridad`, `fecha_limite`, `horas_estimadas`, `checklist`. Devuelve la tarea y `creadas: [{ id, area_nombre, jefe }]`; a los jefes de cada área les llega `tarea_para_asignar` |
 | PUT | `/tareas/:id` | TAR editar | Edita los datos mientras no esté aprobada ni cancelada |
-| GET | `/tareas/:id/candidatos` | TAR aprobar | Empleados que pueden hacerla, con su carga |
+| GET | `/tareas/:id/candidatos` | TAR aprobar | Empleados que pueden hacerla, con su carga. Asigna el jefe del área; el administrador solo si el área no tiene jefe (`403` "La asigna …") |
 | POST | `/tareas/:id/asignaciones` | TAR aprobar | `empleado_id`\*. `422` si no es del área, no tiene la habilidad, la certificación venció o la máquina está en mantenimiento |
 | DELETE | `/tareas/:id/asignaciones/:empleadoId` | TAR aprobar | `204` |
 | POST | `/tareas/:id/iniciar` · `/pausar` | TAR ver (asignado) | Una sola tarea en curso por persona (`409`) |

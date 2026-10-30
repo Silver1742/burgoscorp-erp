@@ -6,6 +6,7 @@ import { usePuede } from '../../../../contexto/sesion';
 
 const FILTROS = [
   { valor: 'revision', titulo: 'Para revisar', consulta: { estado: 'en_revision' } },
+  { valor: 'sin_asignar', titulo: 'Para asignar', consulta: { sin_asignar: 1 } },
   { valor: 'abiertas', titulo: 'Abiertas', consulta: { abiertas: 1 } },
   { valor: 'curso', titulo: 'En curso', consulta: { estado: 'en_curso' } },
   { valor: 'todas', titulo: 'Todas', consulta: {} },

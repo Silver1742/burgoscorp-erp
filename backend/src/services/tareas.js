@@ -14,7 +14,7 @@
 //  - No se asigna ni se inicia una operación si la máquina no está operativa (mantenimiento).
 //  - Un empleado tiene una sola tarea en curso a la vez.
 //  - Solo los asignados avanzan la tarea; la aprueba un jefe que no esté asignado a ella.
-import { query, queryOne, transaccion } from '../config/db.js';
+import { pool, query, queryOne, transaccion } from '../config/db.js';
 import { errores } from '../utils/errores.js';
 import { hoy, fechaAr } from '../utils/fechas.js';
 import { resolverPermiso } from './permisos.js';
@@ -61,6 +61,9 @@ export async function listar(usuario, f) {
   }
   if (f.estado) { where.push('t.estado = ?'); params.push(f.estado); }
   if (f.abiertas) where.push("t.estado NOT IN ('aprobada', 'cancelada')");
+  if (f.sin_asignar) {
+    where.push("t.estado NOT IN ('aprobada', 'cancelada') AND NOT EXISTS (SELECT 1 FROM tarea_asignaciones ta WHERE ta.tarea_id = t.id)");
+  }
   if (f.orden_trabajo_id) { where.push('t.orden_trabajo_id = ?'); params.push(f.orden_trabajo_id); }
   if (f.area_id) { where.push('t.area_id = ?'); params.push(f.area_id); }
   const condicion = where.join(' AND ');
@@ -86,12 +89,35 @@ async function cargar(usuario, id) {
     JOIN empleados e ON e.id = ta.empleado_id WHERE ta.tarea_id = ? ORDER BY e.apellido`, [id]);
   const gestion = await resolverPermiso(usuario, 'TAR', 'aprobar');
   const puedeGestionar = gestion.permitido && (gestion.alcance === 'todo' || t.area_id === usuario.area_id);
+  // Asignar personas lo hace el jefe del área, que conoce a su equipo. Quien gestiona toda la
+  // empresa (el administrador) solo asigna si el área no tiene un jefe con cuenta activa.
+  const jefes = await jefesDelArea(t.area_id);
+  const jefe = jefes[0] ?? null;
+  const delArea = gestion.permitido && gestion.alcance !== 'todo' && t.area_id === usuario.area_id;
+  const puedeAsignar = delArea || (puedeGestionar && (!jefes.length || jefes.some((j) => j.usuario_id === usuario.id)));
   return {
     t,
     asignados,
     esAsignado: asignados.some((a) => a.id === usuario.empleado_id),
     puedeGestionar,
+    puedeAsignar,
+    jefe,
   };
+}
+
+/**
+ * Jefes del área con cuenta activa: el titular (areas.jefe_empleado_id) primero y después los
+ * demás con rol de jefe en esa área. Son quienes reciben las tareas para asignar.
+ */
+async function jefesDelArea(areaId) {
+  return query(`
+    SELECT u.id AS usuario_id, CONCAT(e.nombre, ' ', e.apellido) AS nombre
+    FROM empleados e
+    JOIN usuarios u ON u.empleado_id = e.id AND u.activo = 1 AND u.estado_cuenta = 'habilitada'
+    JOIN roles r ON r.id = u.rol_id
+    JOIN areas a ON a.id = e.area_id
+    WHERE e.area_id = ? AND e.estado = 'activo' AND (r.codigo = 'JEFE' OR a.jefe_empleado_id = e.id)
+    ORDER BY a.jefe_empleado_id = e.id DESC, e.apellido`, [areaId]);
 }
 
 /** Para los adjuntos: si el usuario ve la tarea y si puede agregarle fotos. */
@@ -102,7 +128,7 @@ export async function acceso(usuario, id) {
 }
 
 export async function obtener(usuario, id) {
-  const { t, asignados, esAsignado, puedeGestionar } = await cargar(usuario, id);
+  const { t, asignados, esAsignado, puedeGestionar, puedeAsignar, jefe } = await cargar(usuario, id);
   const [checklist, comentarios, historial, horas] = await Promise.all([
     query('SELECT id, texto, hecho, orden FROM tarea_checklist WHERE tarea_id = ? ORDER BY orden, id', [id]),
     query(`SELECT c.id, c.texto, c.created_at, CONCAT(u.nombre, ' ', u.apellido) AS autor
@@ -112,7 +138,10 @@ export async function obtener(usuario, id) {
     query(`SELECT r.inicio_at, r.fin_at, r.horas, CONCAT(e.nombre, ' ', e.apellido) AS empleado
            FROM registros_horas r JOIN empleados e ON e.id = r.empleado_id WHERE r.tarea_id = ? ORDER BY r.inicio_at DESC`, [id]),
   ]);
-  return { ...t, asignados_detalle: asignados, checklist, comentarios, historial, horas, es_asignado: esAsignado, puede_gestionar: puedeGestionar };
+  return {
+    ...t, asignados_detalle: asignados, checklist, comentarios, historial, horas,
+    es_asignado: esAsignado, puede_gestionar: puedeGestionar, puede_asignar: puedeAsignar, jefe_area: jefe?.nombre ?? null,
+  };
 }
 
 // ---------------------------------------------------------------- alta
@@ -161,16 +190,106 @@ export async function crearOperacion(usuario, otId, datos, req) {
 }
 
 /** Tarea suelta del área (no ligada a una OT). */
+/**
+ * Alta de una tarea suelta. Un jefe la crea en su área y la asigna él. Quien gestiona toda la
+ * empresa (el administrador) elige una o varias áreas —o la da la máquina— y se crea una tarea por
+ * área; a cada jefe le llega el aviso para que la asigne a alguien de su equipo.
+ */
 export async function crear(usuario, datos, req) {
   const permiso = await resolverPermiso(usuario, 'TAR', 'crear');
   if (!permiso.permitido) throw errores.prohibido();
-  const areaId = permiso.alcance === 'todo' ? (datos.area_id ?? usuario.area_id) : usuario.area_id;
-  if (datos.area_id && permiso.alcance !== 'todo' && datos.area_id !== usuario.area_id) throw errores.prohibido('Solo podés crear tareas de tu área');
-  if (!areaId) throw errores.validacion([{ campo: 'body.area_id', mensaje: 'Indicá el área' }]);
-  const d = await completarConMaquina(datos);
-  const id = await transaccion((conn) => insertarTarea(conn, { ...d, area_id: areaId, creado_por: usuario.id }));
-  await auditar(req, { accion: 'crear', entidad: 'tarea', entidadId: id });
-  return obtener(usuario, id);
+  const { area_ids: areaIds, area_id: areaId, ...resto } = datos;
+  const d = await completarConMaquina(resto);
+  const { area_maquina: areaMaquina, ...tarea } = d;
+
+  let areas;
+  if (permiso.alcance === 'todo') {
+    areas = [...new Set(areaIds ?? (areaId ? [areaId] : areaMaquina ? [areaMaquina] : usuario.area_id ? [usuario.area_id] : []))];
+    if (!areas.length) throw errores.validacion([{ campo: 'body.area_ids', mensaje: 'Elegí a qué área va la tarea' }]);
+  } else {
+    if ((areaId && areaId !== usuario.area_id) || areaIds?.some((a) => a !== usuario.area_id)) {
+      throw errores.prohibido('Solo podés crear tareas de tu área');
+    }
+    if (!usuario.area_id) throw errores.validacion([{ campo: 'body.area_ids', mensaje: 'Tu cuenta no tiene área' }]);
+    areas = [usuario.area_id];
+  }
+  // pool.query (no execute) para que mysql2 expanda la lista del IN.
+  const [validas] = await pool.query('SELECT id, nombre FROM areas WHERE activo = 1 AND id IN (?)', [areas]);
+  if (validas.length !== areas.length) throw errores.validacion([{ campo: 'body.area_ids', mensaje: 'Alguna de las áreas no existe' }]);
+  if (areaMaquina && areas.some((a) => a !== areaMaquina)) {
+    throw errores.validacion([{ campo: 'body.centro_trabajo_id', mensaje: 'La máquina es de otra área: elegí solo el área de la máquina o sacá la máquina' }]);
+  }
+
+  const ids = await transaccion(async (conn) => {
+    const creadas = [];
+    for (const area of areas) creadas.push(await insertarTarea(conn, { ...tarea, area_id: area, creado_por: usuario.id }));
+    return creadas;
+  });
+
+  const enviadas = [];
+  for (const [i, id] of ids.entries()) {
+    await auditar(req, { accion: 'crear', entidad: 'tarea', entidadId: id });
+    const jefes = (await jefesDelArea(areas[i])).filter((j) => j.usuario_id !== usuario.id);
+    const jefe = jefes[0] ?? null;
+    // El aviso es para lo que llega de afuera del área: si la crea un jefe, la asigna él mismo.
+    if (permiso.alcance !== 'todo') jefes.length = 0;
+    const area = validas.find((a) => a.id === areas[i]);
+    if (jefes.length) {
+      await notificar(jefes.map((j) => j.usuario_id), {
+        tipo: 'tarea_para_asignar', titulo: `Tarea para asignar: ${tarea.titulo}`.slice(0, 120),
+        mensaje: `${usuario.nombre} ${usuario.apellido} la mandó a ${area.nombre}. Asignala a alguien de tu equipo.`.slice(0, 255),
+        entidad: 'tarea', entidadId: id,
+      });
+    }
+    enviadas.push({ id, area_id: area.id, area_nombre: area.nombre, jefe: jefe?.nombre ?? null });
+  }
+  return { ...(await obtener(usuario, ids[0])), creadas: enviadas };
+}
+
+/**
+ * Propuesta de a qué área mandar una tarea: la de la máquina, o las que tienen gente con la
+ * habilidad pedida (primero la que más tiene). Devuelve todas las áreas con su jefe y cuántos
+ * pueden hacerla, para que quien la crea confirme o cambie la sugerencia.
+ */
+export async function destinos(usuario, { centro_trabajo_id: centroId, habilidad_requerida_id: habilidadId }) {
+  const permiso = await resolverPermiso(usuario, 'TAR', 'crear');
+  if (!permiso.permitido || permiso.alcance !== 'todo') throw errores.prohibido();
+  let maquina = null;
+  if (centroId) {
+    maquina = await queryOne(`SELECT ct.codigo, ct.area_id, ct.habilidad_requerida_id, a.nombre AS area_nombre
+      FROM centros_trabajo ct JOIN areas a ON a.id = ct.area_id WHERE ct.id = ? AND ct.activo = 1`, [centroId]);
+    if (!maquina) throw errores.validacion([{ campo: 'query.centro_trabajo_id', mensaje: 'La máquina no existe' }]);
+  }
+  const habilidad = habilidadId ?? maquina?.habilidad_requerida_id ?? null;
+  const filas = await query(`
+    SELECT a.id, a.nombre, CONCAT(e.nombre, ' ', e.apellido) AS jefe,
+      (SELECT COUNT(*) FROM empleados x
+        LEFT JOIN empleado_habilidades eh ON eh.empleado_id = x.id AND eh.habilidad_id = ?
+        LEFT JOIN habilidades h ON h.id = eh.habilidad_id
+        WHERE x.area_id = a.id AND x.estado = 'activo'
+          AND (? IS NULL OR (eh.habilidad_id IS NOT NULL AND (h.requiere_certificacion = 0 OR eh.certificado_vence >= ?)))) AS pueden
+    FROM areas a LEFT JOIN empleados e ON e.id = a.jefe_empleado_id
+    WHERE a.activo = 1 ORDER BY a.nombre`, [habilidad, habilidad, hoy()]);
+
+  let sugeridas = [];
+  let motivo = null;
+  if (maquina) {
+    sugeridas = [maquina.area_id];
+    motivo = `La máquina ${maquina.codigo} es de ${maquina.area_nombre}.`;
+  } else if (habilidad) {
+    const con = filas.filter((f) => f.pueden > 0).sort((a, b) => b.pueden - a.pueden);
+    if (con.length) {
+      sugeridas = [con[0].id];
+      const h = await queryOne('SELECT nombre FROM habilidades WHERE id = ?', [habilidad]);
+      motivo = `${con[0].nombre} tiene ${con[0].pueden} ${con[0].pueden === 1 ? 'persona' : 'personas'} con ${h.nombre}.`;
+    } else {
+      motivo = 'Nadie tiene esa habilidad vigente: elegí el área a mano.';
+    }
+  }
+  return {
+    areas: filas.map((f) => ({ ...f, pueden: Number(f.pueden), sugerida: sugeridas.includes(f.id) })),
+    sugeridas, motivo, area_fija: maquina?.area_id ?? null,
+  };
 }
 
 export async function editar(usuario, id, datos, req) {
@@ -194,8 +313,8 @@ export async function editar(usuario, id, datos, req) {
  * (y la certificación vigente si corresponde). Incluye cuántas tareas abiertas tiene cada uno.
  */
 export async function candidatos(usuario, id) {
-  const { t, puedeGestionar } = await cargar(usuario, id);
-  if (!puedeGestionar) throw errores.prohibido();
+  const { t, puedeAsignar, jefe } = await cargar(usuario, id);
+  if (!puedeAsignar) throw errores.prohibido(jefe ? `La asigna ${jefe.nombre}, jefe del área` : undefined);
   return query(`
     SELECT e.id, e.legajo, e.nombre, e.apellido, p.nombre AS puesto_nombre,
            eh.nivel, eh.certificado_vence,
@@ -236,8 +355,8 @@ async function validarAsignable(t, empleadoId) {
 }
 
 export async function asignar(usuario, id, empleadoId, req) {
-  const { t, puedeGestionar } = await cargar(usuario, id);
-  if (!puedeGestionar) throw errores.prohibido('Solo el jefe del área asigna tareas');
+  const { t, puedeAsignar, jefe } = await cargar(usuario, id);
+  if (!puedeAsignar) throw errores.prohibido(jefe ? `La asigna ${jefe.nombre}, jefe del área` : 'Solo el jefe del área asigna tareas');
   if (['aprobada', 'cancelada'].includes(t.estado)) throw errores.conflicto('La tarea ya está cerrada');
   const e = await validarAsignable(t, empleadoId);
 
@@ -256,8 +375,8 @@ export async function asignar(usuario, id, empleadoId, req) {
 }
 
 export async function desasignar(usuario, id, empleadoId, req) {
-  const { t, puedeGestionar } = await cargar(usuario, id);
-  if (!puedeGestionar) throw errores.prohibido();
+  const { t, puedeAsignar } = await cargar(usuario, id);
+  if (!puedeAsignar) throw errores.prohibido('Solo el jefe del área cambia quién hace la tarea');
   if (['aprobada', 'cancelada'].includes(t.estado)) throw errores.conflicto('La tarea ya está cerrada');
   const abierto = await queryOne('SELECT id FROM registros_horas WHERE tarea_id = ? AND empleado_id = ? AND fin_at IS NULL', [id, empleadoId]);
   if (abierto) throw errores.conflicto('Esa persona está trabajando en la tarea ahora. Que la pause primero.');

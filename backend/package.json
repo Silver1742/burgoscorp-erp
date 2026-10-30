@@ -4,10 +4,11 @@
   "description": "API REST del ERP de BurgosCorp",
   "main": "src/server.js",
   "scripts": {
-    "prestart": "node scripts/restablecer-admin.js",
+    "prestart": "node scripts/restablecer-admin.js && node scripts/usuarios-prueba.js",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node scripts/seed.js",
+    "usuarios:prueba": "node scripts/usuarios-prueba.js",
     "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\"",
     "db:init": "node scripts/init-db.js"
   },

@@ -115,10 +115,36 @@ async function fichajesDeEjemplo(conn) {
   console.log(`Migración: se cargaron ${filas.length} fichajes de ejemplo de las últimas 4 semanas.`);
 }
 
+/**
+ * Cuentas habilitadas (que no son del administrador) sin legajo o con un legajo sin área: no ven
+ * ningún módulo. Si el nombre coincide exactamente con un legajo sin cuenta, se vinculan; las demás
+ * quedan en el registro para asignarles el área desde Usuarios.
+ */
+async function cuentasSinArea(conn) {
+  const [cuentas] = await conn.execute(
+    `SELECT u.id, u.nombre, u.apellido, r.codigo AS rol FROM usuarios u
+     JOIN roles r ON r.id = u.rol_id
+     LEFT JOIN empleados e ON e.id = u.empleado_id
+     WHERE r.codigo <> 'ADMIN' AND u.activo = 1 AND u.estado_cuenta = 'habilitada' AND e.area_id IS NULL`);
+  for (const c of cuentas) {
+    const [legajos] = await conn.execute(
+      `SELECT e.id, e.legajo FROM empleados e LEFT JOIN usuarios u ON u.empleado_id = e.id
+       WHERE u.id IS NULL AND e.estado = 'activo' AND e.area_id IS NOT NULL AND e.nombre = ? AND e.apellido = ?`,
+      [c.nombre, c.apellido]);
+    if (legajos.length === 1) {
+      await conn.execute('UPDATE usuarios SET empleado_id = ? WHERE id = ?', [legajos[0].id, c.id]);
+      console.log(`Migración: la cuenta ${c.id} (${c.rol}) quedó con el legajo ${legajos[0].legajo}.`);
+    } else {
+      console.log(`Migración: la cuenta ${c.id} (${c.nombre} ${c.apellido}, ${c.rol}) no tiene área: asignala en Usuarios.`);
+    }
+  }
+}
+
 export async function migrar(conn) {
   await dniOpcional(conn);
   await jornadaLaboral(conn);
   await fichajesDeEjemplo(conn);
   await jefesDeArea(conn);
   await administradorSinLegajo(conn);
+  await cuentasSinArea(conn);
 }

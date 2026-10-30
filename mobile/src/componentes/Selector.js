@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Cargando, ErrorCarga, Vacio } from './ui';
+import { Cargando, ErrorCarga, Vacio, useMostrarError } from './ui';
 import { api } from '../lib/api';
 import { espacio, radio, useTema } from '../tema';
 
@@ -48,8 +48,9 @@ export default function Selector({
     setAbierto(false);
   }
 
+  const contenedor = useMostrarError(error);
   return (
-    <View style={[{ marginBottom: espacio.l }, estilo]}>
+    <View ref={contenedor} style={[{ marginBottom: espacio.l }, estilo]}>
       {etiqueta ? <Text style={[estilos.etiqueta, { color: t.texto }]}>{etiqueta}</Text> : null}
       <Pressable
         onPress={() => !deshabilitado && setAbierto(true)}

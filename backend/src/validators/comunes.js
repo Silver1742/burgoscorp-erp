@@ -1,6 +1,27 @@
 // Piezas de validación reutilizables. Los largos coinciden con las columnas de schema.sql.
 import { z } from 'zod';
 
+// Mensajes de zod en castellano (los que no tienen uno propio). Un campo que falta dice
+// "Campo obligatorio" en vez del mensaje técnico.
+z.config(z.locales.es());
+z.config({
+  customError: (issue) => {
+    if (issue.code === 'invalid_type' && issue.input === undefined) return 'Campo obligatorio';
+    const { origin, minimum, maximum, inclusive } = issue;
+    if (issue.code === 'too_small') {
+      if (origin === 'number') return `Tiene que ser ${inclusive ? 'mayor o igual a' : 'mayor a'} ${minimum}`;
+      if (origin === 'string') return Number(minimum) <= 1 ? 'Campo obligatorio' : `Mínimo ${minimum} caracteres`;
+      if (origin === 'array') return `Agregá al menos ${minimum}`;
+    }
+    if (issue.code === 'too_big') {
+      if (origin === 'number') return `Tiene que ser ${inclusive ? 'menor o igual a' : 'menor a'} ${maximum}`;
+      if (origin === 'string') return `Máximo ${maximum} caracteres`;
+      if (origin === 'array') return `Como máximo ${maximum}`;
+    }
+    return undefined;
+  },
+});
+
 export const id = z.coerce.number().int().positive('Debe ser un id válido').max(4294967295);
 export const paramsId = z.object({ id });
 

@@ -31,6 +31,10 @@ router.post('/ordenes-trabajo/:id/operaciones', autenticado, requierePermiso('PR
 router.get('/tareas', autenticado, requierePermiso('TAR', 'ver'), validar({ query: v.filtroTareas }), async (req, res) => {
   res.json({ ok: true, ...(await tareas.listar(req.usuario, req.validado.query)) });
 });
+// Antes de /tareas/:id para que "destinos" no se tome como un id.
+router.get('/tareas/destinos', autenticado, requierePermiso('TAR', 'crear'), validar({ query: v.destinosTarea }), async (req, res) => {
+  res.json({ ok: true, data: await tareas.destinos(req.usuario, req.validado.query) });
+});
 router.get('/tareas/:id', autenticado, requierePermiso('TAR', 'ver'), validar({ params: paramsId }), async (req, res) => {
   res.json({ ok: true, data: await tareas.obtener(req.usuario, req.validado.params.id) });
 });
