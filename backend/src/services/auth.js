@@ -8,6 +8,7 @@ import { buscarUsuarioPorId, perfilPublico, exigirCuentaHabilitada } from './usu
 import { firmarAcceso, firmarTemporal, emitirRefresh, rotarRefresh, revocarFamilia, revocarTodas } from './tokens.js';
 import * as intentos from './intentos.js';
 import { notificar } from './notificaciones.js';
+import { enviarAviso } from './email.js';
 
 const COSTO_BCRYPT = 12;
 // Hash de relleno: si el email no existe se compara igual, para que el tiempo
@@ -29,17 +30,43 @@ export async function emitirSesion(usuario, req) {
 
 /** Usuarios administradores activos (reciben las solicitudes de acceso). */
 async function administradores() {
-  const filas = await query(`SELECT u.id FROM usuarios u JOIN roles r ON r.id = u.rol_id
+  return query(`SELECT u.id, u.email, u.nombre FROM usuarios u JOIN roles r ON r.id = u.rol_id
     WHERE r.codigo = 'ADMIN' AND u.activo = 1 AND u.estado_cuenta = 'habilitada'`);
-  return filas.map((f) => f.id);
 }
 
-/** Avisa a los administradores que hay una solicitud de acceso para revisar. */
+// Dominios reservados (RFC 2606/6761): las cuentas de prueba no reciben correos.
+const DOMINIO_DE_PRUEBA = /\.(test|example|invalid|localhost)$/i;
+
+/** Destinatarios del email de solicitudes: administradores con email real + EMAIL_AVISOS, sin repetir. */
+function destinatariosDeAviso(admins) {
+  const lista = new Map();
+  for (const a of admins) if (!DOMINIO_DE_PRUEBA.test(a.email)) lista.set(a.email.toLowerCase(), a.nombre);
+  for (const e of env.EMAIL_AVISOS.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)) {
+    if (!lista.has(e)) lista.set(e, 'administrador');
+  }
+  return [...lista].map(([para, nombre]) => ({ para, nombre }));
+}
+
+/** Avisa a los administradores (campanita y email) que hay una solicitud de acceso para revisar. */
 export async function avisarSolicitud(usuarioId, nombre, apellido) {
-  await notificar(await administradores(), {
+  const admins = await administradores();
+  await notificar(admins.map((a) => a.id), {
     tipo: 'cuenta_pendiente', titulo: `Solicitud de acceso: ${nombre} ${apellido}`.slice(0, 120),
     mensaje: 'Revisala en Usuarios → Solicitudes de acceso.', entidad: 'usuario', entidadId: usuarioId,
   });
+  // Sin esperar: el email no demora la respuesta (el tiempo no revela si la cuenta es nueva) y si
+  // falla, la solicitud igual queda guardada y avisada en la campanita.
+  const enlace = env.WEB_URL ? `${env.WEB_URL.replace(/\/$/, '')}/modulos/usuarios/solicitudes` : null;
+  for (const d of destinatariosDeAviso(admins)) {
+    enviarAviso({
+      para: d.para, nombre: d.nombre, asunto: 'Nueva solicitud de acceso',
+      lineas: [
+        `${nombre} ${apellido} pidió acceso al sistema.`,
+        'Revisala en Usuarios → Solicitudes de acceso: elegí su rol, área y habilidades y habilitala, o rechazala.',
+        ...(enlace ? [`Abrir: ${enlace}`] : []),
+      ],
+    }).catch((err) => console.error('No se pudo mandar el aviso de solicitud:', err.message));
+  }
 }
 
 /**

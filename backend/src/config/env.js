@@ -61,6 +61,13 @@ const esquema = z.object({
   // Clave de la API de Brevo: si está, los correos salen por HTTPS en vez de SMTP (Render gratis
   // bloquea los puertos SMTP). El remitente es el de SMTP_FROM, verificado en Brevo.
   BREVO_API_KEY: z.string().default(''),
+  // Correos que reciben el aviso de cada solicitud de acceso, además de los administradores que
+  // tengan un email real. Separados por coma (ej. el correo personal del dueño).
+  EMAIL_AVISOS: z.string().max(500).default('')
+    .refine((v) => v.split(',').map((s) => s.trim()).filter(Boolean)
+      .every((s) => z.string().email().max(160).safeParse(s).success), 'EMAIL_AVISOS: emails separados por coma'),
+  // Dirección de la versión web (va en el enlace de los avisos por email).
+  WEB_URL: z.string().url().startsWith('https://').or(z.literal('')).default(''),
 
   // Login social (vacío = proveedor deshabilitado)
   GOOGLE_CLIENT_IDS: z.string().default(''),   // ids de cliente web/android/ios separados por coma
