@@ -22,6 +22,11 @@ dentro de la app en **Perfil → Ayuda** (y en Inicio, "¿Cómo se usa?").
    y en ese correo te llega **este manual en PDF**.
 4. Cuando entres por primera vez te llega un **código de 6 dígitos** al email para confirmarlo.
 
+### Con Google, GitHub o Discord
+En el ingreso tocá **"Ingresar con Google"** (o GitHub, o Discord) y elegí tu cuenta. La primera
+vez tu cuenta queda **pendiente** hasta que un administrador la habilita, igual que con "Pedí
+acceso". Desde el celular se abre el navegador para elegir la cuenta y después vuelve a la app.
+
 ### Si el administrador te creó la cuenta
 Te llega un email **"Creá tu contraseña"** con un código. En la app tocá
 **"¿Olvidaste tu contraseña?" → "Ya tengo un código"** y escribí tu email, el código y tu nueva

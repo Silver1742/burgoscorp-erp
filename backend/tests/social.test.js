@@ -20,7 +20,7 @@ const claveFalsa = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
 const jwk = { ...claveGoogle.publicKey.export({ format: 'jwk' }), kid: 'clave-1', alg: 'RS256', use: 'sig' };
 
 // Estado del simulador (cada test lo ajusta)
-const sim = { github: {}, facebook: {} };
+const sim = { github: {}, facebook: {}, discord: {} };
 
 const respuesta = (cuerpo, status = 200, headers = {}) => new Response(JSON.stringify(cuerpo), {
   status, headers: { 'Content-Type': 'application/json', ...headers },
@@ -39,6 +39,13 @@ before(() => {
     }
     if (u.href === 'https://api.github.com/user') return respuesta(sim.github.usuario);
     if (u.href === 'https://api.github.com/user/emails') return respuesta(sim.github.emails);
+    if (u.href === 'https://discord.com/api/oauth2/token') {
+      const body = new URLSearchParams(opciones.body);
+      const valido = body.get('code') === 'codigo-discord-valido' && body.get('client_secret') === env.DISCORD_CLIENT_SECRET
+        && body.get('code_verifier') && body.get('grant_type') === 'authorization_code';
+      return respuesta(valido ? { access_token: 'discord_token' } : { error: 'invalid_grant' }, valido ? 200 : 400);
+    }
+    if (u.href === 'https://discord.com/api/users/@me') return respuesta(sim.discord.yo);
     if (u.pathname === '/debug_token') return respuesta({ data: sim.facebook.debug });
     if (u.pathname === '/me') return respuesta(sim.facebook.yo);
     throw new Error(`URL no simulada: ${url}`);
@@ -64,6 +71,7 @@ describe('proveedores', () => {
     assert.equal(res.status, 200);
     const texto = JSON.stringify(res.body);
     assert.ok(res.body.data.google.clientIds.length > 0);
+    assert.ok('redirectUri' in res.body.data, 'dice a qué dirección vuelven los proveedores');
     assert.ok(!texto.includes(env.GITHUB_CLIENT_SECRET));
     assert.ok(!texto.includes(env.FACEBOOK_APP_SECRET));
   });
@@ -142,6 +150,9 @@ describe('Google', () => {
     const vencido = jwt.sign({ sub: 'x4', email: 'x4@gmail.test', email_verified: true, exp: Math.floor(Date.now() / 1000) - 60 },
       claveGoogle.privateKey, { algorithm: 'RS256', keyid: 'clave-1', audience: env.googleClientIds[0], issuer: 'https://accounts.google.com' });
     assert.equal((await api().post('/api/v1/auth/social/google').send({ idToken: vencido })).status, 401);
+    const conNonce = idTokenGoogle({ sub: `g-nonce-${Date.now()}`, email: `nonce.${Date.now()}@gmail.com`, nonce: 'nonce-de-esta-sesion-123' });
+    assert.equal((await api().post('/api/v1/auth/social/google').send({ idToken: conNonce, nonce: 'otro-nonce-distinto-4567' })).status, 401,
+      'un id_token de otra sesión (nonce distinto) no sirve');
   });
 });
 
@@ -175,6 +186,27 @@ describe('GitHub', () => {
     const res = await api().post('/api/v1/auth/social/github')
       .send({ code: 'codigo-github-valido', codeVerifier: verifier, redirectUri: 'burgoscorp://oauth' });
     assert.equal(res.status, 400);
+  });
+});
+
+describe('Discord', () => {
+  const verifier = crypto.randomBytes(32).toString('base64url');
+  const redirectUri = env.oauthRedirectUris[0];
+
+  test('canje de código con PKCE y email verificado: queda pendiente de habilitar', async () => {
+    const id = Date.now();
+    sim.discord = { yo: { id: `9${id}`, username: 'soldador_dc', global_name: 'Marta Gil', email: `marta.${id}@discord.test`, verified: true } };
+    const res = await api().post('/api/v1/auth/social/discord').send({ code: 'codigo-discord-valido', codeVerifier: verifier, redirectUri });
+    assert.equal(res.body.error?.codigo, 'CUENTA_PENDIENTE', JSON.stringify(res.body));
+    const [u] = await query('SELECT nombre, apellido FROM usuarios WHERE email = ?', [`marta.${id}@discord.test`]);
+    assert.deepEqual({ ...u }, { nombre: 'Marta', apellido: 'Gil' });
+  });
+
+  test('código inválido → 401, redirect ajena → 400 y sin email verificado no crea cuenta', async () => {
+    assert.equal((await api().post('/api/v1/auth/social/discord').send({ code: 'codigo-inventado-123', codeVerifier: verifier, redirectUri })).status, 401);
+    assert.equal((await api().post('/api/v1/auth/social/discord').send({ code: 'codigo-discord-valido', codeVerifier: verifier, redirectUri: 'https://atacante.test/cb' })).status, 400);
+    sim.discord = { yo: { id: `8${Date.now()}`, username: 'sin_verificar', email: 'x@discord.test', verified: false } };
+    assert.equal((await api().post('/api/v1/auth/social/discord').send({ code: 'codigo-discord-valido', codeVerifier: verifier, redirectUri })).status, 400);
   });
 });
 

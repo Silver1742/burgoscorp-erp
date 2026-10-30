@@ -223,15 +223,16 @@ códigos vencen a los 10 minutos, sirven una sola vez y se guardan como HMAC.
 
 ### Redes sociales · `/auth/social`
 
-La app hace el flujo OAuth con PKCE (`expo-auth-session`) y le manda al backend lo que obtuvo.
+La app abre la pantalla del proveedor (en el celular, con `expo-web-browser`), el proveedor vuelve a la página `/oauth` de la web y la app le manda al backend lo que obtuvo (detalle en `docs/guia-oauth.md`).
 El backend lo **verifica con el proveedor** antes de emitir sus propios tokens.
 
 | Método | Ruta | Auth | Body | Respuesta |
 |---|---|---|---|---|
-| GET | `/auth/social/proveedores` | No | — | `200 { google, github, facebook }`: ids públicos de los proveedores configurados, `null` en los que no |
-| POST | `/auth/social/google` | No | `idToken` | Sesión · `{ requiere2fa, tokenTemporal }` |
+| GET | `/auth/social/proveedores` | No | — | `200 { redirectUri, google, github, discord, facebook }`: ids públicos de los proveedores configurados (`null` en los que no) y la dirección `/oauth` a la que vuelven |
+| POST | `/auth/social/google` | No | `idToken`, `nonce` | Sesión · `{ requiere2fa, tokenTemporal }`. El `nonce` tiene que coincidir con el del token |
 | POST | `/auth/social/github` | No | `code`, `codeVerifier`, `redirectUri` | Sesión · `{ requiere2fa, tokenTemporal }` |
-| POST | `/auth/social/facebook` | No | `accessToken` | Sesión · `{ requiere2fa, tokenTemporal }` |
+| POST | `/auth/social/discord` | No | `code`, `codeVerifier`, `redirectUri` | Sesión · `{ requiere2fa, tokenTemporal }` |
+| POST | `/auth/social/facebook` | No | `accessToken` | Sesión (soportado, sin botón en la app) |
 | DELETE | `/auth/social/:proveedor` | Sí | — | `204` · `422` si es la única forma de ingresar |
 
 Errores: `400` email no verificado por el proveedor o redirect URI no permitida · `401` token
@@ -261,7 +262,7 @@ apps OAuth está en [`docs/guia-oauth.md`](../docs/guia-oauth.md).
 Cambiar el rol o desactivar una cuenta cierra todas sus sesiones.
 
 **Solicitudes de acceso** (como en el portal R3): quien se registra en la app, o entra por primera vez
-con Google, GitHub o Facebook, queda `pendiente` y no puede iniciar sesión hasta que un administrador
+con Google, GitHub o Discord, queda `pendiente` y no puede iniciar sesión hasta que un administrador
 la habilita (con rol y legajo) o la rechaza. A los administradores les llega el aviso `cuenta_pendiente`.
 
 ### Recursos CRUD (motor común)

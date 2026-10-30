@@ -5,6 +5,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AuthLayout from '../../componentes/AuthLayout';
+import BotonesSociales from '../../componentes/BotonesSociales';
 import { Campo, CampoContrasena, Boton, Casilla } from '../../componentes/ui';
 import { useSesion } from '../../contexto/sesion';
 import { useToast } from '../../contexto/toast';
@@ -86,6 +87,7 @@ export default function Login() {
       ) : (
         <Boton titulo="Ingresar" onPress={enviar} cargando={enviando} textoCargando="Verificando credenciales…" />
       )}
+      {!sellado ? <BotonesSociales /> : null}
 
       <View style={estilos.pie}>
         <Text style={{ color: t.textoSuave, fontSize: 14 }}>¿Sos nuevo en BurgosCorp? </Text>

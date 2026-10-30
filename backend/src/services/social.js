@@ -48,7 +48,7 @@ async function claveGoogle(kid) {
   return jwksGoogle.claves.get(kid);
 }
 
-async function perfilGoogle({ idToken }) {
+async function perfilGoogle({ idToken, nonce }) {
   if (!env.googleClientIds.length) throw noConfigurado('Google');
   const kid = jwt.decode(idToken, { complete: true })?.header?.kid;
   const clave = kid && (await claveGoogle(kid));
@@ -63,6 +63,7 @@ async function perfilGoogle({ idToken }) {
   } catch {
     throw rechazado('Google');
   }
+  if (nonce && p.nonce !== nonce) throw rechazado('Google');
   return {
     uid: p.sub,
     email: p.email?.toLowerCase(),
@@ -108,6 +109,37 @@ async function perfilGithub({ code, codeVerifier, redirectUri }) {
   };
 }
 
+// ---------------------------------------------------------------- Discord (canje de código + PKCE)
+
+async function perfilDiscord({ code, codeVerifier, redirectUri }) {
+  if (!env.DISCORD_CLIENT_ID || !env.DISCORD_CLIENT_SECRET) throw noConfigurado('Discord');
+  if (!env.oauthRedirectUris.includes(redirectUri)) throw errores.validacion([{ campo: 'body.redirectUri', mensaje: 'Redirect URI no permitida' }]);
+
+  const token = await pedirJson('https://discord.com/api/oauth2/token', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: env.DISCORD_CLIENT_ID,
+      client_secret: env.DISCORD_CLIENT_SECRET,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+      code_verifier: codeVerifier,
+    }).toString(),
+  });
+  const accessToken = token.cuerpo.access_token;
+  if (!token.ok || !accessToken) throw rechazado('Discord');
+
+  const yo = await pedirJson('https://discord.com/api/users/@me', { headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!yo.ok || !yo.cuerpo.id) throw rechazado('Discord');
+  return {
+    uid: String(yo.cuerpo.id),
+    email: yo.cuerpo.email?.toLowerCase(),
+    emailVerificado: yo.cuerpo.verified === true,
+    ...separarNombre(yo.cuerpo.global_name, yo.cuerpo.username),
+  };
+}
+
 // ---------------------------------------------------------------- Facebook (validación del access token)
 
 async function perfilFacebook({ accessToken }) {
@@ -142,14 +174,21 @@ const PROVEEDORES = {
   google: { nombre: 'Google', perfil: perfilGoogle, configurado: () => env.googleClientIds.length > 0 },
   github: { nombre: 'GitHub', perfil: perfilGithub, configurado: () => Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) },
   facebook: { nombre: 'Facebook', perfil: perfilFacebook, configurado: () => Boolean(env.FACEBOOK_APP_ID && env.FACEBOOK_APP_SECRET) },
+  discord: { nombre: 'Discord', perfil: perfilDiscord, configurado: () => Boolean(env.DISCORD_CLIENT_ID && env.DISCORD_CLIENT_SECRET) },
 };
 
-/** Qué botones mostrar en la app y con qué ids públicos (nunca los secretos). */
+/**
+ * Qué botones mostrar en la app y con qué ids públicos (nunca los secretos). `redirectUri` es la
+ * página /oauth de la versión web: los tres proveedores vuelven ahí (también desde el APK, que la
+ * abre en el navegador y recibe el resultado por burgoscorp://oauth).
+ */
 export function proveedoresDisponibles() {
   return {
+    redirectUri: env.oauthRedirectUris.find((u) => u.startsWith('https://')) ?? env.oauthRedirectUris[0] ?? null,
     google: PROVEEDORES.google.configurado() ? { clientIds: env.googleClientIds } : null,
     github: PROVEEDORES.github.configurado() ? { clientId: env.GITHUB_CLIENT_ID } : null,
     facebook: PROVEEDORES.facebook.configurado() ? { appId: env.FACEBOOK_APP_ID } : null,
+    discord: PROVEEDORES.discord.configurado() ? { clientId: env.DISCORD_CLIENT_ID } : null,
   };
 }
 

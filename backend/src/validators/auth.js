@@ -47,16 +47,26 @@ export const dosPasosVerificar = z.object({
   codigo: codigoSeisDigitos,
 }).strict();
 
-export const proveedorSocial = z.object({ proveedor: z.enum(['google', 'github', 'facebook']) });
+export const proveedorSocial = z.object({ proveedor: z.enum(['google', 'github', 'facebook', 'discord']) });
 
 export const datosSocial = {
-  google: z.object({ idToken: z.string().min(100).max(4096) }).strict(),
+  // nonce: valor al azar que la app mandó a Google y tiene que volver dentro del token (evita que
+  // se reuse un id_token robado de otra sesión).
+  google: z.object({
+    idToken: z.string().min(100).max(4096),
+    nonce: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/, 'nonce inválido').optional(),
+  }).strict(),
   github: z.object({
     code: z.string().min(10).max(200),
     codeVerifier: z.string().regex(/^[A-Za-z0-9._~-]{43,128}$/, 'code_verifier PKCE inválido'),
     redirectUri: z.string().max(200),
   }).strict(),
   facebook: z.object({ accessToken: z.string().min(20).max(1024) }).strict(),
+  discord: z.object({
+    code: z.string().min(10).max(200),
+    codeVerifier: z.string().regex(/^[A-Za-z0-9._~-]{43,128}$/, 'code_verifier PKCE inválido'),
+    redirectUri: z.string().max(200),
+  }).strict(),
 };
 
 export const cambioPassword = z.object({

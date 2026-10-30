@@ -169,8 +169,20 @@ async function dosPasosPorEmail(conn) {
   }
 }
 
+/** Login con Discord: se agrega a los proveedores de cuentas sociales. */
+async function proveedorDiscord(conn) {
+  const [[col]] = await conn.execute(
+    `SELECT COLUMN_TYPE AS tipo FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cuentas_sociales' AND COLUMN_NAME = 'proveedor'`);
+  if (col && !col.tipo.includes('discord')) {
+    await conn.query("ALTER TABLE cuentas_sociales MODIFY proveedor ENUM('google','github','facebook','discord') NOT NULL");
+    console.log('Migración: se agregó Discord a los ingresos con redes sociales.');
+  }
+}
+
 export async function migrar(conn) {
   await dosPasosPorEmail(conn);
+  await proveedorDiscord(conn);
   await dniOpcional(conn);
   await jornadaLaboral(conn);
   await fichajesDeEjemplo(conn);

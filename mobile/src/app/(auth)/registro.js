@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import AuthLayout from '../../componentes/AuthLayout';
+import BotonesSociales from '../../componentes/BotonesSociales';
 import VolverAlLogin from '../../componentes/VolverAlLogin';
 import { Campo, CampoContrasena, ChecklistContrasena, Boton } from '../../componentes/ui';
 import { useSesion } from '../../contexto/sesion';
@@ -61,6 +62,7 @@ export default function Registro() {
       <CampoContrasena etiqueta="Repetir contraseña" value={datos.repetir} onChangeText={cambiar('repetir')} error={errores.repetir}
         autoComplete="new-password" maxLength={72} onSubmitEditing={enviar} />
       <Boton titulo="Enviar solicitud" onPress={enviar} cargando={enviando} textoCargando="Enviando…" icono="person-add-outline" />
+      <BotonesSociales texto="Pedir acceso con" />
       <VolverAlLogin />
     </AuthLayout>
   );

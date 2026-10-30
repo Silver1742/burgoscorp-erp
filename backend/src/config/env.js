@@ -76,6 +76,8 @@ const esquema = z.object({
   GITHUB_CLIENT_SECRET: z.string().default(''),
   FACEBOOK_APP_ID: z.string().default(''),
   FACEBOOK_APP_SECRET: z.string().default(''),
+  DISCORD_CLIENT_ID: z.string().default(''),
+  DISCORD_CLIENT_SECRET: z.string().default(''),
   // Redirect URIs aceptadas en el canje de código (GitHub). Separadas por coma.
   OAUTH_REDIRECT_URIS: z.string().default(''),
 });

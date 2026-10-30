@@ -6,7 +6,7 @@ export const TEMAS_AYUDA = [
   {
     id: 'empezar', titulo: 'Entrar por primera vez', icono: 'log-in-outline', roles: [],
     pasos: [
-      'En la pantalla de ingreso tocá "Pedí acceso" y completá tus datos.',
+      'En la pantalla de ingreso tocá "Pedí acceso" y completá tus datos, o entrá con Google, GitHub o Discord.',
       'Tu cuenta queda pendiente: un administrador la revisa y la habilita. Te avisamos por email.',
       'La primera vez que entrás te mandamos un código de 6 dígitos al email para confirmarlo.',
       'Si un administrador te creó la cuenta, te llega un email "Creá tu contraseña": tocá "¿Olvidaste tu contraseña?" → "Ya tengo un código".',

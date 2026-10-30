@@ -260,7 +260,7 @@ CREATE TABLE usuarios (
 CREATE TABLE cuentas_sociales (
   id            INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   usuario_id    INT UNSIGNED NOT NULL,
-  proveedor     ENUM('google','github','facebook') NOT NULL,
+  proveedor     ENUM('google','github','facebook','discord') NOT NULL,
   proveedor_uid VARCHAR(128) NOT NULL,             -- "sub" / id del proveedor
   email         VARCHAR(254) NULL,
   created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
