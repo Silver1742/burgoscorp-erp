@@ -1,5 +1,5 @@
 // Calidad: las OT que esperan inspección (con su QR se llega a la pieza) y las últimas inspecciones.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -8,6 +8,7 @@ import { usePuede } from '../../../../contexto/sesion';
 import { api } from '../../../../lib/api';
 import { PRIORIDAD, RESULTADO_INSPECCION, fechaCorta, fechaHoraCorta } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 export default function Calidad() {
   const router = useRouter();
@@ -27,7 +28,7 @@ export default function Calidad() {
       setError(err.message);
     }
   }, []);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   const inspecciona = puede('CAL', 'crear');
 

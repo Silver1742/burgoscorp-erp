@@ -2,7 +2,7 @@
 //  - El jefe ve directamente a la gente de su área.
 //  - Gerencia y el administrador ven todas las áreas con su jefe y cuántos son; tocando una, sus
 //    integrantes con el detalle de cada uno.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -12,6 +12,7 @@ import { useSesion } from '../../contexto/sesion';
 import { api } from '../../lib/api';
 import { perfilRol } from '../../lib/roles';
 import { espacio, radio, sombra, useTema, usePantalla } from '../../tema';
+import { useCargar } from '../../lib/cambios';
 
 function ListaAreas() {
   const t = useTema();
@@ -28,7 +29,7 @@ function ListaAreas() {
     setError(null);
     try { setDatos(await api('/personal/resumen')); } catch (err) { setError(err.message); }
   }, []);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   return (
     <ScrollView style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido}

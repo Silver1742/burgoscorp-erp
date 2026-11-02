@@ -12,6 +12,7 @@ import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
 import { fechaHoraCorta } from '../modulos';
 import { espacio, radio, useTema } from '../tema';
+import { useCargar } from '../lib/cambios';
 
 const LADO_MAX = 1600;
 const MINIATURA = 96;
@@ -113,7 +114,7 @@ export default function Fotos({ entidad, entidadId, titulo = 'Fotos', vacio = 'T
       setError(err.message);
     }
   }, [entidad, entidadId]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function agregar(origen) {
     try {

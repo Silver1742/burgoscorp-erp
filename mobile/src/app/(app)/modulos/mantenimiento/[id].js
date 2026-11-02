@@ -1,6 +1,6 @@
 // Detalle de una orden de mantenimiento: la falla con sus fotos, el técnico a cargo, el avance,
 // los repuestos usados y el cierre con lo que se hizo.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -12,6 +12,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { ESTADO_OM, PRIORIDAD, cantidad, fechaHoraCorta, pesosAr } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 const VERBO = { en_curso: 'Empezar reparación', esperando_repuesto: 'Esperando repuesto', cerrada: 'Cerrar: reparada', cancelada: 'Cancelar orden' };
 const ICONO = { en_curso: 'play', esperando_repuesto: 'hourglass-outline', cerrada: 'checkmark-done', cancelada: 'close-circle-outline' };
@@ -39,7 +40,7 @@ export default function DetalleOm() {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function cambiarEstado() {
     const e = {};

@@ -1,6 +1,6 @@
 // Personal: cuánta gente trabaja en BurgosCorp, en qué área, quién está a cargo de cada una y
 // quién vino hoy. El administrador, gerencia y RRHH ven toda la empresa; un jefe, su área.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -11,6 +11,7 @@ import { usePuede } from '../../../../contexto/sesion';
 import { api } from '../../../../lib/api';
 import { fechaCorta } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 function Numero({ icono, tono, valor, etiqueta }) {
   const t = useTema();
@@ -40,7 +41,7 @@ export default function Personal() {
       setError(err.message);
     }
   }, []);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   const porFila = columnas >= 3 ? 4 : 2;
   const tot = datos?.totales;

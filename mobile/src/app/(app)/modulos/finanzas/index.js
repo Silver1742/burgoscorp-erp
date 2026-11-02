@@ -1,6 +1,6 @@
 // Finanzas: saldos a cobrar y a pagar, lo que falta facturar (OT aprobadas por Calidad y compras
 // recibidas sin la factura del proveedor) y los comprobantes.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Pantalla, EncabezadoPagina, Tarjeta, FilaLista, Insignia, Boton, Campo, Opciones, EsqueletoLista, ErrorCarga, Vacio } from '../../../../componentes/ui';
@@ -10,6 +10,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { ESTADO_COMPROBANTE, TIPO_COMPROBANTE, fechaCorta, pesosAr } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 const VISTAS = [
   { valor: 'venta', titulo: 'A cobrar' },
@@ -57,7 +58,7 @@ export default function Finanzas() {
       setError(err.message);
     }
   }, [vista]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   const crea = puede('FIN', 'crear');
 

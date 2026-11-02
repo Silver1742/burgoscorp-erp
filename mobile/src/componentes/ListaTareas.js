@@ -1,11 +1,12 @@
 // Listado de tareas con filtros. Lo usan "Mis tareas" (mias) y "Tareas del área" (jefe).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { EncabezadoPagina, Opciones, EsqueletoLista, ErrorCarga, Vacio } from './ui';
 import TarjetaTarea from './TarjetaTarea';
 import { api } from '../lib/api';
 import { espacio, useTema, usePantalla } from '../tema';
+import { useCargar } from '../lib/cambios';
 
 export default function ListaTareas({ mias = false, titulo, sub, icono, filtros, acciones, rutaDetalle }) {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function ListaTareas({ mias = false, titulo, sub, icono, filtros,
 
   // Carga al entrar, al cambiar el filtro y al volver del detalle (donde pudo cambiar el estado).
   useEffect(() => { setLista(null); }, [filtro]);
-  useFocusEffect(useCallback(() => { cargar(); }, [cargar]));
+  useCargar(cargar);
 
   const enCurso = lista?.find((x) => x.estado === 'en_curso');
 

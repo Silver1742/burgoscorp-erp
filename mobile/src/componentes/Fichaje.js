@@ -1,11 +1,12 @@
 // Tarjeta de fichaje: muestra si el empleado está dentro y le permite registrar entrada o salida.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Tarjeta, Boton, Insignia, Esqueleto } from './ui';
 import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
 import { horaCorta } from '../modulos';
 import { espacio, useTema } from '../tema';
+import { useCargar } from '../lib/cambios';
 
 const duracion = (min) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`;
 
@@ -22,7 +23,7 @@ export default function Fichaje() {
       toast.error(err.message);
     }
   }, [toast]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function fichar() {
     setEnviando(true);

@@ -1,11 +1,12 @@
 // Avisos del usuario (licencias aprobadas, pedidos para aprobar...). Al abrir se marcan como leídos.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pantalla, EncabezadoPagina, Tarjeta, FilaLista, EsqueletoLista, ErrorCarga, Vacio, Insignia } from '../../../componentes/ui';
 import { api } from '../../../lib/api';
 import { espacio, useTema } from '../../../tema';
+import { useCargar } from '../../../lib/cambios';
 
 const ICONO = {
   licencia_aprobada: ['checkmark-circle', 'exito'],
@@ -77,7 +78,7 @@ export default function Notificaciones() {
       setError(err.message);
     }
   }, []);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   const colores = { exito: t.exito, error: t.error, aviso: t.avisoTexto };
 

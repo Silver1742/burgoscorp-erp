@@ -5,6 +5,7 @@ import rutas from './routes/index.js';
 import { subida as subidaAdjuntos } from './routes/adjuntos.js';
 import { cabeceras, corsConfigurado, exigirJson } from './middlewares/seguridad.js';
 import { limiteGeneral } from './middlewares/limites.js';
+import { contarCambios } from './middlewares/cambios.js';
 import { manejarErrores, rutaNoEncontrada } from './middlewares/errores.js';
 
 // Las respuestas de la API no se cachean (contienen datos personales).
@@ -23,6 +24,7 @@ export function crearApp() {
   app.use(cabeceras);
   app.use(corsConfigurado);
   app.use(limiteGeneral);
+  app.use(contarCambios);
   // Fotos y archivos: llegan como binario, así que van antes de exigir JSON.
   app.use('/api/v1/adjuntos', sinCache, subidaAdjuntos);
   app.use(exigirJson);

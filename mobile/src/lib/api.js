@@ -122,8 +122,22 @@ export function renovarSesion() {
   return renovando;
 }
 
+// Quien quiera enterarse de que se guardó algo (lib/cambios.js revisa enseguida si hubo cambios).
+const oyentesGuardado = new Set();
+export function alGuardar(fn) {
+  oyentesGuardado.add(fn);
+  return () => oyentesGuardado.delete(fn);
+}
+const LECTURAS = new Set(['GET', 'HEAD']);
+
 /** Petición autenticada con renovación automática del token. */
 export async function api(ruta, opciones = {}) {
+  const r = await apiSinAviso(ruta, opciones);
+  if (!LECTURAS.has(opciones.metodo ?? 'GET') && !ruta.startsWith('/auth')) for (const fn of oyentesGuardado) fn();
+  return r;
+}
+
+async function apiSinAviso(ruta, opciones) {
   try {
     return await llamar(ruta, opciones);
   } catch (err) {

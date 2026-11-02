@@ -1,5 +1,5 @@
 // Detalle de una inspección: resultado, mediciones (lo que quedó fuera, en rojo) y fotos.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Pantalla, Tarjeta, FilaLista, Insignia, Dato, Boton, Esqueleto, ErrorCarga, Vacio } from '../../../../componentes/ui';
@@ -8,6 +8,7 @@ import { usePuede } from '../../../../contexto/sesion';
 import { api } from '../../../../lib/api';
 import { RESULTADO_INSPECCION, fechaHoraCorta } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 const n = (v) => Number(v).toLocaleString('es-AR', { maximumFractionDigits: 4 });
 
@@ -27,7 +28,7 @@ export default function DetalleInspeccion() {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   if (error) return <Pantalla><Tarjeta><ErrorCarga error={error} onReintentar={cargar} /></Tarjeta></Pantalla>;
   if (!x) return <Pantalla><Tarjeta><Esqueleto ancho="40%" /><Esqueleto alto={20} estilo={{ marginTop: 10 }} /></Tarjeta></Pantalla>;

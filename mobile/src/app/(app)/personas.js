@@ -11,6 +11,7 @@ import { usePuede, useSesion } from '../../contexto/sesion';
 import { api } from '../../lib/api';
 import { perfilRol } from '../../lib/roles';
 import { espacio, radio, useTema } from '../../tema';
+import { useAlCambiar } from '../../lib/cambios';
 
 const POR_PAGINA = 40;
 
@@ -46,6 +47,7 @@ export default function Personas() {
     }
   }, [q, area]);
   useEffect(() => { const e = setTimeout(() => cargar(1), q ? 300 : 0); return () => clearTimeout(e); }, [cargar, q]);
+  useAlCambiar(() => cargar(1));
 
   const cabecera = (
     <View>

@@ -2,7 +2,7 @@
 // cuántas tareas tiene abiertas y sus habilidades. Tocando a alguien se abre su ficha en una ventana
 // encima de la lista (ahí se edita, se le asigna una tarea, etc., según el rol de quien mira).
 // Lo usan "Mi equipo" (jefe) y la ventana de cada área (gerencia y administración).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Avatar, ErrorCarga, EsqueletoLista, Insignia, InsigniaRol, Tarjeta, Vacio } from './ui';
@@ -10,6 +10,7 @@ import FichaPersona from './FichaPersona';
 import { api } from '../lib/api';
 import { horaCorta } from '../modulos';
 import { espacio, radio, useTema } from '../tema';
+import { useCargar } from '../lib/cambios';
 
 const sinAcentos = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -62,7 +63,7 @@ export default function IntegrantesArea({ areaId }) {
       setError(err.message);
     }
   }, [areaId]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   const f = sinAcentos(filtro.trim());
   const lista = (datos?.integrantes ?? []).filter((i) => !f

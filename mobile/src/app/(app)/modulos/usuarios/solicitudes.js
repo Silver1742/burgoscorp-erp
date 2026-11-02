@@ -1,7 +1,7 @@
 // Solicitudes de acceso (como en el portal R3): quien se registra queda pendiente hasta que el
 // administrador lo habilita o lo rechaza con un motivo. Al habilitarlo se elige su rol y dónde va a
 // trabajar (área, puesto y habilidades): con eso se le crea el legajo solo. En los dos casos le llega un email.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -15,6 +15,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { ROLES, fechaCorta, fechaHoraCorta } from '../../../../modulos';
 import { espacio, radio, useTema } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 const OPCIONES_ROL = ['EMPLEADO', 'JEFE', 'GERENCIA', 'ADMIN'].map((valor) => ({ valor, titulo: ROLES[valor] }));
 
@@ -129,7 +130,7 @@ export default function SolicitudesAcceso() {
       setError(err.message);
     }
   }, []);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   const { conJefatura, dialogoJefatura } = useJefatura();
 

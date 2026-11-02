@@ -4,7 +4,7 @@
 //   Jefe de área  → pendientes (asignar, revisar, licencias), tablón, fichaje y accesos.
 //   Gerencia      → cómo viene la empresa (OT, pedidos, personal), tablón y accesos.
 //   Administrador → pendientes (accesos, tareas sin jefe…), tablón y accesos.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -18,6 +18,7 @@ import { api } from '../../lib/api';
 import { perfilRol } from '../../lib/roles';
 import { ESTADO_TAREA } from '../../modulos';
 import { espacio, radio, useTema, usePantalla } from '../../tema';
+import { useCargar } from '../../lib/cambios';
 
 /** "Buen día" hasta las 13, "Buenas tardes" hasta las 20 y después "Buenas noches". */
 function saludo() {
@@ -114,10 +115,9 @@ export default function Inicio() {
     setDatos(d);
     setTareas(mias);
     setSinLeer(notif?.meta?.sinLeer ?? 0);
-    setVuelta((v) => v + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuario.id, usuario.rol]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   const ir = (ruta) => router.push(ruta, { withAnchor: true });
   const accesos = accesosDe(usuario, puede);
@@ -125,7 +125,7 @@ export default function Inicio() {
 
   return (
     <ScrollView style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido}
-      refreshControl={<RefreshControl refreshing={recargando} onRefresh={async () => { setRecargando(true); await cargar(); setRecargando(false); }} />}>
+      refreshControl={<RefreshControl refreshing={recargando} onRefresh={async () => { setRecargando(true); await cargar(); setVuelta((v) => v + 1); setRecargando(false); }} />}>
       <View style={estilos.centrado}>
         {/* Encabezado imponente: degradado, chispas y sombra roja */}
         <BloqueImponente estilo={estilos.hero} alto={240}>

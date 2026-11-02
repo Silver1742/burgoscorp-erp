@@ -1,5 +1,5 @@
 // Detalle de una orden de trabajo: datos, avance, cambio de estado y sus operaciones.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -15,6 +15,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { ESTADO_OT, ESTADO_TAREA, PRIORIDAD, TIPO_TRABAJO, TRANSICIONES_OT, fechaCorta, horas, pesosAr } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 const VERBO = { en_proceso: 'Reanudar', pausada: 'Pausar', control_calidad: 'Enviar a calidad', terminada: 'Marcar terminada', entregada: 'Marcar entregada', cancelada: 'Cancelar orden' };
 const ICONO = { en_proceso: 'play', pausada: 'pause', control_calidad: 'ribbon-outline', terminada: 'checkmark-done', entregada: 'cube-outline', cancelada: 'close-circle-outline' };
@@ -85,7 +86,7 @@ export default function DetalleOt() {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function cambiarEstado() {
     try {

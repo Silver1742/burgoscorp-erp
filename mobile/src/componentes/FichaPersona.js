@@ -18,6 +18,7 @@ import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
 import { ESTADO_TAREA, fechaCorta, horaCorta } from '../modulos';
 import { espacio, radio, sombra, useTema, usePantalla } from '../tema';
+import { useAlCambiar } from '../lib/cambios';
 
 const PESTANAS = [
   { valor: 'datos', titulo: 'Datos' },
@@ -70,6 +71,7 @@ export default function FichaPersona({ empleadoId, alCerrar, alCambiar }) {
     }
   }, [empleadoId]);
   useEffect(() => { if (empleadoId) { setPestana('datos'); setP(null); cargar(); } }, [empleadoId, cargar]);
+  useAlCambiar(() => { if (empleadoId) cargar(); });
 
   async function ejecutar(fn, mensaje) {
     setGuardando(true);

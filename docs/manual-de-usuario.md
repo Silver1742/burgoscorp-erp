@@ -82,6 +82,8 @@ Cada rol tiene **su color y sus pestañas**, así se nota enseguida desde dónde
     su contraseña y darlo de baja.
   - **Jefe de área**: ver a su gente y **asignarle una tarea**.
   - **Gerencia**: solo consultar.
+- **Todo se actualiza solo**: si alguien publica un aviso, te asigna una tarea o aprueba algo, lo
+  ves en unos segundos sin recargar (también al volver a una pantalla).
 - **Menú de tu avatar** (arriba a la derecha): Mi perfil, Notificaciones, Verificación en dos pasos,
   Ayuda y Cerrar sesión. Al lado, el botón **QR** y el modo claro/oscuro.
 

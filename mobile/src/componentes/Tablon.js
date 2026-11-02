@@ -13,6 +13,7 @@ import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
 import { fechaCorta } from '../modulos';
 import { espacio, radio, useTema } from '../tema';
+import { useCargar } from '../lib/cambios';
 
 const VACIO = { titulo: '', texto: '', fijado: false, importante: false, vence_el: '', area: 'empresa', imagenes: [], nuevas: [], quitar: [] };
 const MAX_IMAGENES = 4;
@@ -99,7 +100,7 @@ export default function Tablon() {
   const cargar = useCallback(async () => {
     try { setDatos(await api('/tablon')); } catch { setDatos({ data: [], meta: {} }); }
   }, []);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
   useEffect(() => {
     if (esAdmin) api('/areas', { consulta: { activo: 'true', limite: 50 } }).then((r) => setAreas(r.data)).catch(() => {});
   }, [esAdmin]);

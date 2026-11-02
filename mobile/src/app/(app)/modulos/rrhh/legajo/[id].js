@@ -1,6 +1,6 @@
 // Detalle de un legajo: datos, habilidades (con certificaciones vencidas) y, si es el propio,
 // edición de los datos de contacto. La API decide qué legajos se pueden ver.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -12,6 +12,7 @@ import { useToast } from '../../../../../contexto/toast';
 import { api } from '../../../../../lib/api';
 import { fechaCorta } from '../../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../../tema';
+import { useCargar } from '../../../../../lib/cambios';
 
 const NIVEL = { basico: 'Básico', intermedio: 'Intermedio', avanzado: 'Avanzado' };
 const ESTADO = { activo: ['Activo', 'exito'], licencia: ['De licencia', 'aviso'], baja: ['Baja', 'gris'] };
@@ -52,7 +53,7 @@ export default function Legajo() {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function guardar() {
     setGuardando(true);

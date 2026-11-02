@@ -15,6 +15,7 @@ import { api } from '../../../../lib/api';
 import { descargarCsv } from '../../../../lib/archivos';
 import { fechaCorta, pesosAr } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 const PERIODOS = [
   { valor: 'mes', titulo: 'Este mes' },
@@ -147,7 +148,7 @@ export default function Liquidacion() {
       setError(err.message);
     }
   }, [fechas, area]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   function elegirPeriodo(p) {
     setPeriodo(p);

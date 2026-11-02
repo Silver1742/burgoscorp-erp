@@ -18,6 +18,7 @@ import * as compras from '../services/compras.js';
 import * as adjuntos from '../services/adjuntos.js';
 import { puedeEditar, veTodos } from '../services/tablon.js';
 import { id, paramsId, fecha } from '../validators/comunes.js';
+import { versionCambios } from '../middlewares/cambios.js';
 
 const router = Router();
 
@@ -114,6 +115,13 @@ router.delete('/tablon/:id', autenticado, validar({ params: paramsId }), async (
 router.post('/tablon/:id/leido', autenticado, validar({ params: paramsId }), async (req, res) => {
   await query('INSERT IGNORE INTO avisos_leidos (aviso_id, usuario_id) SELECT id, ? FROM avisos_tablon WHERE id = ?', [req.usuario.id, req.validado.params.id]);
   res.status(204).end();
+});
+
+// ---------------------------------------------------------------- cambios
+
+// La app pregunta esto cada tantos segundos: si la versión es otra, recarga lo que está mirando.
+router.get('/cambios', autenticado, (req, res) => {
+  res.json({ ok: true, data: { version: versionCambios() } });
 });
 
 // ---------------------------------------------------------------- pendientes

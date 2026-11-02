@@ -1,6 +1,6 @@
 // Detalle de un presupuesto: líneas e importes, envío al cliente (también por WhatsApp) y su
 // respuesta. Si lo acepta, se elige el área y la API crea la OT con operaciones y material reservado.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Pantalla, Tarjeta, FilaLista, Insignia, Dato, Boton, Campo, Opciones, Esqueleto, ErrorCarga } from '../../../../../componentes/ui';
@@ -10,6 +10,7 @@ import { useToast } from '../../../../../contexto/toast';
 import { api } from '../../../../../lib/api';
 import { ESTADO_PRESUPUESTO, PRIORIDAD, TIPO_ITEM, cantidad, fechaCorta, pesosAr } from '../../../../../modulos';
 import { espacio, useTema } from '../../../../../tema';
+import { useCargar } from '../../../../../lib/cambios';
 
 const PRIORIDADES = ['baja', 'media', 'alta', 'urgente'].map((valor) => ({ valor, titulo: PRIORIDAD[valor].texto }));
 
@@ -32,7 +33,7 @@ export default function DetallePresupuesto() {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function ejecutar() {
     if (accion === 'aprobar' && !aprob.area_id) {

@@ -1,6 +1,6 @@
 // Detalle de una solicitud: qué pide el cliente, fotos de la pieza, contacto por teléfono o
 // WhatsApp, asignación a Ingeniería y el paso a presupuesto.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -13,6 +13,7 @@ import { useToast } from '../../../../../contexto/toast';
 import { api } from '../../../../../lib/api';
 import { ESTADO_PRESUPUESTO, ESTADO_SOLICITUD, TIPO_TRABAJO, fechaCorta, fechaHoraCorta, pesosAr } from '../../../../../modulos';
 import { espacio, useTema } from '../../../../../tema';
+import { useCargar } from '../../../../../lib/cambios';
 
 export default function DetalleSolicitud() {
   const { id } = useLocalSearchParams();
@@ -31,7 +32,7 @@ export default function DetalleSolicitud() {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function editar(cuerpo, mensaje) {
     try {

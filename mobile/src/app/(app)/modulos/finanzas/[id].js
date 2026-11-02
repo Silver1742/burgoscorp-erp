@@ -1,6 +1,6 @@
 // Detalle de un comprobante: ítems, cobros o pagos registrados, el saldo y (en las de proveedor)
 // la foto o el PDF de la factura.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { Pantalla, Tarjeta, FilaLista, Insignia, Dato, Boton, Campo, Opciones, Esqueleto, ErrorCarga, Vacio } from '../../../../componentes/ui';
@@ -10,6 +10,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { ESTADO_COMPROBANTE, TIPO_COMPROBANTE, cantidad, fechaCorta, pesosAr } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 const MEDIOS = ['transferencia', 'efectivo', 'cheque', 'tarjeta', 'otro'].map((v) => ({ valor: v, titulo: v[0].toUpperCase() + v.slice(1) }));
 
@@ -32,7 +33,7 @@ export default function DetalleComprobante() {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function registrar() {
     const e = {};

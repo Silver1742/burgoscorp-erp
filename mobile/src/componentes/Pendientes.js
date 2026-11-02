@@ -1,7 +1,7 @@
 // Bandeja de pendientes de Inicio (como las solicitudes del Dashboard de R3): todo lo que espera una
 // decisión de quien entra, en un solo lugar y con la acción ahí mismo. Licencias se aprueban desde la
 // fila; el resto abre la ficha justa (la tarea, la compra, las solicitudes de acceso).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -9,6 +9,7 @@ import { Boton, Esqueleto, Insignia, Tarjeta } from './ui';
 import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
 import { espacio, radio, useTema } from '../tema';
+import { useCargar } from '../lib/cambios';
 
 const ICONO = { acceso: 'person-add', licencia: 'airplane', asignar: 'people', revisar: 'eye', compra: 'cart' };
 const DESTINO = {
@@ -32,7 +33,7 @@ export default function Pendientes({ color }) {
   const cargar = useCallback(async () => {
     try { setGrupos(await api('/pendientes')); } catch { setGrupos([]); }
   }, []);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function aprobarLicencia(i) {
     setOcupado(i.id);

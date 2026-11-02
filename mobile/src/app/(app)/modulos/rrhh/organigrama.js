@@ -1,11 +1,12 @@
 // Organigrama: Dirección arriba y debajo cada área con su jefe y cantidad de personas
 // (tarjetas de área con borde rojo arriba, como .bc-area-card de R3).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pantalla, EncabezadoPagina, Tarjeta, Avatar, Insignia, Esqueleto, ErrorCarga } from '../../../../componentes/ui';
 import { api } from '../../../../lib/api';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 function Area({ a, destacada }) {
   const t = useTema();
@@ -40,7 +41,7 @@ export default function Organigrama() {
       setError(err.message);
     }
   }, []);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   const direccion = areas?.find((a) => a.codigo === 'DIR');
   const resto = areas?.filter((a) => a.codigo !== 'DIR') ?? [];

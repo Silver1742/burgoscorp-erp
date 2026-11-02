@@ -1,6 +1,6 @@
 // Bandeja de aprobación: lo que este jefe (o RRHH) tiene que resolver ahora.
 // Aprobar y rechazar se confirman con un diálogo propio (el rechazo pide el motivo).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 import {
   Pantalla, EncabezadoPagina, Tarjeta, FilaLista, Insignia, Avatar, Boton, Campo,
@@ -13,6 +13,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { ESTADO_LICENCIA, TIPO_LICENCIA, fechaCorta, diasHabiles } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 export default function Aprobaciones() {
   const t = useTema();
@@ -38,7 +39,7 @@ export default function Aprobaciones() {
       setError(err.message);
     }
   }, []);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   function abrir(tipo, l) {
     setComentario('');

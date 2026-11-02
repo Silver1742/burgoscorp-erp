@@ -14,6 +14,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { ESTADO_OC, cantidad, fechaCorta, fechaHoraCorta, pesosAr } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 const esCantidad = (v) => /^\d+([.,]\d{1,3})?$/.test(v);
 const aNumero = (v) => Number(String(v).replace(',', '.'));
@@ -93,7 +94,7 @@ export default function DetalleOrdenCompra() {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   const ACCIONES = {
     'enviar-aprobacion': { titulo: 'Enviar a aprobar', mensaje: 'La jefa de Abastecimiento recibe el aviso para aprobarla.', exito: 'Enviada a aprobar.' },

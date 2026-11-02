@@ -1,5 +1,5 @@
 // Mis licencias: pedir vacaciones / licencias y ver en qué estado está cada pedido.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import {
   Pantalla, EncabezadoPagina, Campo, Boton, Opciones, Tarjeta, FilaLista, Insignia,
@@ -11,6 +11,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { TIPO_LICENCIA, ESTADO_LICENCIA, fechaCorta, diasHabiles } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 const esFecha = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(new Date(`${v}T00:00:00Z`).getTime());
 const manana = () => new Date(Date.now() + 86400000).toISOString().slice(0, 10);
@@ -35,7 +36,7 @@ export default function MisLicencias() {
       setErrorLista(err.message);
     }
   }, []);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function pedir() {
     const e = {};

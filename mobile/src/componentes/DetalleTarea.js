@@ -17,6 +17,7 @@ import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
 import { ESTADO_TAREA, PRIORIDAD, fechaHoraCorta, horas } from '../modulos';
 import { espacio, useTema, usePantalla } from '../tema';
+import { useCargar } from '../lib/cambios';
 
 const NIVEL = { basico: 'Básico', intermedio: 'Intermedio', avanzado: 'Avanzado' };
 
@@ -100,7 +101,7 @@ export default function DetalleTarea({ id }) {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   /** Ejecuta una acción de la API, actualiza la tarea y avisa con un toast. */
   async function accion(ruta, cuerpo, mensaje) {

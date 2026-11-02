@@ -1,6 +1,6 @@
 // Ficha de un producto: stock por depósito, para qué OT está reservado, compras en camino y
 // movimientos. Abastecimiento ajusta (conteo físico) y transfiere entre depósitos.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -13,6 +13,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { ESTADO_OC, TIPO_MOVIMIENTO, TIPO_PRODUCTO, cantidad, fechaCorta, fechaHoraCorta, pesosAr } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 const esCantidad = (v) => /^\d+([.,]\d{1,3})?$/.test(v) && Number(v.replace(',', '.')) > 0;
 const aNumero = (v) => Number(v.replace(',', '.'));
@@ -87,7 +88,7 @@ export default function Producto() {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   if (error) return <Pantalla><Tarjeta><ErrorCarga error={error} onReintentar={cargar} /></Tarjeta></Pantalla>;
   if (!p) return <Pantalla><Tarjeta><Esqueleto ancho="40%" /><Esqueleto alto={20} estilo={{ marginTop: 10 }} /></Tarjeta></Pantalla>;

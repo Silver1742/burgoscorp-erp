@@ -1,6 +1,6 @@
 // Ficha de una máquina (lo que se abre al escanear la etiqueta QR pegada en ella): estado,
 // fallas abiertas, planes preventivos y las últimas reparaciones. Desde acá se reporta una falla.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -11,6 +11,7 @@ import { useToast } from '../../../../../contexto/toast';
 import { api } from '../../../../../lib/api';
 import { ESTADO_MAQUINA, ESTADO_OM, fechaCorta, fechaHoraCorta } from '../../../../../modulos';
 import { espacio, useTema } from '../../../../../tema';
+import { useCargar } from '../../../../../lib/cambios';
 
 export default function FichaMaquina() {
   const { id } = useLocalSearchParams();
@@ -30,7 +31,7 @@ export default function FichaMaquina() {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function generar(plan) {
     setGenerando(plan.id);

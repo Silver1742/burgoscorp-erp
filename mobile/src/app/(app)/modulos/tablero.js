@@ -1,6 +1,6 @@
 // Tablero: los números del día en tarjetas, pensado para mirarlo en el celular. Cada bloque aparece
 // solo si el rol puede ver ese módulo (Finanzas, por ejemplo, solo Gerencia y Administración).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -8,6 +8,7 @@ import { Pantalla, EncabezadoPagina, Tarjeta, Esqueleto, ErrorCarga } from '../.
 import { api } from '../../../lib/api';
 import { ESTADO_OT, fechaCorta, pesosAr } from '../../../modulos';
 import { espacio, useTema } from '../../../tema';
+import { useCargar } from '../../../lib/cambios';
 
 /** Número grande con su etiqueta. `alerta` lo pinta de rojo con un ícono (nunca solo color). */
 function Indicador({ etiqueta, valor, detalle, alerta, onPress }) {
@@ -72,7 +73,7 @@ export default function Tablero() {
       setError(err.message);
     }
   }, []);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   const pct = (v) => (v === null || v === undefined ? '—' : `${v} %`);
 

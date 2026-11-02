@@ -1,6 +1,6 @@
 // Materiales de una orden de trabajo: el jefe reserva (y ve si falta), el operario registra lo
 // que usa. Si no alcanza, la API le avisa a Abastecimiento para que compre.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Tarjeta, FilaLista, Insignia, Boton, Campo, Esqueleto, ErrorCarga, Vacio } from './ui';
@@ -10,6 +10,7 @@ import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
 import { cantidad } from '../modulos';
 import { espacio, useTema } from '../tema';
+import { useCargar } from '../lib/cambios';
 
 const esCantidad = (v) => /^\d+([.,]\d{1,3})?$/.test(v) && Number(v.replace(',', '.')) > 0;
 const aNumero = (v) => Number(String(v).replace(',', '.'));
@@ -36,7 +37,7 @@ export default function MaterialesOt({ otId, tareaId, alCambiar }) {
       setError(err.message);
     }
   }, [otId]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   async function reservar() {
     const e = {};

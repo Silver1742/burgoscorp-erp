@@ -1,6 +1,6 @@
 // Ficha de un usuario (como el UserDetailModal de R3) con sus acciones: editar, dar de baja o
 // reactivar, mandarle el código para crear su contraseña y eliminarlo (solo si no tiene actividad).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -15,6 +15,7 @@ import { api } from '../../../../lib/api';
 import { estadoUsuario, haceCuanto, metodoIngreso } from '../../../../lib/usuarios';
 import { ROLES, fechaHoraCorta } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import { useCargar } from '../../../../lib/cambios';
 
 const OPCIONES_ROL = ['EMPLEADO', 'JEFE', 'GERENCIA', 'ADMIN'].map((valor) => ({ valor, titulo: ROLES[valor] }));
 const NIVEL = { basico: 'básico', intermedio: 'intermedio', avanzado: 'avanzado' };
@@ -42,7 +43,7 @@ export default function Usuario() {
       setError(err.message);
     }
   }, [id]);
-  useEffect(() => { cargar(); }, [cargar]);
+  useCargar(cargar);
 
   if (error) return <Pantalla><Tarjeta><ErrorCarga error={error} onReintentar={cargar} /></Tarjeta></Pantalla>;
   if (!u) return <Pantalla><Cargando texto="Cargando usuario…" /></Pantalla>;

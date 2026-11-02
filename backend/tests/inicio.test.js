@@ -156,3 +156,19 @@ describe('imágenes en los avisos del tablón', () => {
     assert.equal(Number(n), 0);
   });
 });
+
+describe('recarga automática', () => {
+  test('la versión de cambios sube cuando alguien guarda algo, no al leer', async () => {
+    const v = async () => (await api().get('/api/v1/cambios').set(como('ramon'))).body.data.version;
+    assert.equal((await api().get('/api/v1/cambios')).status, 401);
+    const antes = await v();
+    await api().get('/api/v1/tablon').set(como('jorge'));
+    assert.equal(await v(), antes, 'leer no cuenta como cambio');
+    const r = await api().post('/api/v1/tablon').set(como('jorge')).send({ titulo: `Cambio ${sello}`, texto: 'x' });
+    assert.equal(r.status, 201);
+    assert.notEqual(await v(), antes);
+    const despues = await v();
+    await api().post('/api/v1/tablon').set(como('ramon')).send({ titulo: 'no', texto: 'x' }); // 403: no cuenta
+    assert.equal(await v(), despues);
+  });
+});
