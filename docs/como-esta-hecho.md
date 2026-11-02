@@ -148,24 +148,24 @@ no entrega la sesión: manda un código nuevo al email y devuelve un token tempo
 no sirve para nada más. La sesión se entrega recién con el código correcto. Tres errores invalidan
 el token temporal y los fallos cuentan para el bloqueo de la cuenta.
 
-### 4.4 Login con Google, GitHub y Facebook
+### 4.4 Login con Google, GitHub y Discord
 
 **Archivo:** [`services/social.js`](../backend/src/services/social.js). La guía para crear las
 apps en cada proveedor está en [`docs/guia-oauth.md`](guia-oauth.md).
 
-La app abre la pantalla de Google (o GitHub, o Facebook), el usuario acepta y la app le pasa a la
-API lo que recibió. **La API no confía en eso:** lo verifica directamente con el proveedor.
+La app abre la pantalla del proveedor; los tres vuelven a una sola página, `/oauth` de la web (desde
+el APK, esa página le pasa la respuesta a la app por `burgoscorp://oauth`). La app le manda a la API
+lo que recibió y **la API no confía en eso:** lo verifica con el proveedor.
 
-- **Google:** comprueba la firma digital del token con las claves públicas de Google, y que el
-  token sea para *esta* app y no haya vencido.
-- **GitHub:** canjea el código con GitHub usando un secreto que solo conoce el servidor.
-- **Facebook:** le pregunta a Facebook si el token es válido y si fue emitido para *esta* app.
+- **Google:** comprueba la firma del token con las claves públicas de Google, que sea para *esta*
+  app, que no haya vencido y que traiga el `nonce` que generó la app.
+- **GitHub y Discord:** canjean el código con el proveedor usando un secreto que solo conoce el
+  servidor, con PKCE y solo con la dirección de vuelta registrada.
 
-Si el email de esa cuenta coincide con un empleado ya cargado, se vinculan: el empleado entra
-con su Google y conserva su rol y su área.
-
-> Estado: el código del servidor está hecho y probado con proveedores simulados. Falta crear las
-> apps en cada proveedor y agregar los botones en la app.
+La primera vez que alguien entra con una red social es una **solicitud de acceso**: la cuenta queda
+pendiente hasta que la habilita el administrador. Si el email coincide con una cuenta ya
+habilitada, entra a esa cuenta con su rol. Antes de un ingreso social la app cierra y revoca la
+sesión que hubiera abierta en ese navegador.
 
 ### 4.5 Roles y permisos
 
@@ -490,9 +490,21 @@ Con "reducir movimiento" activado en el sistema, las animaciones no se reproduce
 
 ### 5.5 Qué muestra cada rol
 
-[`mobile/src/modulos.js`](../mobile/src/modulos.js) es el catálogo de módulos y define cómo se
-muestra cada recurso: título, detalle y etiquetas como "Bajo mínimo" o "En mantenimiento". La
-pestaña Módulos muestra solo los que el rol puede ver, según lo que responde `/auth/yo`.
+Cada rol tiene su color, su panel y sus pestañas ([`lib/roles.js`](../mobile/src/lib/roles.js) y
+[`app/(app)/_layout.js`](../mobile/src/app/(app)/_layout.js)): Empleado (Mi día), Jefe de área (Mi
+área, Mi equipo), Gerencia (La empresa, Áreas) y Administrador (Administración, Áreas). Inicio muestra
+para cada uno lo que espera su decisión y sus accesos.
+
+**Buscar** ([`app/(app)/buscar.js`](../mobile/src/app/(app)/buscar.js)) reúne el menú completo y la
+búsqueda de datos de `GET /buscar`: personas, pedidos, OT, tareas, máquinas, materiales, clientes,
+proveedores y cuentas, cada grupo con el mismo alcance que su listado.
+[`mobile/src/modulos.js`](../mobile/src/modulos.js) sigue siendo el catálogo de módulos y define cómo
+se muestra cada recurso.
+
+**Un jefe por área:** al poner a alguien como jefe de un área que ya tiene uno, la API responde
+`409 JEFE_OCUPADO` y la app pregunta si se destituye al actual (pasa a empleado) o se lo pasa a un
+área sin jefe ([`services/legajos.js`](../backend/src/services/legajos.js),
+[`componentes/Jefatura.js`](../mobile/src/componentes/Jefatura.js)).
 
 ### 5.6 Todo desde el celular: funciones del teléfono por área
 
