@@ -206,7 +206,7 @@ export async function crearOperacion(usuario, otId, datos, req) {
 export async function crear(usuario, datos, req) {
   const permiso = await resolverPermiso(usuario, 'TAR', 'crear');
   if (!permiso.permitido) throw errores.prohibido();
-  const { area_ids: areaIds, area_id: areaId, ...resto } = datos;
+  const { area_ids: areaIds, area_id: areaId, empleado_ids: _asignar, ...resto } = datos;
   const d = await completarConMaquina(resto);
   const { area_maquina: areaMaquina, ...tarea } = d;
 
@@ -250,6 +250,15 @@ export async function crear(usuario, datos, req) {
       });
     }
     enviadas.push({ id, area_id: area.id, area_nombre: area.nombre, jefe: jefe?.nombre ?? null });
+  }
+  // Si ya se eligió a quién asignarla (una sola área), se asigna ahora con las mismas reglas de
+  // siempre (habilidad, certificación, máquina operativa y quién puede asignar).
+  if (datos.empleado_ids?.length && ids.length === 1) {
+    try {
+      return { ...(await asignar(usuario, ids[0], datos.empleado_ids, req)), creadas: enviadas };
+    } catch (err) {
+      return { ...(await obtener(usuario, ids[0])), creadas: enviadas, aviso_asignacion: err.message };
+    }
   }
   return { ...(await obtener(usuario, ids[0])), creadas: enviadas };
 }
@@ -323,6 +332,11 @@ export async function editar(usuario, id, datos, req) {
 export async function candidatos(usuario, id) {
   const { t, puedeAsignar, jefe } = await cargar(usuario, id);
   if (!puedeAsignar) throw errores.prohibido(jefe ? `La asigna ${jefe.nombre}, jefe del área` : undefined);
+  return listaCandidatos({ tareaId: id, areaId: t.area_id, habilidadId: t.habilidad_requerida_id });
+}
+
+/** Personas activas del área que pueden hacer el trabajo (habilidad y certificación vigente), las menos cargadas primero. */
+function listaCandidatos({ tareaId = 0, areaId, habilidadId }) {
   return query(`
     SELECT e.id, e.legajo, e.nombre, e.apellido, p.nombre AS puesto_nombre,
            eh.nivel, eh.certificado_vence,
@@ -337,7 +351,31 @@ export async function candidatos(usuario, id) {
       AND (? IS NULL OR (eh.habilidad_id IS NOT NULL
            AND (h.requiere_certificacion = 0 OR eh.certificado_vence >= ?)))
     ORDER BY carga, FIELD(eh.nivel, 'avanzado','intermedio','basico'), e.apellido`,
-  [id, t.habilidad_requerida_id, t.area_id, t.habilidad_requerida_id, hoy()]);
+  [tareaId, habilidadId ?? null, areaId, habilidadId ?? null, hoy()]);
+}
+
+/**
+ * Antes de crear una tarea: a quién se le puede asignar según el área, la máquina (su área y su
+ * habilidad) y la habilidad pedida. `puede_asignar` dice si quien la crea la asigna él mismo (jefe del
+ * área, o el administrador si el área no tiene jefe) o si le va a llegar al jefe.
+ */
+export async function candidatosPrevios(usuario, { area_id: areaPedida, centro_trabajo_id: centroId, habilidad_requerida_id: habilidadId }) {
+  const permiso = await resolverPermiso(usuario, 'TAR', 'crear');
+  if (!permiso.permitido) throw errores.prohibido();
+  const d = await completarConMaquina({ centro_trabajo_id: centroId, habilidad_requerida_id: habilidadId });
+  const areaId = permiso.alcance === 'todo' ? (d.area_maquina ?? areaPedida) : usuario.area_id;
+  if (!areaId) return { puede_asignar: false, jefe: null, candidatos: [] };
+  if (d.area_maquina && d.area_maquina !== areaId) {
+    throw errores.validacion([{ campo: 'query.centro_trabajo_id', mensaje: 'La máquina es de otra área' }]);
+  }
+  const jefes = await jefesDelArea(areaId);
+  const puedeAsignar = permiso.alcance !== 'todo' || !jefes.length || jefes.some((j) => j.usuario_id === usuario.id);
+  return {
+    puede_asignar: puedeAsignar,
+    jefe: jefes[0]?.nombre ?? null,
+    habilidad_requerida_id: d.habilidad_requerida_id ?? null,
+    candidatos: puedeAsignar ? await listaCandidatos({ areaId, habilidadId: d.habilidad_requerida_id }) : [],
+  };
 }
 
 async function validarAsignable(t, empleadoId) {

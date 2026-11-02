@@ -193,7 +193,35 @@ async function ventasSoloSusAreas(conn) {
   if (r.affectedRows) console.log('Migración: Ventas queda solo para Comercial, Ingeniería, gerencia y administración.');
 }
 
+/** Tablón de avisos de Inicio y quién leyó cada aviso. */
+async function tablonDeAvisos(conn) {
+  await conn.query(`CREATE TABLE IF NOT EXISTS avisos_tablon (
+    id          INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    titulo      VARCHAR(120) NOT NULL,
+    texto       TEXT NOT NULL,
+    area_id     SMALLINT UNSIGNED NULL,          -- NULL = toda la empresa
+    fijado      BOOLEAN NOT NULL DEFAULT 0,
+    importante  BOOLEAN NOT NULL DEFAULT 0,
+    vence_el    DATE NULL,
+    autor_id    INT UNSIGNED NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_tablon_area (area_id),
+    CONSTRAINT fk_tablon_area FOREIGN KEY (area_id) REFERENCES areas(id),
+    CONSTRAINT fk_tablon_autor FOREIGN KEY (autor_id) REFERENCES usuarios(id)
+  ) ENGINE=InnoDB`);
+  await conn.query(`CREATE TABLE IF NOT EXISTS avisos_leidos (
+    aviso_id   INT UNSIGNED NOT NULL,
+    usuario_id INT UNSIGNED NOT NULL,
+    leido_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (aviso_id, usuario_id),
+    CONSTRAINT fk_leido_aviso FOREIGN KEY (aviso_id) REFERENCES avisos_tablon(id) ON DELETE CASCADE,
+    CONSTRAINT fk_leido_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`);
+}
+
 export async function migrar(conn) {
+  await tablonDeAvisos(conn);
   await dosPasosPorEmail(conn);
   await proveedorDiscord(conn);
   await ventasSoloSusAreas(conn);

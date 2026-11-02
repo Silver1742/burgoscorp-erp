@@ -195,3 +195,24 @@ describe('cada área ve lo suyo', () => {
     assert.equal(ok.body.data.asignados_detalle.length, 2);
   });
 });
+
+describe('ficha de una persona', () => {
+  test('lo que se puede hacer depende de quién mira', async () => {
+    const ramon = s.ramon.usuario.empleadoId;
+    const admin = await api().get(`/api/v1/personas/${ramon}`).set(como('admin'));
+    assert.equal(admin.status, 200, JSON.stringify(admin.body));
+    assert.deepEqual(admin.body.data.acciones, { editar_cuenta: true, editar_area: true, asignar_tarea: true });
+    assert.equal(admin.body.data.cuenta.email, EMAILS.ramon);
+    assert.ok(admin.body.data.habilidades.some((h) => /Torner/.test(h.nombre)));
+
+    const jefe = await api().get(`/api/v1/personas/${ramon}`).set(como('jorge'));
+    assert.deepEqual(jefe.body.data.acciones, { editar_cuenta: false, editar_area: false, asignar_tarea: true }, 'el jefe asigna tareas, no edita cuentas');
+
+    const gerencia = await api().get(`/api/v1/personas/${ramon}`).set(como('ricardo'));
+    assert.deepEqual(gerencia.body.data.acciones, { editar_cuenta: false, editar_area: false, asignar_tarea: false }, 'gerencia solo consulta');
+
+    const [{ id: soldador }] = await query("SELECT e.id FROM empleados e JOIN areas a ON a.id = e.area_id WHERE a.codigo = 'SOL' LIMIT 1");
+    assert.equal((await api().get(`/api/v1/personas/${soldador}`).set(como('jorge'))).status, 403, 'un jefe no ve la ficha de otra área');
+    assert.equal((await api().get(`/api/v1/personas/${s.jorge.usuario.empleadoId}`).set(como('ramon'))).status, 403, 'un empleado no ve la de otros');
+  });
+});

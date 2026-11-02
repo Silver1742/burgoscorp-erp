@@ -6,7 +6,7 @@ import { crearRecursoCrud } from '../utils/crud.js';
 import { autenticado } from '../middlewares/auth.js';
 import { requierePermiso } from '../middlewares/permisos.js';
 import { validar } from '../middlewares/validar.js';
-import { filtroAlcance } from '../services/permisos.js';
+import { filtroAlcance, resolverPermiso } from '../services/permisos.js';
 import { auditar } from '../services/auditoria.js';
 import * as asistencias from '../services/asistencias.js';
 import * as licencias from '../services/licencias.js';
@@ -217,7 +217,7 @@ router.get('/personal/area/:id', autenticado, requierePermiso('RRHH', 'ver'), va
   const fecha = hoyEmpresa();
   const integrantes = await query(`
     SELECT e.id, e.legajo, e.nombre, e.apellido, e.estado, e.telefono, e.fecha_ingreso,
-           COALESCE(u.email, e.email_laboral) AS email, p.nombre AS puesto, r.codigo AS rol,
+           COALESCE(u.email, e.email_laboral) AS email, p.nombre AS puesto, r.codigo AS rol, u.id AS usuario_id,
            a.jefe_empleado_id = e.id AS es_jefe,
            (SELECT GROUP_CONCAT(CONCAT(h.nombre, ' (', eh.nivel, ')') ORDER BY h.nombre SEPARATOR ', ')
               FROM empleado_habilidades eh JOIN habilidades h ON h.id = eh.habilidad_id WHERE eh.empleado_id = e.id) AS habilidades,
@@ -239,6 +239,55 @@ router.get('/personal/area/:id', autenticado, requierePermiso('RRHH', 'ver'), va
       integrantes: integrantes.map((i) => ({
         ...i, es_jefe: Boolean(i.es_jefe), trabajando: Boolean(i.trabajando), tareas_abiertas: Number(i.tareas_abiertas),
       })),
+    },
+  });
+});
+
+/**
+ * Ficha de una persona en una sola llamada: legajo, habilidades, cuenta, tareas abiertas y si vino
+ * hoy, más qué puede hacer quien la mira (`acciones`). La ven el administrador, gerencia y RRHH
+ * (toda la empresa), el jefe (su área) y la persona misma.
+ */
+router.get('/personas/:id', autenticado, requierePermiso('RRHH', 'ver'), validar({ params: paramsId }), async (req, res) => {
+  const empleadoId = req.validado.params.id;
+  const u = req.usuario;
+  const e = await queryOne(`
+    SELECT e.id, e.legajo, e.nombre, e.apellido, e.telefono, e.email_laboral, e.direccion, e.fecha_ingreso, e.estado,
+           e.area_id, a.nombre AS area_nombre, a.jefe_empleado_id = e.id AS es_jefe, p.nombre AS puesto,
+           CONCAT(s.nombre, ' ', s.apellido) AS supervisor
+    FROM empleados e JOIN areas a ON a.id = e.area_id LEFT JOIN puestos p ON p.id = e.puesto_id
+    LEFT JOIN empleados s ON s.id = e.supervisor_id WHERE e.id = ?`, [empleadoId]);
+  if (!e) throw errores.noEncontrado('La persona no existe');
+  const { alcance } = req.permiso;
+  const visible = alcance === 'todo' || (alcance === 'area' && e.area_id === u.area_id) || empleadoId === u.empleado_id;
+  if (!visible) throw errores.prohibido('Solo podés ver a la gente de tu área');
+
+  const fecha = hoyEmpresa();
+  const [habilidades, cuenta, tareasAbiertas, hoy] = await Promise.all([
+    query(`SELECT h.nombre, eh.nivel, eh.certificado_vence, h.requiere_certificacion FROM empleado_habilidades eh
+           JOIN habilidades h ON h.id = eh.habilidad_id WHERE eh.empleado_id = ? ORDER BY h.nombre`, [empleadoId]),
+    queryOne(`SELECT u.id, u.email, r.codigo AS rol, u.estado_cuenta, u.activo, u.ultimo_login_at, u.totp_habilitado AS dos_pasos
+              FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.empleado_id = ?`, [empleadoId]),
+    query(`SELECT t.id, t.titulo, t.estado, t.prioridad FROM tarea_asignaciones ta JOIN tareas t ON t.id = ta.tarea_id
+           WHERE ta.empleado_id = ? AND t.estado IN ('pendiente','en_curso','pausada','rechazada','en_revision')
+           ORDER BY FIELD(t.estado,'en_curso','pausada','rechazada','pendiente','en_revision'), t.id DESC LIMIT 8`, [empleadoId]),
+    queryOne('SELECT MIN(entrada_at) AS entrada, MAX(salida_at IS NULL) AS trabajando FROM asistencias WHERE empleado_id = ? AND fecha = ?', [empleadoId, fecha]),
+  ]);
+  const [seg, tar] = await Promise.all([resolverPermiso(u, 'SEG', 'editar'), resolverPermiso(u, 'TAR', 'crear')]);
+  res.json({
+    ok: true,
+    data: {
+      ...e, es_jefe: Boolean(e.es_jefe), habilidades,
+      cuenta: cuenta ? { ...cuenta, activo: Boolean(cuenta.activo), dos_pasos: Boolean(cuenta.dos_pasos) } : null,
+      tareas_abiertas: tareasAbiertas,
+      hoy: { entrada: hoy?.entrada ?? null, trabajando: Boolean(hoy?.entrada && Number(hoy.trabajando)) },
+      // Qué botones ve quien mira: el administrador edita todo; el jefe asigna tareas a su gente;
+      // gerencia solo consulta.
+      acciones: {
+        editar_cuenta: seg.permitido && Boolean(cuenta) && cuenta.id !== u.id,
+        editar_area: seg.permitido,
+        asignar_tarea: tar.permitido && (tar.alcance === 'todo' || e.area_id === u.area_id) && e.estado === 'activo',
+      },
     },
   });
 });

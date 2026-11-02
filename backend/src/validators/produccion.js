@@ -60,6 +60,13 @@ export const tarea = z.object({
   ...tareaBase,
   area_id: id.optional(),
   area_ids: z.array(id).min(1, 'Elegí al menos un área').max(20).optional(),
+  empleado_ids: z.array(id).max(20).optional(), // a quién asignarla al crearla
+}).strict();
+
+export const candidatosPrevios = z.object({
+  area_id: id.optional(),
+  centro_trabajo_id: id.optional(),
+  habilidad_requerida_id: id.optional(),
 }).strict();
 
 /** Para sugerir a qué área mandar una tarea nueva. */
