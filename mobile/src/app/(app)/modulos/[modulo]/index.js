@@ -30,7 +30,7 @@ export default function Modulo() {
   const router = useRouter();
   const modulo = buscarModulo(String(codigo));
   const permitido = modulo && permisos[modulo.codigo]?.ver;
-  const acciones = (modulo?.acciones ?? []).filter((a) => !a.visible || a.visible({ usuario, puede }));
+  const acciones = (modulo?.acciones ?? []).filter((a) => !a.visible || a.visible({ usuario, puede, permisos }));
 
   return (
     <Pantalla>

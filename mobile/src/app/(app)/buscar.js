@@ -79,7 +79,7 @@ export default function Buscar() {
   const menu = useMemo(() => MODULOS.filter((m) => permisos[m.codigo]?.ver).map((m) => ({
     modulo: m,
     items: [
-      ...(m.acciones ?? []).filter((a) => !a.visible || a.visible({ usuario, puede }))
+      ...(m.acciones ?? []).filter((a) => !a.visible || a.visible({ usuario, puede, permisos }))
         .map((a) => ({ titulo: a.titulo, icono: a.icono, ruta: a.ruta(usuario), claves: `${a.rapido ?? ''} ${SINONIMOS[a.titulo] ?? ''}` })),
       ...m.recursos.map((r) => ({ titulo: r.titulo, icono: m.icono, ruta: `/modulos/${m.codigo}/${r.ruta}`, claves: '' })),
     ],

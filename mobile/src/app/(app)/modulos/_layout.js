@@ -16,6 +16,7 @@ export default function LayoutModulos() {
       <Stack.Screen name="rrhh/personal" options={{ title: 'Personal' }} />
       <Stack.Screen name="rrhh/area/[id]" options={{ title: 'Integrantes del área' }} />
       <Stack.Screen name="rrhh/legajo/[id]" options={{ title: 'Legajo' }} />
+      <Stack.Screen name="rrhh/legajo/nuevo" options={{ title: 'Nuevo legajo' }} />
       <Stack.Screen name="produccion/index" options={{ title: 'Órdenes de trabajo' }} />
       <Stack.Screen name="produccion/nueva" options={{ title: 'Nueva orden de trabajo' }} />
       <Stack.Screen name="produccion/[id]" options={{ title: 'Orden de trabajo' }} />

@@ -1,5 +1,6 @@
 // Detalle de un legajo: datos, habilidades (con certificaciones vencidas) y, si es el propio,
-// edición de los datos de contacto. La API decide qué legajos se pueden ver.
+// edición de los datos de contacto. RRHH (jefa y personal del área) edita el legajo completo de
+// los demás. La API decide qué legajos se pueden ver y qué se puede cambiar.
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -7,7 +8,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   Pantalla, Tarjeta, FilaLista, Insignia, Avatar, Campo, Boton, Esqueleto, ErrorCarga, Vacio,
 } from '../../../../../componentes/ui';
-import { useSesion } from '../../../../../contexto/sesion';
+import FormLegajo from '../../../../../componentes/FormLegajo';
+import { usePuede, useSesion } from '../../../../../contexto/sesion';
 import { useToast } from '../../../../../contexto/toast';
 import { api } from '../../../../../lib/api';
 import { fechaCorta } from '../../../../../modulos';
@@ -30,7 +32,8 @@ function Dato({ icono, etiqueta, valor, ultima }) {
 
 export default function Legajo() {
   const { id } = useLocalSearchParams();
-  const { usuario } = useSesion();
+  const { usuario, permisos } = useSesion();
+  const puede = usePuede();
   const toast = useToast();
   const t = useTema();
   const { columnas } = usePantalla();
@@ -41,6 +44,9 @@ export default function Legajo() {
   const [errores, setErrores] = useState({});
   const [guardando, setGuardando] = useState(false);
   const esPropio = Number(id) === usuario.empleadoId;
+  // RRHH edita los legajos de los demás (el propio, solo el contacto: nadie se cambia el sueldo).
+  const gestiona = !esPropio && puede('RRHH', 'editar') && permisos?.RRHH?.alcance === 'todo';
+  const [editando, setEditando] = useState(false);
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -104,6 +110,20 @@ export default function Legajo() {
           </View>
         </View>
       </Tarjeta>
+
+      {gestiona && !editando ? (
+        <Boton titulo="Editar legajo" icono="create-outline" variante="secundario" onPress={() => setEditando(true)} estilo={{ alignSelf: 'flex-start' }} />
+      ) : null}
+      {editando ? (
+        <FormLegajo legajo={emp} alCancelar={() => setEditando(false)}
+          alGuardar={async (cuerpo) => {
+            const e = await api(`/empleados/${id}`, { metodo: 'PUT', cuerpo });
+            setEmp((prev) => ({ ...prev, ...e }));
+            setEditando(false);
+            toast.exito('Legajo actualizado.');
+            cargar();
+          }} />
+      ) : null}
 
       <View style={[{ gap: espacio.m }, dosColumnas && { flexDirection: 'row', alignItems: 'flex-start' }]}>
         <View style={columna}>

@@ -268,6 +268,17 @@ legajo se crea solo). Dejá marcado **"Mandarle un email…"** para que cree su 
 ficharon hoy y están trabajando, quién está de licencia, cada área con su jefe, y las **cuentas sin
 área** para ubicarlas. Los jefes ven solo su área.
 
+### Legajos (RRHH)
+Todo el personal del área **Recursos Humanos** (la jefa y sus empleados) gestiona los legajos de la
+empresa:
+- **Recursos humanos → Nuevo legajo**: nombre, apellido, área, puesto (solo los del área elegida),
+  fecha de ingreso y, si se quiere, DNI, CUIL, contacto y costo por hora. El **número de legajo se
+  asigna solo**.
+- En la ficha de un legajo, **Editar legajo**: cambiar cualquier dato, el estado (activo, de licencia
+  o baja con su fecha de egreso).
+- El propio legajo no se edita así (solo el teléfono y la dirección, como cualquiera).
+- **Aprobar licencias** sigue siendo de la jefa de RRHH (y de cada jefe para su equipo).
+
 El **administrador del sistema no pertenece a ningún área** ni lleva legajo: ve y administra todo.
 Al habilitar o crear a alguien con el rol Administrador no se le pide área.
 

@@ -220,7 +220,9 @@ export const MODULOS = [
     // Accesos a pantallas propias del módulo (además de los listados).
     acciones: [
       { titulo: 'Personal: cuántos somos y dónde', icono: 'people-circle-outline', ruta: () => '/modulos/rrhh/personal',
-        visible: ({ usuario }) => ['ADMIN', 'GERENCIA', 'JEFE'].includes(usuario.rol), rapido: 'Personal' },
+        visible: ({ usuario, permisos }) => ['ADMIN', 'GERENCIA', 'JEFE'].includes(usuario.rol) || permisos?.RRHH?.alcance === 'todo', rapido: 'Personal' },
+      { titulo: 'Nuevo legajo', icono: 'person-add-outline', ruta: () => '/modulos/rrhh/legajo/nuevo',
+        visible: ({ puede, permisos }) => puede('RRHH', 'crear') && permisos?.RRHH?.alcance === 'todo', rapido: 'Nuevo legajo' },
       { titulo: 'Mi legajo', icono: 'id-card-outline', ruta: (u) => `/modulos/rrhh/legajo/${u.empleadoId}`, visible: ({ usuario }) => Boolean(usuario.empleadoId) },
       { titulo: 'Mis licencias y vacaciones', icono: 'airplane-outline', ruta: () => '/modulos/rrhh/licencias', visible: ({ usuario }) => Boolean(usuario.empleadoId), rapido: 'Pedir licencia' },
       { titulo: 'Aprobar licencias', icono: 'checkmark-done-outline', ruta: () => '/modulos/rrhh/aprobaciones', visible: ({ puede }) => puede('RRHH', 'aprobar'), rapido: 'Aprobar licencias' },

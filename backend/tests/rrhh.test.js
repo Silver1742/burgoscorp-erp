@@ -210,10 +210,12 @@ describe('licencias: circuito de aprobación', () => {
 describe('EPP y organigrama', () => {
   test('solo RRHH registra entregas de EPP', async () => {
     const datos = { empleado_id: s.ramon.usuario.empleadoId, elemento: 'Careta de soldar fotosensible', fecha_entrega: hoy() };
-    assert.equal((await api().post('/api/v1/epp-entregas').set(como('lucia')).send(datos)).status, 403);
+    // Fuera de RRHH, no; dentro de RRHH, la jefa y también su personal (Lucía es técnica en seguridad e higiene).
+    assert.equal((await api().post('/api/v1/epp-entregas').set(como('ramon')).send(datos)).status, 403);
     const ok = await api().post('/api/v1/epp-entregas').set(como('carolina')).send(datos);
     assert.equal(ok.status, 201);
     assert.equal(ok.body.data.entregado_por, s.carolina.usuario.id);
+    assert.equal((await api().post('/api/v1/epp-entregas').set(como('lucia')).send(datos)).status, 201);
     const propias = await api().get('/api/v1/epp-entregas').set(como('ramon'));
     assert.ok(propias.body.data.every((e) => e.empleado_id === s.ramon.usuario.empleadoId));
   });

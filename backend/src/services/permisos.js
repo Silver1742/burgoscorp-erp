@@ -39,6 +39,9 @@ export function invalidarCachePermisos() {
  * Devuelve { permitido, alcance, esDuenia } para una acción.
  * alcance: 'todo' | 'area' | 'propio'.
  */
+/** Módulos en los que cualquier integrante del área dueña trabaja sobre toda la empresa. */
+const GESTIONADOS_POR_EL_AREA = new Set(['RRHH']);
+
 export async function resolverPermiso(usuario, modulo, accion) {
   const { permisos, duenias } = await cargar();
   // Una cuenta sin legajo (recién registrada, o creada por login social) no accede a ningún
@@ -53,8 +56,11 @@ export async function resolverPermiso(usuario, modulo, accion) {
   if (p.duenia === 'escritura' && accion !== 'ver' && !esDuenia) return denegado;
 
   // Un jefe del área dueña del módulo lo administra para toda la empresa.
-  // Los empleados conservan su alcance (un operario de Mecanizado no ve otras áreas).
-  let alcance = esDuenia && usuario.rol === 'JEFE' ? 'todo' : p.alcance;
+  // Los empleados conservan su alcance (un operario de Mecanizado no ve otras áreas), salvo en los
+  // módulos que su área gestiona para todos: el personal de RRHH carga y edita los legajos de
+  // toda la empresa (aprobar licencias sigue siendo del jefe: el rol Empleado no tiene "aprobar").
+  const gestionaParaTodos = esDuenia && (usuario.rol === 'JEFE' || GESTIONADOS_POR_EL_AREA.has(modulo));
+  let alcance = gestionaParaTodos ? 'todo' : p.alcance;
   // Sin legajo no hay área: el alcance "area" se reduce a lo propio.
   if (alcance === 'area' && !usuario.area_id) alcance = 'propio';
   return { permitido: true, alcance, esDuenia };

@@ -80,7 +80,7 @@ export async function resolverJefatura(conn, { areaId, empleadoId = null, decisi
 }
 
 /** Próximo número de legajo (L0001, L0002…). Bloquea la tabla para que dos altas no tomen el mismo. */
-async function proximoLegajo(conn) {
+export async function proximoLegajo(conn) {
   const [[{ ultimo }]] = await conn.execute(
     "SELECT COALESCE(MAX(CAST(SUBSTRING(legajo, 2) AS UNSIGNED)), 0) AS ultimo FROM empleados WHERE legajo REGEXP '^L[0-9]+$' FOR UPDATE");
   return `L${String(Number(ultimo) + 1).padStart(4, '0')}`;

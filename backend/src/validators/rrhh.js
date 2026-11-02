@@ -6,10 +6,11 @@ const opcional = (e) => e.nullable().optional();
 const telefono = z.string().trim().max(30).regex(/^[0-9 +()-]*$/, 'Teléfono inválido');
 
 const empleadoBase = z.object({
-  legajo: z.string().trim().toUpperCase().regex(/^L\d{4,8}$/, 'Formato de legajo: L0001'),
+  // Sin número de legajo, la API asigna el siguiente (L0031, L0032…).
+  legajo: z.string().trim().toUpperCase().regex(/^L\d{4,8}$/, 'Formato de legajo: L0001').optional(),
   nombre: nombrePersona,
   apellido: nombrePersona,
-  dni: z.string().trim().regex(/^\d{7,8}$/, 'DNI de 7 u 8 dígitos, sin puntos'),
+  dni: opcional(z.string().trim().regex(/^\d{7,8}$/, 'DNI de 7 u 8 dígitos, sin puntos')), // opcional desde la migración dniOpcional
   cuil: opcional(cuit),
   fecha_nacimiento: opcional(fecha),
   telefono: opcional(telefono),

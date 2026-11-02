@@ -231,3 +231,36 @@ describe('Personas cuenta lo mismo que Inicio', () => {
     assert.equal(r.status, 400);
   });
 });
+
+describe('el personal de RRHH gestiona los legajos', () => {
+  const login = async (email) => (await api().post('/api/v1/auth/login').send({ email, password: PASSWORD })).body.data;
+  const legajoNuevo = () => ({
+    legajo: `L9${String(Date.now()).slice(-6)}`, nombre: 'Prueba', apellido: 'Legajo',
+    dni: String(30000000 + (Date.now() % 9999999)), area_id: 1, fecha_ingreso: '2026-11-02',
+  });
+
+  test('una empleada de RRHH ve todos los legajos y da de alta uno nuevo, pero no aprueba licencias', async () => {
+    const lucia = await login('lucia.benitez@burgoscorp.test');
+    const yo = { Authorization: `Bearer ${lucia.accessToken}` };
+    const suyos = await api().get('/api/v1/empleados').query({ limite: 1 }).set(yo);
+    const todos = await api().get('/api/v1/empleados').query({ limite: 1 }).set(como('admin'));
+    assert.equal(suyos.body.meta.total, todos.body.meta.total);
+    const r = await api().post('/api/v1/empleados').set(yo).send(legajoNuevo());
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    const { legajo: _, dni: __, ...sinNumero } = legajoNuevo();
+    const auto = await api().post('/api/v1/empleados').set(yo).send(sinNumero);
+    assert.equal(auto.status, 201, JSON.stringify(auto.body));
+    assert.match(auto.body.data.legajo, /^L\d{4,}$/, 'sin número, la API asigna el siguiente');
+    assert.equal((await api().get('/api/v1/personal/resumen').set(yo)).status, 200);
+    const permisos = (await api().get('/api/v1/auth/yo').set(yo)).body.data.permisos;
+    assert.equal(permisos.RRHH.alcance, 'todo');
+    assert.ok(!permisos.RRHH.aprobar, 'aprobar licencias sigue siendo del jefe');
+  });
+
+  test('un empleado de otra área sigue viendo solo su legajo y no da de alta', async () => {
+    const r = await api().post('/api/v1/empleados').set(como('ramon')).send(legajoNuevo());
+    assert.equal(r.status, 403);
+    const suyos = await api().get('/api/v1/empleados').query({ limite: 1 }).set(como('ramon'));
+    assert.equal(suyos.body.meta.total, 1);
+  });
+});

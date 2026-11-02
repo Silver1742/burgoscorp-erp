@@ -1,7 +1,7 @@
 // Recursos Humanos y Organización: legajos, habilidades, fichaje, licencias, EPP y organigrama.
 import { Router } from 'express';
 import { z } from 'zod';
-import { query, queryOne } from '../config/db.js';
+import { pool, query, queryOne } from '../config/db.js';
 import { crearRecursoCrud } from '../utils/crud.js';
 import { autenticado } from '../middlewares/auth.js';
 import { requierePermiso } from '../middlewares/permisos.js';
@@ -10,6 +10,7 @@ import { filtroAlcance, resolverPermiso } from '../services/permisos.js';
 import { auditar } from '../services/auditoria.js';
 import * as asistencias from '../services/asistencias.js';
 import * as licencias from '../services/licencias.js';
+import { proximoLegajo } from '../services/legajos.js';
 import { id, paramsId } from '../validators/comunes.js';
 import * as v from '../validators/rrhh.js';
 import { errores } from '../utils/errores.js';
@@ -52,7 +53,11 @@ router.use('/empleados', crearRecursoCrud({
   alcance: { areaCol: 't.area_id', areaCampo: 'area_id', propioCol: 't.id' },
   ocultar: (req, fila) => (esRrhhOAdmin(req) || fila.id === req.usuario.empleado_id ? [] : DATOS_PERSONALES),
   async antesDeGuardar(datos, { req, id: empleadoId }) {
-    if (esRrhhOAdmin(req)) return datos;
+    if (esRrhhOAdmin(req)) {
+      // Alta sin número: el siguiente libre (si dos altas chocan, el índice único lo frena).
+      if (!empleadoId && !datos.legajo) return { ...datos, legajo: await proximoLegajo(pool) };
+      return datos;
+    }
     // Fuera de RRHH: cada uno actualiza solo sus propios datos de contacto (ni el jefe los de su equipo).
     const ajenos = Object.keys(datos).filter((c) => !v.CAMPOS_CONTACTO.includes(c));
     if (!empleadoId || ajenos.length) {
