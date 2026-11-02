@@ -216,6 +216,10 @@ router.put('/:id', requierePermiso('SEG', 'editar'), validar({ params: paramsId,
     if (actual.rol === 'ADMIN' && ((rol !== undefined && rol !== 'ADMIN') || activo === false)) await exigirOtroAdmin(id, conn);
     if (nombre !== undefined) await conn.execute('UPDATE usuarios SET nombre = ? WHERE id = ?', [nombre, id]);
     if (apellido !== undefined) await conn.execute('UPDATE usuarios SET apellido = ? WHERE id = ?', [apellido, id]);
+    // Cuenta y legajo son la misma persona: el nombre se corrige en los dos.
+    const legajoId = empleadoId ?? actual.empleado_id;
+    if (legajoId && nombre !== undefined) await conn.execute('UPDATE empleados SET nombre = ? WHERE id = ?', [nombre, legajoId]);
+    if (legajoId && apellido !== undefined) await conn.execute('UPDATE empleados SET apellido = ? WHERE id = ?', [apellido, legajoId]);
     if (rol !== undefined) {
       await conn.execute('UPDATE usuarios SET rol_id = (SELECT id FROM roles WHERE codigo = ?) WHERE id = ?', [rol, id]);
       if (rol !== actual.rol) await ajustarJefatura(conn, empleadoId ?? actual.empleado_id, rol, decision);

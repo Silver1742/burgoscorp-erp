@@ -2,7 +2,10 @@
 // donde estás —Áreas, Personas, Buscar— y se cierra sin perder el lugar. Junta el legajo y la cuenta.
 //
 // Lo que se puede hacer depende de quién mira (lo decide la API en `acciones`):
-//   Administrador → editar rol y cuenta, cambiar área/puesto/habilidades, mandar código, dar de baja.
+//   Administrador → la barra de acciones de abajo, como en R3: Editar (nombre y rol), Aprobar (si pidió
+//                   acceso), Activar / Desactivar, Clave (le manda un código por email para que la cree:
+//                   nunca se ve ni se inventa una contraseña) y Eliminar (si la cuenta no tiene actividad).
+//                   Área, puesto y habilidades se cambian en su pestaña.
 //   Jefe de área  → ver a su gente y asignarle una tarea.
 //   Gerencia      → solo consultar.
 import { useCallback, useEffect, useState } from 'react';
@@ -10,7 +13,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Avatar, Boton, Cargando, ErrorCarga, Insignia, InsigniaRol, Opciones } from './ui';
+import { Avatar, Boton, Campo, Cargando, ErrorCarga, Insignia, InsigniaRol, Opciones } from './ui';
 import ConfirmDialog from './ConfirmDialog';
 import Contacto from './Contacto';
 import UbicacionLaboral, { cuerpoUbicacion } from './UbicacionLaboral';
@@ -53,17 +56,16 @@ export default function FichaPersona({ empleadoId, alCerrar, alCambiar }) {
   const [p, setP] = useState(null);
   const [error, setError] = useState(null);
   const [pestana, setPestana] = useState('datos');
-  const [rol, setRol] = useState(null);
   const [ubicacion, setUbicacion] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const [confirmar, setConfirmar] = useState(null);
+  const [confirmar, setConfirmar] = useState(null); // 'baja' | 'alta' | 'eliminar'
+  const [editando, setEditando] = useState(null); // { nombre, apellido, rol, errores }
 
   const cargar = useCallback(async () => {
     setError(null);
     try {
       const d = await api(`/personas/${empleadoId}`);
       setP(d);
-      setRol(d.cuenta?.rol ?? null);
       setUbicacion({
         area_id: d.area_id, area_codigo: d.area_codigo, area_nombre: d.area_nombre, puesto_id: d.puesto_id, puesto_nombre: d.puesto,
         habilidades: d.habilidades.map((h) => ({ habilidad_id: h.habilidad_id, nombre: h.nombre, nivel: h.nivel, requiere_certificacion: h.requiere_certificacion })),
@@ -90,9 +92,6 @@ export default function FichaPersona({ empleadoId, alCerrar, alCambiar }) {
     }
   }
 
-  const guardarRol = () => ejecutar(() => conJefatura((jefeActual) => api(`/usuarios/${p.cuenta.id}`, {
-    metodo: 'PUT', cuerpo: { rol, ...(jefeActual ? { jefe_actual: jefeActual } : {}) },
-  })), 'Rol actualizado. Sus sesiones se cerraron para que rija enseguida.');
   const guardarArea = () => ejecutar(() => conJefatura((jefeActual) => api(`/usuarios/${p.cuenta.id}/legajo`, {
     metodo: 'PUT', cuerpo: { ...cuerpoUbicacion(ubicacion), ...(jefeActual ? { jefe_actual: jefeActual } : {}) },
   })), 'Área y habilidades actualizadas.');
@@ -172,19 +171,9 @@ export default function FichaPersona({ empleadoId, alCerrar, alCambiar }) {
                       <Fila etiqueta="Estado">{p.cuenta.activo ? (p.cuenta.estado_cuenta === 'habilitada' ? 'Activa' : p.cuenta.estado_cuenta) : 'Dada de baja'}</Fila>
                       <Fila etiqueta="Último ingreso">{p.cuenta.ultimo_login_at ? `${fechaCorta(p.cuenta.ultimo_login_at)} ${horaCorta(p.cuenta.ultimo_login_at)}` : 'Nunca'}</Fila>
                       <Fila etiqueta="Verificación en dos pasos">{p.cuenta.dos_pasos ? 'Activada' : 'Desactivada'}</Fila>
-                      {a.editar_cuenta ? (
-                        <>
-                          <Fila etiqueta="Rol">
-                            <Opciones opciones={ROLES} valor={rol} alCambiar={setRol} />
-                          </Fila>
-                          {rol !== p.cuenta.rol ? <Boton titulo="Guardar rol" icono="checkmark" onPress={guardarRol} cargando={guardando} /> : null}
-                          <View style={estilos.linea}>
-                            <Boton titulo="Mandar código para su contraseña" variante="secundario" chico icono="mail-outline"
-                              onPress={() => ejecutar(() => api(`/usuarios/${p.cuenta.id}/restablecer-password`, { metodo: 'POST' }), 'Le mandamos el código por email.')} />
-                            <Boton titulo={p.cuenta.activo ? 'Dar de baja' : 'Reactivar'} variante={p.cuenta.activo ? 'contornoPeligro' : 'secundario'} chico
-                              icono={p.cuenta.activo ? 'person-remove-outline' : 'person-add-outline'} onPress={() => setConfirmar(p.cuenta.activo ? 'baja' : 'alta')} />
-                          </View>
-                        </>
+                      <Fila etiqueta="Rol"><InsigniaRol rol={p.cuenta.rol} /></Fila>
+                      {p.cuenta.estado_cuenta === 'pendiente' ? (
+                        <Text style={{ color: t.textoSuave, marginTop: espacio.s }}>Pidió acceso y todavía no puede entrar: tocá "Aprobar".</Text>
                       ) : null}
                     </>
                   ) : null}
@@ -200,11 +189,35 @@ export default function FichaPersona({ empleadoId, alCerrar, alCambiar }) {
                   ) : null}
                 </ScrollView>
 
-                {/* Acciones fijas abajo */}
-                {a.asignar_tarea ? (
+                {/* Acciones fijas abajo, siempre a la vista (como la barra de acciones de cada usuario en R3). */}
+                {a.editar_cuenta || a.asignar_tarea ? (
                   <View style={[estilos.pie, { borderTopColor: t.borde }]}>
-                    <Boton titulo={`Asignarle una tarea a ${p.nombre}`} icono="add-circle-outline" estilo={{ marginBottom: 0 }}
-                      onPress={() => { alCerrar(); router.push(`/modulos/tareas/nueva?empleado=${p.id}`, { withAnchor: true }); }} />
+                    {a.editar_cuenta ? (
+                      <View style={[estilos.linea, { marginTop: 0, marginBottom: a.asignar_tarea ? espacio.s : 0 }]}>
+                        <Boton titulo="Editar" variante="secundario" chico icono="create-outline" estilo={{ marginBottom: 0 }}
+                          onPress={() => setEditando({ nombre: p.cuenta.nombre ?? p.nombre, apellido: p.cuenta.apellido ?? p.apellido, rol: p.cuenta.rol, errores: {} })} />
+                        {p.cuenta.estado_cuenta === 'pendiente' ? (
+                          <Boton titulo="Aprobar" variante="exito" chico icono="person-add-outline" estilo={{ marginBottom: 0 }}
+                            onPress={() => { alCerrar(); router.push('/modulos/usuarios/solicitudes', { withAnchor: true }); }} />
+                        ) : (
+                          <Boton titulo={p.cuenta.activo ? 'Desactivar' : 'Activar'} variante={p.cuenta.activo ? 'aviso' : 'exito'} chico
+                            icono={p.cuenta.activo ? 'person-remove-outline' : 'person-add-outline'} estilo={{ marginBottom: 0 }}
+                            onPress={() => setConfirmar(p.cuenta.activo ? 'baja' : 'alta')} />
+                        )}
+                        {p.cuenta.activo && p.cuenta.estado_cuenta === 'habilitada' ? (
+                          <Boton titulo="Clave" variante="secundario" chico icono="key-outline" estilo={{ marginBottom: 0 }}
+                            onPress={() => setConfirmar('clave')} />
+                        ) : null}
+                        {a.eliminar_cuenta ? (
+                          <Boton titulo="Eliminar" variante="contornoPeligro" chico icono="trash-outline" estilo={{ marginBottom: 0 }}
+                            onPress={() => setConfirmar('eliminar')} />
+                        ) : null}
+                      </View>
+                    ) : null}
+                    {a.asignar_tarea ? (
+                      <Boton titulo={`Asignarle una tarea a ${p.nombre}`} icono="add-circle-outline" estilo={{ marginBottom: 0 }}
+                        onPress={() => { alCerrar(); router.push(`/modulos/tareas/nueva?empleado=${p.id}`, { withAnchor: true }); }} />
+                    ) : null}
                   </View>
                 ) : null}
               </>
@@ -213,12 +226,64 @@ export default function FichaPersona({ empleadoId, alCerrar, alCambiar }) {
         </View>
       </Modal>
 
-      <ConfirmDialog visible={Boolean(confirmar)} titulo={confirmar === 'baja' ? 'Dar de baja la cuenta' : 'Reactivar la cuenta'}
+      <ConfirmDialog visible={confirmar === 'baja' || confirmar === 'alta'} titulo={confirmar === 'baja' ? 'Dar de baja la cuenta' : 'Reactivar la cuenta'}
         mensaje={confirmar === 'baja' ? `${nombre} no va a poder entrar y se cierran sus sesiones. Su historia se conserva.` : `${nombre} va a poder entrar de nuevo.`}
         textoConfirmar={confirmar === 'baja' ? 'Dar de baja' : 'Reactivar'} variante={confirmar === 'baja' ? 'peligro' : 'primario'}
         alCerrar={() => setConfirmar(null)}
         alConfirmar={() => ejecutar(() => api(`/usuarios/${p.cuenta.id}`, { metodo: 'PUT', cuerpo: { activo: confirmar !== 'baja' } }),
           confirmar === 'baja' ? `${nombre} quedó dado de baja.` : `${nombre} está activo de nuevo.`)} />
+      <ConfirmDialog visible={confirmar === 'clave'} titulo="Clave: mandar código por email" textoConfirmar="Mandar" variante="primario"
+        mensaje={`Le llega a ${p?.cuenta?.email ?? 'su email'} un código de 6 dígitos (vale 10 minutos) para crear su contraseña. Vos nunca ves ni inventás su contraseña.`}
+        alCerrar={() => setConfirmar(null)}
+        alConfirmar={() => ejecutar(() => api(`/usuarios/${p.cuenta.id}/restablecer-password`, { metodo: 'POST' }), 'Le mandamos el código por email.')} />
+      <ConfirmDialog visible={confirmar === 'eliminar'} titulo="Eliminar la cuenta" textoConfirmar="Eliminar" variante="peligro"
+        mensaje={`Vas a eliminar definitivamente la cuenta de ${nombre}. No se puede deshacer. Solo se puede si la cuenta no tiene actividad; si la tiene, dala de baja. El legajo se conserva.`}
+        alCerrar={() => setConfirmar(null)}
+        alConfirmar={async () => {
+          try {
+            await api(`/usuarios/${p.cuenta.id}`, { metodo: 'DELETE' });
+          } catch (err) {
+            toast.error(err.message);
+            throw err;
+          }
+          toast.exito(`La cuenta de ${nombre} fue eliminada.`);
+          await cargar();
+          alCambiar?.();
+        }} />
+      <ConfirmDialog visible={Boolean(editando)} titulo={`Editar a ${nombre}`} textoConfirmar="Guardar" variante="primario"
+        alCerrar={() => setEditando(null)}
+        alConfirmar={async () => {
+          const e = {};
+          if (!editando.nombre.trim()) e.nombre = 'Escribí el nombre';
+          if (!editando.apellido.trim()) e.apellido = 'Escribí el apellido';
+          if (Object.keys(e).length) { setEditando((x) => ({ ...x, errores: e })); throw new Error('datos'); }
+          const cambiaRol = editando.rol !== p.cuenta.rol;
+          const cuerpo = { nombre: editando.nombre.trim(), apellido: editando.apellido.trim(), ...(cambiaRol ? { rol: editando.rol } : {}) };
+          try {
+            // Si pasa a ser jefe de un área que ya tiene jefe, primero pregunta qué hacer con el actual.
+            await conJefatura((jefeActual) => api(`/usuarios/${p.cuenta.id}`, { metodo: 'PUT', cuerpo: { ...cuerpo, ...(jefeActual ? { jefe_actual: jefeActual } : {}) } }));
+          } catch (err) {
+            if (esCancelado(err)) { toast.info(err.message); throw err; }
+            setEditando((x) => ({ ...x, errores: err.porCampo ?? {} }));
+            toast.error(err.message);
+            throw err;
+          }
+          toast.exito(cambiaRol ? 'Datos guardados. Cambió el rol: sus sesiones se cerraron para que rija enseguida.' : 'Datos guardados en la cuenta y en el legajo.');
+          await cargar();
+          alCambiar?.();
+        }}>
+        {editando ? (
+          <View style={{ marginTop: espacio.s }}>
+            <Campo etiqueta="Nombre" value={editando.nombre} maxLength={60} error={editando.errores.nombre}
+              onChangeText={(v) => setEditando((x) => ({ ...x, nombre: v }))} />
+            <Campo etiqueta="Apellido" value={editando.apellido} maxLength={60} error={editando.errores.apellido}
+              onChangeText={(v) => setEditando((x) => ({ ...x, apellido: v }))} />
+            <Text style={{ color: t.texto, marginBottom: 6 }}>Rol</Text>
+            <Opciones opciones={ROLES} valor={editando.rol} alCambiar={(v) => setEditando((x) => ({ ...x, rol: v }))} />
+            <Text style={{ color: t.textoSuave, fontSize: 12, marginTop: 6 }}>El área, el puesto y las habilidades se cambian en la pestaña "Área y habilidades".</Text>
+          </View>
+        ) : null}
+      </ConfirmDialog>
       {dialogoJefatura}
     </>
   );

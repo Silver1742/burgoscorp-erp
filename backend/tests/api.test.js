@@ -165,7 +165,7 @@ describe('registro', () => {
     const [{ id }] = await query('SELECT id FROM usuarios WHERE email = ?', [email]);
     const aviso = await query("SELECT COUNT(*) AS n FROM notificaciones WHERE tipo = 'cuenta_pendiente' AND entidad_id = ?", [id]);
     assert.ok(aviso[0].n >= 1, 'se avisa a los administradores');
-    const lista = await api().get('/api/v1/usuarios').query({ estado_cuenta: 'pendiente' }).set(conToken(admin.accessToken));
+    const lista = await api().get('/api/v1/usuarios').query({ estado_cuenta: 'pendiente', q: email }).set(conToken(admin.accessToken));
     assert.ok(lista.body.data.some((x) => x.id === id));
 
     const jefe = await login('jorge.dominguez@burgoscorp.test');

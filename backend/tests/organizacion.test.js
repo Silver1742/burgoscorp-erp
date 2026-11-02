@@ -201,15 +201,15 @@ describe('ficha de una persona', () => {
     const ramon = s.ramon.usuario.empleadoId;
     const admin = await api().get(`/api/v1/personas/${ramon}`).set(como('admin'));
     assert.equal(admin.status, 200, JSON.stringify(admin.body));
-    assert.deepEqual(admin.body.data.acciones, { editar_cuenta: true, editar_area: true, asignar_tarea: true });
+    assert.deepEqual(admin.body.data.acciones, { editar_cuenta: true, eliminar_cuenta: true, editar_area: true, asignar_tarea: true });
     assert.equal(admin.body.data.cuenta.email, EMAILS.ramon);
     assert.ok(admin.body.data.habilidades.some((h) => /Torner/.test(h.nombre)));
 
     const jefe = await api().get(`/api/v1/personas/${ramon}`).set(como('jorge'));
-    assert.deepEqual(jefe.body.data.acciones, { editar_cuenta: false, editar_area: false, asignar_tarea: true }, 'el jefe asigna tareas, no edita cuentas');
+    assert.deepEqual(jefe.body.data.acciones, { editar_cuenta: false, eliminar_cuenta: false, editar_area: false, asignar_tarea: true }, 'el jefe asigna tareas, no edita cuentas');
 
     const gerencia = await api().get(`/api/v1/personas/${ramon}`).set(como('ricardo'));
-    assert.deepEqual(gerencia.body.data.acciones, { editar_cuenta: false, editar_area: false, asignar_tarea: false }, 'gerencia solo consulta');
+    assert.deepEqual(gerencia.body.data.acciones, { editar_cuenta: false, eliminar_cuenta: false, editar_area: false, asignar_tarea: false }, 'gerencia solo consulta');
 
     const [{ id: soldador }] = await query("SELECT e.id FROM empleados e JOIN areas a ON a.id = e.area_id WHERE a.codigo = 'SOL' LIMIT 1");
     assert.equal((await api().get(`/api/v1/personas/${soldador}`).set(como('jorge'))).status, 403, 'un jefe no ve la ficha de otra área');
@@ -279,5 +279,21 @@ describe('el administrador crea áreas', () => {
     assert.equal((await api().put(`/api/v1/areas/${areaId}/modulos`).set(como('admin')).send({ modulos: ['RRHH'] })).status, 400);
     assert.equal((await api().put(`/api/v1/areas/${areaId}/modulos`).set(como('jorge')).send({ modulos: [] })).status, 403);
     assert.equal((await api().put('/api/v1/areas/999999/modulos').set(como('admin')).send({ modulos: [] })).status, 404);
+  });
+});
+
+describe('acciones del administrador en la ficha de una persona', () => {
+  test('editar el nombre cambia la cuenta y el legajo; eliminar aparece solo para el administrador', async () => {
+    const empleadoId = s.matias.usuario.empleadoId;
+    const ficha = await api().get(`/api/v1/personas/${empleadoId}`).set(como('admin'));
+    assert.equal(ficha.body.data.acciones.eliminar_cuenta, true);
+    assert.equal((await api().get(`/api/v1/personas/${empleadoId}`).set(como('ricardo'))).body.data.acciones.eliminar_cuenta, false, 'gerencia solo consulta');
+    const cuentaId = ficha.body.data.cuenta.id;
+    const original = { nombre: ficha.body.data.nombre, apellido: ficha.body.data.apellido };
+    const r = await api().put(`/api/v1/usuarios/${cuentaId}`).set(como('admin')).send({ nombre: 'Matías Ezequiel', apellido: 'Peralta' });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const [legajo] = await query('SELECT nombre, apellido FROM empleados WHERE id = ?', [empleadoId]);
+    assert.equal(legajo.nombre, 'Matías Ezequiel', 'el legajo toma el nombre nuevo');
+    await api().put(`/api/v1/usuarios/${cuentaId}`).set(como('admin')).send(original);
   });
 });

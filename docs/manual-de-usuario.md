@@ -259,13 +259,18 @@ Cuando alguien pide entrar, en Inicio aparece **"Hay N personas esperando acceso
 - Tocá una persona para ver su **ficha**: legajo, área, puesto, cómo entra, último ingreso.
 
 ### Acciones en la ficha
+Al tocar a alguien (en **Personas**, **Áreas** o **Buscar**) se abre su ficha. Abajo, siempre a la
+vista, está la **barra de acciones** (como en R3):
+
 | Acción | Qué hace |
 |---|---|
-| **Editar nombre o rol** | Cambia nombre, apellido o rol. Si cambia el rol, se cierran sus sesiones. |
-| **Área, puesto y habilidades** | Lo cambia de área o de puesto y le agrega o quita habilidades. Si no tenía legajo, se le crea. |
-| **Mandarle un código para crear su contraseña** | Le llega un email con un código. Vos nunca ves su contraseña. |
-| **Dar de baja** | No puede entrar más y se cierran sus sesiones. Su historia se conserva. Se puede **Reactivar**. |
-| **Eliminar** | Borra la cuenta del todo. Solo si **no tiene actividad** (si la tiene, dala de baja). |
+| **Editar** | Cambia nombre, apellido y rol (en la cuenta y en el legajo). Si cambia el rol, se cierran sus sesiones. |
+| **Aprobar** | Si pidió acceso: abre la solicitud para habilitarla (o rechazarla) con su área. |
+| **Desactivar / Activar** | Desactivada no puede entrar y se cierran sus sesiones; su historia se conserva. |
+| **Clave** | Le llega un email con un código para crear su contraseña. Vos nunca ves ni inventás su contraseña. |
+| **Eliminar** | Borra la cuenta del todo. Solo si **no tiene actividad** (si la tiene, desactivala). El legajo se conserva. |
+
+El **área, el puesto y las habilidades** se cambian en la pestaña **Área y habilidades** de la ficha.
 
 ### Nuevo usuario
 **Usuarios → Nuevo**: nombre, apellido, email y rol; después **área, puesto y habilidades** (el

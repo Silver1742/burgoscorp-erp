@@ -280,7 +280,7 @@ router.get('/personas/:id', autenticado, requierePermiso('RRHH', 'ver'), validar
            ORDER BY FIELD(t.estado,'en_curso','pausada','rechazada','pendiente','en_revision'), t.id DESC LIMIT 8`, [empleadoId]),
     queryOne('SELECT MIN(entrada_at) AS entrada, MAX(salida_at IS NULL) AS trabajando FROM asistencias WHERE empleado_id = ? AND fecha = ?', [empleadoId, fecha]),
   ]);
-  const [seg, tar] = await Promise.all([resolverPermiso(u, 'SEG', 'editar'), resolverPermiso(u, 'TAR', 'crear')]);
+  const [seg, tar, borrar] = await Promise.all([resolverPermiso(u, 'SEG', 'editar'), resolverPermiso(u, 'TAR', 'crear'), resolverPermiso(u, 'SEG', 'borrar')]);
   res.json({
     ok: true,
     data: {
@@ -292,6 +292,7 @@ router.get('/personas/:id', autenticado, requierePermiso('RRHH', 'ver'), validar
       // gerencia solo consulta.
       acciones: {
         editar_cuenta: seg.permitido && Boolean(cuenta) && cuenta.id !== u.id,
+        eliminar_cuenta: borrar.permitido && Boolean(cuenta) && cuenta.id !== u.id,
         editar_area: seg.permitido,
         asignar_tarea: tar.permitido && (tar.alcance === 'todo' || e.area_id === u.area_id) && e.estado === 'activo',
       },
