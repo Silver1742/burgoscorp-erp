@@ -7,14 +7,49 @@ import * as v from '../validators/catalogos.js';
 import { plan } from '../validators/mantenimiento.js';
 import { errores } from '../utils/errores.js';
 import { hoy, sumarDias } from '../utils/fechas.js';
+import { transaccion } from '../config/db.js';
+import { autenticado } from '../middlewares/auth.js';
+import { validar } from '../middlewares/validar.js';
+import { invalidarCachePermisos } from '../services/permisos.js';
+import { auditar } from '../services/auditoria.js';
+import { paramsId } from '../validators/comunes.js';
 
 const router = Router();
 const filtroActivo = { activo: { col: 't.activo', esquema: booleano.or(z.enum(['true', 'false']).transform((x) => x === 'true')) } };
 
 // ---------------------------------------------------------------- Organización
+
+// Qué trabaja un área (area_modulos). El administrador lo elige al crear un área nueva.
+// Solo módulos que comparten varias áreas: Producción (cada área productiva con sus OT) y Ventas.
+// Los demás (RRHH, Calidad, Compras, Finanzas, Mantenimiento...) tienen una sola área dueña que
+// los gestiona para toda la empresa; si se sumara otra, esa dueña dejaría de ver todo.
+export const MODULOS_COMPARTIBLES = ['PROD', 'VEN'];
+const modulosArea = z.object({ modulos: z.array(z.enum(MODULOS_COMPARTIBLES)).max(MODULOS_COMPARTIBLES.length) }).strict();
+
+router.put('/areas/:id/modulos', autenticado, validar({ params: paramsId, body: modulosArea }), async (req, res) => {
+  if (req.usuario.rol !== 'ADMIN') throw errores.prohibido('Lo que trabaja cada área lo define el administrador');
+  const areaId = req.validado.params.id;
+  const elegidos = [...new Set(req.validado.body.modulos)];
+  await transaccion(async (conn) => {
+    const [[area]] = await conn.execute('SELECT id FROM areas WHERE id = ? AND activo = 1 FOR UPDATE', [areaId]);
+    if (!area) throw errores.noEncontrado('El área no existe');
+    // Solo se tocan los compartibles: lo que el área ya gestiona en exclusiva queda como está.
+    await conn.query(`DELETE am FROM area_modulos am JOIN modulos m ON m.id = am.modulo_id
+      WHERE am.area_id = ? AND m.codigo IN (?)`, [areaId, MODULOS_COMPARTIBLES]);
+    if (elegidos.length) {
+      await conn.query(`INSERT INTO area_modulos (area_id, modulo_id) SELECT ?, id FROM modulos WHERE codigo IN (?)`, [areaId, elegidos]);
+    }
+  });
+  invalidarCachePermisos();
+  await auditar(req, { accion: 'editar', entidad: 'area', entidadId: areaId, detalle: { modulos: elegidos } });
+  res.json({ ok: true, data: { id: areaId, modulos: elegidos } });
+});
+
 router.use('/areas', crearRecursoCrud({
   modulo: 'ORG', tabla: 'areas', entidad: 'area',
-  select: "t.*, CONCAT(e.nombre, ' ', e.apellido) AS jefe_nombre",
+  select: `t.*, CONCAT(e.nombre, ' ', e.apellido) AS jefe_nombre,
+           (SELECT GROUP_CONCAT(m.codigo ORDER BY m.codigo) FROM area_modulos am JOIN modulos m ON m.id = am.modulo_id
+             WHERE am.area_id = t.id) AS modulos`,
   joins: 'LEFT JOIN empleados e ON e.id = t.jefe_empleado_id',
   busqueda: ['t.codigo', 't.nombre'],
   filtros: filtroActivo,
@@ -156,6 +191,7 @@ router.use('/planes-mantenimiento', crearRecursoCrud({
   filtros: { ...filtroActivo, centro_trabajo_id: { col: 't.centro_trabajo_id', esquema: id } },
   ordenables: { proxima: 't.proxima_fecha', nombre: 't.nombre' },
   ordenDefecto: 't.proxima_fecha',
+  alcance: { areaCol: 'ct.area_id' }, // cada jefe, los planes de las máquinas de su área
   esquemaCrear: plan,
   bajaLogica: true,
   antesDeGuardar: async (datos, { req, id: existente }) => {

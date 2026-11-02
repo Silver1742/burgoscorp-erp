@@ -43,7 +43,9 @@ function FormOperacion({ visible, otId, alCerrar, alCrear }) {
           checklist: f.checklist.split('\n').map((x) => x.trim()).filter(Boolean),
         },
       });
-      toast.exito(`Operación ${op.secuencia} agregada. Asignala desde su detalle.`);
+      toast.exito(op.otra_area
+        ? 'Operación agregada. Es de otra área (por la máquina): la asigna el jefe de esa área.'
+        : `Operación ${op.secuencia} agregada. Asignala desde su detalle.`);
       setF({ titulo: '', centro_trabajo_id: null, horas_estimadas: '', checklist: '' });
       alCrear();
     } catch (err) {

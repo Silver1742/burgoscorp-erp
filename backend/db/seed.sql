@@ -65,9 +65,9 @@ INSERT INTO tmp_permisos VALUES
   ('JEFE','PROD',1,1,1,1,1,'area',  'escritura'),
   ('JEFE','TAR', 1,1,1,1,1,'area',  'no'),         -- crea y asigna tareas a su equipo
   ('JEFE','INV', 1,1,1,1,1,'todo',  'escritura'),
-  ('JEFE','COM', 1,1,1,1,1,'todo',  'escritura'),
+  ('JEFE','COM', 1,1,1,1,1,'area',  'escritura'),   -- Abastecimiento (dueña) ve todas
   ('JEFE','MANT',1,1,1,0,1,'area',  'no'),         -- cualquier jefe reporta fallas de sus máquinas
-  ('JEFE','CAL', 1,1,1,0,1,'todo',  'escritura'),
+  ('JEFE','CAL', 1,1,1,0,1,'area',  'escritura'),   -- Calidad (dueña) ve todas
   ('JEFE','FIN', 1,1,1,1,1,'todo',  'todo'),
   ('JEFE','TAB', 1,0,0,0,0,'area',  'no'),
 

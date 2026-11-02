@@ -97,9 +97,9 @@ bien, rojo si hubo un problema). Antes de algo que no se puede deshacer, la app 
 | Rol | Puede |
 |---|---|
 | **Empleado** | Ver y avanzar **sus tareas**, fichar, pedir licencias, ver su legajo, reportar fallas, escanear QR y cargar datos en los módulos de su área. |
-| **Jefe de área** | Todo lo del empleado, y además **asignar tareas**, aprobar las tareas terminadas y las **licencias** de su equipo, manejar las órdenes de trabajo de su área, pedir y aprobar compras, ver el tablero de su área. |
+| **Jefe de área** | Todo lo del empleado, y además **asignar tareas**, aprobar las tareas terminadas y las **licencias** de su equipo, manejar las órdenes de trabajo de su área, pedir y aprobar compras, ver el tablero de su área. **Ve solo lo de su área** (sus OT, tareas, máquinas, compras e inspecciones); el jefe de un área que gestiona algo para toda la empresa (RRHH, Calidad, Abastecimiento, Mantenimiento, Finanzas) ve eso de todas. |
 | **Gerencia** | **Ver todo** (todos los módulos y el tablero de la empresa) sin modificar nada. |
-| **Administrador** | Todo, más **usuarios**: habilitar solicitudes, crear cuentas, editarlas, darlas de baja. |
+| **Administrador** | Todo, más **usuarios** (habilitar solicitudes, crear cuentas, editarlas, darlas de baja), **crear áreas** y **asignar cualquier tarea** a gente del área. |
 
 Si entrás y **no ves ningún módulo**, tu cuenta todavía no tiene área: pedíselo a un
 administrador.
@@ -223,7 +223,15 @@ que conoce a su equipo.
    "Orden y limpieza 5S").
 4. Tocá **Enviar al jefe**: se crea una tarea por área y a cada jefe le llega el aviso.
 
-Si un área **no tiene jefe**, la tarea la asignás vos desde su ficha.
+Además, **vos también podés asignar** cualquier tarea (aunque el área tenga jefe): abrila y tocá
+**Asignar**. La lista muestra a la gente **del área de la tarea** que puede hacerla (con la habilidad y
+la certificación vigente).
+
+### Áreas nuevas
+En **Áreas → Nueva área**: código, nombre y **qué trabaja el área** (Producción: máquinas, órdenes
+de trabajo y tareas; Ventas: pedidos de clientes). Después sumale gente y un jefe desde la ficha de
+cada persona. Calidad, Compras, RRHH, Finanzas y Mantenimiento tienen una sola área dueña y no se
+ofrecen.
 
 ## 10. Para el administrador: usuarios
 

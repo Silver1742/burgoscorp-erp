@@ -38,13 +38,17 @@ const SELECT = `
 
 const asignadoA = 'EXISTS (SELECT 1 FROM tarea_asignaciones ta WHERE ta.tarea_id = t.id AND ta.empleado_id = ?)';
 
-/** Qué tareas ve el usuario: toda la empresa, las de su área, o las propias (asignadas o creadas por él). */
+/**
+ * Qué tareas ve el usuario: toda la empresa, las de su área (más las que le asignaron), o las
+ * propias (asignadas o creadas por él). Un jefe no ve tareas de otras áreas aunque las haya
+ * pedido él: las ve el jefe de esa área.
+ */
 async function condicionAlcance(usuario) {
   const { alcance } = await resolverPermiso(usuario, 'TAR', 'ver');
   const emp = usuario.empleado_id ?? 0;
   if (alcance === 'todo') return { sql: '1=1', params: [], alcance };
   if (alcance === 'area' && usuario.area_id) {
-    return { sql: `(t.area_id = ? OR t.creado_por = ? OR ${asignadoA})`, params: [usuario.area_id, usuario.id, emp], alcance };
+    return { sql: `(t.area_id = ? OR ${asignadoA})`, params: [usuario.area_id, emp], alcance };
   }
   return { sql: `(t.creado_por = ? OR ${asignadoA})`, params: [usuario.id, emp], alcance };
 }
@@ -89,12 +93,13 @@ async function cargar(usuario, id) {
     JOIN empleados e ON e.id = ta.empleado_id WHERE ta.tarea_id = ? ORDER BY e.apellido`, [id]);
   const gestion = await resolverPermiso(usuario, 'TAR', 'aprobar');
   const puedeGestionar = gestion.permitido && (gestion.alcance === 'todo' || t.area_id === usuario.area_id);
-  // Asignar personas lo hace el jefe del área, que conoce a su equipo. Quien gestiona toda la
-  // empresa (el administrador) solo asigna si el área no tiene un jefe con cuenta activa.
+  // Asignar personas lo hace el jefe del área, que conoce a su equipo, y también el administrador
+  // (a cualquiera del área de la tarea). Gerencia u otro rol con alcance de toda la empresa solo
+  // asigna si el área no tiene un jefe con cuenta activa.
   const jefes = await jefesDelArea(t.area_id);
   const jefe = jefes[0] ?? null;
   const delArea = gestion.permitido && gestion.alcance !== 'todo' && t.area_id === usuario.area_id;
-  const puedeAsignar = delArea || (puedeGestionar && (!jefes.length || jefes.some((j) => j.usuario_id === usuario.id)));
+  const puedeAsignar = delArea || (puedeGestionar && (usuario.rol === 'ADMIN' || !jefes.length || jefes.some((j) => j.usuario_id === usuario.id)));
   return {
     t,
     asignados,
@@ -194,7 +199,13 @@ export async function crearOperacion(usuario, otId, datos, req) {
       mensaje: `Operación de ${ot.numero}. Asignala a alguien de tu equipo.`, entidad: 'tarea', entidadId: id,
     });
   }
-  return obtener(usuario, id);
+  // Si la operación quedó en otra área (máquina de otra área), la ve el jefe de esa área, no quien la pidió.
+  return obtener(usuario, id).catch(async (err) => {
+    if (err.status !== 404) throw err;
+    const basica = await queryOne(`SELECT t.id, t.secuencia, t.titulo, t.area_id, a.nombre AS area_nombre
+      FROM tareas t JOIN areas a ON a.id = t.area_id WHERE t.id = ?`, [id]);
+    return { ...basica, otra_area: true };
+  });
 }
 
 /** Tarea suelta del área (no ligada a una OT). */
@@ -369,7 +380,7 @@ export async function candidatosPrevios(usuario, { area_id: areaPedida, centro_t
     throw errores.validacion([{ campo: 'query.centro_trabajo_id', mensaje: 'La máquina es de otra área' }]);
   }
   const jefes = await jefesDelArea(areaId);
-  const puedeAsignar = permiso.alcance !== 'todo' || !jefes.length || jefes.some((j) => j.usuario_id === usuario.id);
+  const puedeAsignar = permiso.alcance !== 'todo' || usuario.rol === 'ADMIN' || !jefes.length || jefes.some((j) => j.usuario_id === usuario.id);
   return {
     puede_asignar: puedeAsignar,
     jefe: jefes[0]?.nombre ?? null,

@@ -247,7 +247,7 @@ describe('permisos por rol y área', () => {
     assert.equal(res.body.data.unidad, 'kg');
   });
 
-  test('alcance de área: un operario solo ve las máquinas de su área; el jefe dueño ve todas', async () => {
+  test('alcance de área: operario y jefe ven solo las máquinas de su área; el administrador, todas', async () => {
     const op = await login('ramon.gimenez@burgoscorp.test');
     const r1 = await api().get('/api/v1/centros-trabajo?limite=100').set(conToken(op.accessToken));
     assert.equal(r1.status, 200);
@@ -256,7 +256,10 @@ describe('permisos por rol y área', () => {
 
     const jefe = await login('jorge.dominguez@burgoscorp.test');
     const r2 = await api().get('/api/v1/centros-trabajo?limite=100').set(conToken(jefe.accessToken));
-    assert.ok(r2.body.meta.total > r1.body.meta.total);
+    assert.ok(r2.body.data.every((c) => c.area_nombre === 'Mecanizado'), 'Producción la comparten varias áreas: cada jefe ve la suya');
+    const admin = await login('admin@burgoscorp.test');
+    const r3 = await api().get('/api/v1/centros-trabajo?limite=100').set(conToken(admin.accessToken));
+    assert.ok(r3.body.meta.total > r2.body.meta.total);
   });
 
   test('gerencia ve todo pero no modifica', async () => {

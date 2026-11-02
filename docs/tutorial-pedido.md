@@ -56,8 +56,8 @@ Comercial ─▶ Ingeniería ─▶ (cliente acepta) ─▶ OT ─▶ Mecanizado
 2. Abrilo (o **Ventas → Para asignar**). En **"Analiza"** elegí a **Valentina**: la lista muestra
    primero a quien tiene menos pedidos abiertos.
 
-> Solo el jefe del área asigna gente de su área. El administrador asigna únicamente si el área no
-> tiene jefe.
+> El jefe asigna gente de su área (y no ve las de otras áreas). El administrador también puede
+> asignar cualquier tarea, siempre a alguien del área de la tarea.
 
 ## 3. Ingeniería presupuesta (Valentina)
 

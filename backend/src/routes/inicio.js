@@ -152,7 +152,7 @@ router.get('/pendientes', autenticado, async (req, res) => {
     agregar('revisar', 'Tareas para revisar', revisar.meta.total, revisar.data.map((x) => ({ id: x.id, titulo: x.titulo, sub: [x.asignados, x.area_nombre].filter(Boolean).join(' · ') })));
   }
   if ((await resolverPermiso(u, 'COM', 'aprobar')).permitido) {
-    const oc = await compras.listar({ estado: 'pendiente_aprobacion', pagina: 1, limite: POR_GRUPO });
+    const oc = await compras.listar(u, { estado: 'pendiente_aprobacion', pagina: 1, limite: POR_GRUPO });
     agregar('compra', 'Compras por aprobar', oc.meta.total, oc.data.map((x) => ({
       id: x.id, titulo: `${x.numero} · ${x.proveedor_nombre ?? ''}`.trim(), sub: `$ ${Number(x.total ?? 0).toLocaleString('es-AR')}`,
     })));

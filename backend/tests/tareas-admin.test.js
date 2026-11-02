@@ -70,11 +70,14 @@ describe('tareas del administrador', () => {
     assert.equal(await avisos(s.jorge.usuario.id, tSol.id), 0, 'a cada uno solo la de su área');
 
     const vistaAdmin = await api().get(`/api/v1/tareas/${tMec.id}`).set(como('admin'));
-    assert.equal(vistaAdmin.body.data.puede_asignar, false);
+    assert.equal(vistaAdmin.body.data.puede_asignar, true, 'el administrador también asigna');
     assert.match(vistaAdmin.body.data.jefe_area, /Jorge/);
-    const porAdmin = await api().post(`/api/v1/tareas/${tMec.id}/asignaciones`).set(como('admin')).send({ empleado_id: s.ramon.usuario.empleadoId });
-    assert.equal(porAdmin.status, 403, 'el administrador no asigna si el área tiene jefe');
-    assert.match(porAdmin.body.error.mensaje, /La asigna Jorge/);
+    // Gerencia ve todo pero no asigna; el administrador asigna a alguien del área de la tarea, no de otra.
+    const deOtraArea = await api().post(`/api/v1/tareas/${tMec.id}/asignaciones`).set(como('admin')).send({ empleado_id: s.marcelo.usuario.empleadoId });
+    assert.ok([400, 422].includes(deOtraArea.status), 'Marcelo es de Soldadura, no de Mecanizado');
+    const [claudio] = await query("SELECT id FROM empleados WHERE legajo = 'L0017'"); // soldador
+    const porAdmin = await api().post(`/api/v1/tareas/${tSol.id}/asignaciones`).set(como('admin')).send({ empleado_id: claudio.id });
+    assert.equal(porAdmin.status, 201, JSON.stringify(porAdmin.body));
 
     const pendientes = await api().get('/api/v1/tareas').query({ sin_asignar: 1 }).set(como('jorge'));
     assert.ok(pendientes.body.data.some((t) => t.id === tMec.id), 'aparece en "Para asignar" del jefe');

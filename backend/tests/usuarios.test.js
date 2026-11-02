@@ -36,7 +36,7 @@ describe('administración de usuarios', () => {
     const admin = await login('admin@burgoscorp.test');
     const pendiente = await nuevaSolicitud();
 
-    const pendientes = await api().get('/api/v1/usuarios').query({ estado: 'pendientes', limite: 100 }).set(conToken(admin.accessToken));
+    const pendientes = await api().get('/api/v1/usuarios').query({ estado: 'pendientes', q: pendiente.email, limite: 100 }).set(conToken(admin.accessToken));
     assert.equal(pendientes.status, 200);
     assert.ok(pendientes.body.data.some((u) => u.id === pendiente.id));
     assert.ok(pendientes.body.data.every((u) => u.estado_cuenta === 'pendiente'));

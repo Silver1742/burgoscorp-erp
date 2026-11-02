@@ -99,8 +99,8 @@ describe('crear una tarea y asignarla ahí mismo', () => {
     const [sol] = await query("SELECT id FROM centros_trabajo WHERE codigo = 'SOL-01'");
     assert.equal((await api().get('/api/v1/tareas/candidatos').query({ centro_trabajo_id: sol.id }).set(como('jorge'))).status, 400, 'máquina de otra área');
     const admin = await api().get('/api/v1/tareas/candidatos').query({ centro_trabajo_id: tor.id }).set(como('admin'));
-    assert.equal(admin.body.data.puede_asignar, false, 'el área tiene jefe: la asigna él');
-    assert.match(admin.body.data.jefe, /Jorge/);
+    assert.equal(admin.body.data.puede_asignar, true, 'el administrador también asigna, aunque el área tenga jefe');
+    assert.ok(admin.body.data.candidatos.some((c) => c.id === s.ramon.usuario.empleadoId));
   });
 
   test('crear con empleado_ids la deja asignada a esas personas', async () => {

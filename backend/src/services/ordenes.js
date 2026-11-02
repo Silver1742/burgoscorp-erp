@@ -41,8 +41,9 @@ const SELECT = `
   LEFT JOIN empleados r ON r.id = o.responsable_id`;
 
 /**
- * Qué OT puede ver el usuario: toda la empresa, las de su área, o (empleado) las que tienen
- * una operación asignada a él o de las que es responsable.
+ * Qué OT puede ver el usuario: toda la empresa, las de su área (el jefe, también las de otra área
+ * que tienen una operación de la suya), o (empleado) las que tienen una operación asignada a él o
+ * de las que es responsable.
  */
 async function condicionAlcance(usuario) {
   const { alcance } = await resolverPermiso(usuario, 'PROD', 'ver');
@@ -51,6 +52,10 @@ async function condicionAlcance(usuario) {
   const emp = usuario.empleado_id ?? 0;
   if (alcance === 'todo') return { sql: '1=1', params: [] };
   if (alcance === 'area' && usuario.area_id) {
+    if (usuario.rol === 'JEFE') {
+      const operacionDelArea = 'EXISTS (SELECT 1 FROM tareas ta2 WHERE ta2.orden_trabajo_id = o.id AND ta2.area_id = ?)';
+      return { sql: `(o.area_id = ? OR o.responsable_id = ? OR ${asignadoAmi} OR ${operacionDelArea})`, params: [usuario.area_id, emp, emp, usuario.area_id] };
+    }
     return { sql: `(o.area_id = ? OR o.responsable_id = ? OR ${asignadoAmi})`, params: [usuario.area_id, emp, emp] };
   }
   return { sql: `(o.responsable_id = ? OR ${asignadoAmi})`, params: [emp, emp] };

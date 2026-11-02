@@ -203,6 +203,15 @@ async function imagenesEnAvisos(conn) {
     'inspeccion','orden_compra','empleado','licencia','comprobante','aviso') NOT NULL`);
 }
 
+/**
+ * Un jefe ve solo lo de su área: Calidad y Compras pasan de "toda la empresa" a "su área" para el
+ * rol Jefe. El jefe de Calidad y el de Abastecimiento siguen viendo todo (son las áreas dueñas).
+ */
+async function jefesSoloSuArea(conn) {
+  await conn.query(`UPDATE permisos_rol p JOIN roles r ON r.id = p.rol_id JOIN modulos m ON m.id = p.modulo_id
+    SET p.alcance = 'area' WHERE r.codigo = 'JEFE' AND m.codigo IN ('CAL', 'COM') AND p.alcance = 'todo'`);
+}
+
 async function tablonDeAvisos(conn) {
   await conn.query(`CREATE TABLE IF NOT EXISTS avisos_tablon (
     id          INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
@@ -231,6 +240,7 @@ async function tablonDeAvisos(conn) {
 
 export async function migrar(conn) {
   await tablonDeAvisos(conn);
+  await jefesSoloSuArea(conn);
   await imagenesEnAvisos(conn);
   await dosPasosPorEmail(conn);
   await proveedorDiscord(conn);

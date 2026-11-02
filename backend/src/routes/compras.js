@@ -11,7 +11,7 @@ const router = Router();
 const P = '/ordenes-compra';
 
 router.get(P, autenticado, requierePermiso('COM', 'ver'), validar({ query: v.filtroOc }), async (req, res) => {
-  res.json({ ok: true, ...(await compras.listar(req.validado.query)) });
+  res.json({ ok: true, ...(await compras.listar(req.usuario, req.validado.query)) });
 });
 router.get(`${P}/:id`, autenticado, requierePermiso('COM', 'ver'), validar({ params: paramsId }), async (req, res) => {
   res.json({ ok: true, data: await compras.obtener(req.usuario, req.validado.params.id) });

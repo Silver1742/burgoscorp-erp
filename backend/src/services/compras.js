@@ -34,9 +34,33 @@ const SELECT = `
   JOIN usuarios us ON us.id = oc.solicitado_por
   LEFT JOIN usuarios ua ON ua.id = oc.aprobado_por`;
 
-export async function listar(f) {
-  const where = ['1=1'];
-  const params = [];
+/**
+ * Qué órdenes de compra ve el usuario: Abastecimiento (y quien ve toda la empresa) todas; el resto,
+ * las que pidió alguien de su área o las que son para una OT de su área.
+ */
+async function condicionAlcance(usuario) {
+  const ver = await resolverPermiso(usuario, 'COM', 'ver');
+  if (ver.alcance === 'todo') return { sql: '1=1', params: [] };
+  const area = usuario.area_id ?? 0;
+  return {
+    sql: `(o.area_id = ? OR EXISTS (SELECT 1 FROM usuarios su JOIN empleados se ON se.id = su.empleado_id
+            WHERE su.id = oc.solicitado_por AND se.area_id = ?) OR oc.solicitado_por = ?)`,
+    params: [area, area, usuario.id],
+  };
+}
+
+/** 404 si la OC no existe o es de otra área (no se distingue: no se revela que existe). */
+async function exigirVisible(usuario, id) {
+  const alc = await condicionAlcance(usuario);
+  const oc = await queryOne(`SELECT oc.id FROM ordenes_compra oc LEFT JOIN ordenes_trabajo o ON o.id = oc.orden_trabajo_id
+    WHERE oc.id = ? AND ${alc.sql}`, [id, ...alc.params]);
+  if (!oc) throw errores.noEncontrado('La orden de compra no existe');
+}
+
+export async function listar(usuario, f) {
+  const alc = await condicionAlcance(usuario);
+  const where = [alc.sql];
+  const params = [...alc.params];
   if (f.q) {
     const patron = `%${f.q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
     where.push('(oc.numero LIKE ? OR p.razon_social LIKE ? OR o.numero LIKE ?)');
@@ -77,6 +101,7 @@ async function acciones(usuario, oc) {
 }
 
 export async function obtener(usuario, id) {
+  await exigirVisible(usuario, id);
   const oc = await queryOne(`${SELECT} WHERE oc.id = ?`, [id]);
   if (!oc) throw errores.noEncontrado('La orden de compra no existe');
   const [items, recepciones] = await Promise.all([
@@ -94,6 +119,7 @@ export async function obtener(usuario, id) {
 
 /** Para los adjuntos (foto del remito o de la factura del proveedor). */
 export async function acceso(usuario, id) {
+  await exigirVisible(usuario, id);
   const ver = await resolverPermiso(usuario, 'COM', 'ver');
   if (!ver.permitido) throw errores.noEncontrado('La orden de compra no existe');
   const oc = await queryOne('SELECT estado FROM ordenes_compra WHERE id = ?', [id]);
@@ -158,6 +184,7 @@ export async function crear(usuario, d, req) {
 }
 
 export async function editar(usuario, id, d, req) {
+  await exigirVisible(usuario, id);
   await transaccion(async (conn) => {
     const [[oc]] = await conn.execute('SELECT * FROM ordenes_compra WHERE id = ? FOR UPDATE', [id]);
     if (!oc) throw errores.noEncontrado('La orden de compra no existe');
@@ -199,6 +226,7 @@ const exigirEstado = (...estados) => (oc) => {
 };
 
 export async function enviarAprobacion(usuario, id, req) {
+  await exigirVisible(usuario, id);
   const [{ n }] = await query('SELECT COUNT(*) AS n FROM orden_compra_items WHERE orden_compra_id = ?', [id]);
   if (!n) throw errores.negocio('La orden de compra no tiene ítems');
   const oc = await cambiarEstado(id, 'pendiente_aprobacion', exigirEstado('borrador'));
@@ -209,6 +237,7 @@ export async function enviarAprobacion(usuario, id, req) {
 }
 
 export async function aprobar(usuario, id, req) {
+  await exigirVisible(usuario, id);
   const oc = await cambiarEstado(id, 'aprobada', (o) => {
     exigirEstado('pendiente_aprobacion')(o);
     if (o.solicitado_por === usuario.id && usuario.rol !== 'ADMIN') throw errores.prohibido('Una orden de compra la aprueba alguien distinto de quien la pidió');
@@ -219,6 +248,7 @@ export async function aprobar(usuario, id, req) {
 }
 
 export async function rechazar(usuario, id, comentario, req) {
+  await exigirVisible(usuario, id);
   const oc = await cambiarEstado(id, 'borrador', exigirEstado('pendiente_aprobacion'));
   await query('UPDATE ordenes_compra SET observaciones = CONCAT_WS(?, observaciones, ?) WHERE id = ?', ['\n', `Rechazada: ${comentario}`.slice(0, 600), id]);
   await auditar(req, { accion: 'rechazar', entidad: 'orden_compra', entidadId: id });
@@ -227,12 +257,14 @@ export async function rechazar(usuario, id, comentario, req) {
 }
 
 export async function enviar(usuario, id, req) {
+  await exigirVisible(usuario, id);
   await cambiarEstado(id, 'enviada', exigirEstado('aprobada'));
   await auditar(req, { accion: 'enviar_proveedor', entidad: 'orden_compra', entidadId: id });
   return obtener(usuario, id);
 }
 
 export async function cancelar(usuario, id, comentario, req) {
+  await exigirVisible(usuario, id);
   await cambiarEstado(id, 'cancelada', exigirEstado('borrador', 'pendiente_aprobacion', 'aprobada', 'enviada'));
   if (comentario) await query('UPDATE ordenes_compra SET observaciones = CONCAT_WS(?, observaciones, ?) WHERE id = ?', ['\n', `Cancelada: ${comentario}`.slice(0, 600), id]);
   await auditar(req, { accion: 'cancelar', entidad: 'orden_compra', entidadId: id });
@@ -241,6 +273,7 @@ export async function cancelar(usuario, id, comentario, req) {
 
 /** Recepción (total o parcial): ingresa al depósito y actualiza el estado de la OC. */
 export async function recibir(usuario, id, d, req) {
+  await exigirVisible(usuario, id);
   const oc = await transaccion(async (conn) => {
     const [[o]] = await conn.execute('SELECT * FROM ordenes_compra WHERE id = ? FOR UPDATE', [id]);
     if (!o) throw errores.noEncontrado('La orden de compra no existe');

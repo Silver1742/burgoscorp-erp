@@ -38,7 +38,7 @@ router.post(`${P}/:id/repuestos`, autenticado, requierePermiso('MANT', 'editar')
 
 // Todas las máquinas, para elegir en cuál está la falla (Mantenimiento atiende las de toda la planta).
 router.get('/maquinas', autenticado, requierePermiso('MANT', 'ver'), validar({ query: v.filtroMaquinas }), async (req, res) => {
-  res.json({ ok: true, data: await mant.maquinas(req.validado.query) });
+  res.json({ ok: true, data: await mant.maquinas(req.usuario, req.validado.query) });
 });
 router.get('/maquinas/:id', autenticado, requierePermiso('MANT', 'ver'), validar({ params: paramsId }), async (req, res) => {
   res.json({ ok: true, data: await mant.maquina(req.usuario, req.validado.params.id) });

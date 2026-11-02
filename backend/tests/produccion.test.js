@@ -74,6 +74,7 @@ describe('órdenes de trabajo', () => {
       .send({ titulo: 'Fresado de soportes', centro_trabajo_id: await maquina('CNC-02') });
     assert.equal(cnc.body.data.secuencia, 20);
     assert.equal(cnc.body.data.area_nombre, 'Mecanizado');
+    assert.equal(cnc.body.data.otra_area, true, 'queda en Mecanizado: Marcelo no ve el detalle, lo ve Jorge');
     opCnc = cnc.body.data.id;
   });
 });

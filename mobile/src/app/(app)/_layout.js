@@ -16,6 +16,7 @@ import { tomarQrPendiente } from '../../lib/qr';
 import { useTema } from '../../tema';
 import { perfilRol } from '../../lib/roles';
 import { VigiaCambios } from '../../lib/cambios';
+import { RegistroRutas } from '../../lib/volver';
 
 function IconoPestana({ nombre, color, size, focused, rojo }) {
   return (
@@ -100,6 +101,7 @@ export default function LayoutApp() {
     <>
       <AbrirQrPendiente />
       <VigiaCambios />
+      <RegistroRutas />
       <Pestanas />
     </>
   );

@@ -249,12 +249,18 @@ export async function tecnicos() {
                 WHERE a.codigo = 'MAN' AND e.estado = 'activo' ORDER BY e.apellido`);
 }
 
-export async function maquinas(f) {
+/** Máquinas: Mantenimiento (y quien ve toda la empresa) todas; un jefe o empleado, las de su área. */
+export async function maquinas(usuario, f) {
+  const { ver, tecnico } = await rolMant(usuario);
   const params = [];
   let filtro = '';
+  if (!(ver.alcance === 'todo' || ver.esDuenia || tecnico)) {
+    filtro = 'AND ct.area_id = ?';
+    params.push(usuario.area_id ?? 0);
+  }
   if (f.q) {
     const patron = `%${f.q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
-    filtro = 'AND (ct.codigo LIKE ? OR ct.nombre LIKE ?)';
+    filtro += ' AND (ct.codigo LIKE ? OR ct.nombre LIKE ?)';
     params.push(patron, patron);
   }
   return query(`SELECT ct.id, ct.codigo, ct.nombre, ct.estado, ct.ubicacion, ct.costo_hora, a.nombre AS area_nombre

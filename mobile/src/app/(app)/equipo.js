@@ -7,7 +7,8 @@ import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } 
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import IntegrantesArea from '../../componentes/IntegrantesArea';
-import { ErrorCarga, EsqueletoLista, Tarjeta, Vacio } from '../../componentes/ui';
+import NuevaArea from '../../componentes/NuevaArea';
+import { Boton, ErrorCarga, EsqueletoLista, Tarjeta, Vacio } from '../../componentes/ui';
 import { useSesion } from '../../contexto/sesion';
 import { api } from '../../lib/api';
 import { perfilRol } from '../../lib/roles';
@@ -23,6 +24,7 @@ function ListaAreas() {
   const [error, setError] = useState(null);
   const [recargando, setRecargando] = useState(false);
   const [abierta, setAbierta] = useState(null); // área cuya ventana está abierta
+  const [creando, setCreando] = useState(false);
   const { esAncho } = usePantalla();
 
   const cargar = useCallback(async () => {
@@ -35,9 +37,12 @@ function ListaAreas() {
     <ScrollView style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido}
       refreshControl={<RefreshControl refreshing={recargando} onRefresh={async () => { setRecargando(true); await cargar(); setRecargando(false); }} />}>
       <View style={estilos.centrado}>
-        <Text style={{ color: t.texto, fontSize: 22, fontWeight: '700' }}>Áreas de la empresa</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }}>
+          <Text style={{ color: t.texto, fontSize: 22, fontWeight: '700', flex: 1 }}>Áreas de la empresa</Text>
+          {usuario.rol === 'ADMIN' ? <Boton titulo="Nueva área" icono="add" chico onPress={() => setCreando(true)} estilo={{ marginBottom: 0 }} /> : null}
+        </View>
         <Text style={{ color: t.textoSuave, marginBottom: espacio.l }}>
-          {datos ? `${datos.totales.personal} personas · ${datos.totales.vinieron_hoy} vinieron hoy · ${datos.totales.en_licencia} de licencia` : 'Tocá un área para ver a su gente.'}
+          {datos ? `${datos.areas.length} áreas · ${datos.totales.personal} personas · ${datos.totales.vinieron_hoy} vinieron hoy · ${datos.totales.en_licencia} de licencia` : 'Tocá un área para ver a su gente.'}
         </Text>
         {error ? <Tarjeta><ErrorCarga error={error} onReintentar={cargar} /></Tarjeta> : null}
         {!datos && !error ? <EsqueletoLista filas={6} /> : null}
@@ -81,6 +86,7 @@ function ListaAreas() {
           </View>
         </View>
       </Modal>
+      <NuevaArea visible={creando} alCerrar={() => setCreando(false)} alCrear={() => { setCreando(false); cargar(); }} />
     </ScrollView>
   );
 }

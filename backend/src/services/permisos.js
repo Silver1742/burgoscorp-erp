@@ -24,6 +24,8 @@ async function cargar() {
   cache = {
     permisos: new Map(permisos.map((p) => [`${p.rol}:${p.modulo}`, p])),
     duenias: new Set(areaModulos.map((a) => `${a.area_id}:${a.modulo}`)),
+    // Cuántas áreas comparten cada módulo (Producción la comparten Ingeniería, Mecanizado, Soldadura e Impresión 3D).
+    duenosPorModulo: areaModulos.reduce((m, a) => m.set(a.modulo, (m.get(a.modulo) ?? 0) + 1), new Map()),
     modulos: [...new Set(permisos.map((p) => p.modulo))],
   };
   cargadoEn = Date.now();
@@ -40,10 +42,10 @@ export function invalidarCachePermisos() {
  * alcance: 'todo' | 'area' | 'propio'.
  */
 /** Módulos en los que cualquier integrante del área dueña trabaja sobre toda la empresa. */
-const GESTIONADOS_POR_EL_AREA = new Set(['RRHH']);
+const GESTIONADOS_POR_EL_AREA = new Set(['RRHH', 'MANT']);
 
 export async function resolverPermiso(usuario, modulo, accion) {
-  const { permisos, duenias } = await cargar();
+  const { permisos, duenias, duenosPorModulo } = await cargar();
   // Una cuenta sin legajo (recién registrada, o creada por login social) no accede a ningún
   // módulo hasta que RRHH o un admin la vincula a un empleado. El admin no necesita legajo.
   if (!usuario.empleado_id && usuario.rol !== 'ADMIN') return { permitido: false, alcance: null, esDuenia: false };
@@ -55,11 +57,14 @@ export async function resolverPermiso(usuario, modulo, accion) {
   if (p.duenia === 'todo' && !esDuenia) return denegado;
   if (p.duenia === 'escritura' && accion !== 'ver' && !esDuenia) return denegado;
 
-  // Un jefe del área dueña del módulo lo administra para toda la empresa.
+  // El área dueña de un módulo lo gestiona para toda la empresa (RRHH los legajos, Calidad las
+  // inspecciones, Abastecimiento las compras, Mantenimiento las máquinas): su jefe ve todo.
+  // Si el módulo lo comparten varias áreas (Producción), cada jefe ve solo lo de la suya.
   // Los empleados conservan su alcance (un operario de Mecanizado no ve otras áreas), salvo en los
-  // módulos que su área gestiona para todos: el personal de RRHH carga y edita los legajos de
-  // toda la empresa (aprobar licencias sigue siendo del jefe: el rol Empleado no tiene "aprobar").
-  const gestionaParaTodos = esDuenia && (usuario.rol === 'JEFE' || GESTIONADOS_POR_EL_AREA.has(modulo));
+  // módulos que su área trabaja para todos: RRHH carga los legajos de toda la empresa y los
+  // técnicos de Mantenimiento atienden todas las máquinas (aprobar sigue siendo del jefe).
+  const unicaDuenia = duenosPorModulo.get(modulo) === 1;
+  const gestionaParaTodos = esDuenia && unicaDuenia && (usuario.rol === 'JEFE' || GESTIONADOS_POR_EL_AREA.has(modulo));
   let alcance = gestionaParaTodos ? 'todo' : p.alcance;
   // Sin legajo no hay área: el alcance "area" se reduce a lo propio.
   if (alcance === 'area' && !usuario.area_id) alcance = 'propio';

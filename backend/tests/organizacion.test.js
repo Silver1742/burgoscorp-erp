@@ -264,3 +264,20 @@ describe('el personal de RRHH gestiona los legajos', () => {
     assert.equal(suyos.body.meta.total, 1);
   });
 });
+
+describe('el administrador crea áreas', () => {
+  test('crea un área y elige qué trabaja (solo módulos compartibles)', async () => {
+    const r = await api().post('/api/v1/areas').set(como('admin')).send({ codigo: `PIN${sello}`.slice(0, 10), nombre: `Pintura ${sello}` });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    const areaId = r.body.data.id;
+    areasDePrueba.push(areaId);
+    const m = await api().put(`/api/v1/areas/${areaId}/modulos`).set(como('admin')).send({ modulos: ['PROD'] });
+    assert.equal(m.status, 200, JSON.stringify(m.body));
+    const vista = await api().get(`/api/v1/areas/${areaId}`).set(como('admin'));
+    assert.equal(vista.body.data.modulos, 'PROD');
+    // RRHH, Calidad, Finanzas... tienen una sola área dueña: no se ofrecen.
+    assert.equal((await api().put(`/api/v1/areas/${areaId}/modulos`).set(como('admin')).send({ modulos: ['RRHH'] })).status, 400);
+    assert.equal((await api().put(`/api/v1/areas/${areaId}/modulos`).set(como('jorge')).send({ modulos: [] })).status, 403);
+    assert.equal((await api().put('/api/v1/areas/999999/modulos').set(como('admin')).send({ modulos: [] })).status, 404);
+  });
+});

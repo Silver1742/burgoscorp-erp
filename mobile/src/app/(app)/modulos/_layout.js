@@ -1,14 +1,17 @@
 // Navegación de los módulos (pila): el título de cada pantalla de Ventas, Producción, RRHH, etc.
 import { Stack } from 'expo-router';
 import { useTema, opcionesCabecera } from '../../../tema';
+import { botonVolver, useAtrasDelTelefono } from '../../../lib/volver';
 
 // Si se entra directo a un listado (desde Inicio), la grilla de módulos queda debajo para poder volver.
 export const unstable_settings = { anchor: 'index' };
 
 export default function LayoutModulos() {
   const t = useTema();
+  useAtrasDelTelefono('/modulos');
   return (
-    <Stack screenOptions={opcionesCabecera(t)}>
+    // "Volver" lleva a donde estabas (si abriste una tarea desde Inicio, vuelve a Inicio).
+    <Stack screenOptions={{ ...opcionesCabecera(t), headerLeft: botonVolver('/modulos') }}>
       <Stack.Screen name="index" options={{ title: 'Módulos' }} />
       <Stack.Screen name="rrhh/licencias" options={{ title: 'Mis licencias y vacaciones' }} />
       <Stack.Screen name="rrhh/aprobaciones" options={{ title: 'Aprobar licencias' }} />

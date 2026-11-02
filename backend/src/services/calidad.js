@@ -17,11 +17,14 @@ const EPS = 1e-9;
 export const conforme = (m) => m.valor_medido >= m.valor_nominal - m.tolerancia_menos - EPS
   && m.valor_medido <= m.valor_nominal + m.tolerancia_mas + EPS;
 
+/** Inspecciones de las OT de un área (las suyas o con una operación de esa área). */
+const DEL_AREA = '(o.area_id = ? OR EXISTS (SELECT 1 FROM tareas ta2 WHERE ta2.orden_trabajo_id = o.id AND ta2.area_id = ?))';
+
 /** Calidad ve todas las inspecciones; los demás, las de las OT de su área. */
 async function condicionAlcance(usuario) {
   const ver = await resolverPermiso(usuario, 'CAL', 'ver');
   if (ver.alcance === 'todo' || ver.esDuenia) return { sql: '1=1', params: [] };
-  if (usuario.area_id) return { sql: 'o.area_id = ?', params: [usuario.area_id] };
+  if (usuario.area_id) return { sql: DEL_AREA, params: [usuario.area_id, usuario.area_id] };
   return { sql: 'i.inspector_id = ?', params: [usuario.empleado_id ?? 0] };
 }
 
@@ -38,14 +41,14 @@ const SELECT = `
 /** OT esperando inspección, con sus operaciones (para elegir cuál rehacer). */
 export async function pendientes(usuario) {
   const ver = await resolverPermiso(usuario, 'CAL', 'ver');
-  const filtro = ver.alcance === 'todo' || ver.esDuenia ? '1=1' : 'o.area_id = ?';
+  const filtro = ver.alcance === 'todo' || ver.esDuenia ? '1=1' : DEL_AREA;
   const ots = await query(`
     SELECT o.id, o.numero, o.titulo, o.cantidad, o.fecha_entrega_plan, o.prioridad, a.nombre AS area_nombre, c.razon_social AS cliente_nombre,
            (SELECT COUNT(*) FROM inspecciones i WHERE i.orden_trabajo_id = o.id AND i.resultado = 'rechazada') AS rechazos
     FROM ordenes_trabajo o JOIN areas a ON a.id = o.area_id LEFT JOIN clientes c ON c.id = o.cliente_id
     WHERE o.estado = 'control_calidad' AND ${filtro}
     ORDER BY FIELD(o.prioridad, 'urgente','alta','media','baja'), o.fecha_entrega_plan IS NULL, o.fecha_entrega_plan`,
-  filtro === '1=1' ? [] : [usuario.area_id ?? 0]);
+  filtro === '1=1' ? [] : [usuario.area_id ?? 0, usuario.area_id ?? 0]);
   for (const ot of ots) {
     ot.operaciones = await query(`
       SELECT t.id, t.secuencia, t.titulo, t.estado, ct.codigo AS centro_codigo,
