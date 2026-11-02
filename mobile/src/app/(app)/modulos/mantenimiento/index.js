@@ -1,7 +1,7 @@
 // Órdenes de mantenimiento: primero las máquinas paradas y lo urgente. Para el área de
 // Mantenimiento también avisa qué preventivos vencen esta semana.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { EncabezadoPagina, Campo, Opciones, Tarjeta, FilaLista, Insignia, Boton, EsqueletoLista, ErrorCarga, Vacio } from '../../../../componentes/ui';
@@ -9,6 +9,7 @@ import { usePuede, useSesion } from '../../../../contexto/sesion';
 import { api } from '../../../../lib/api';
 import { ESTADO_OM, PRIORIDAD, fechaCorta, fechaHoraCorta } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import { ListaConArriba } from '../../../../componentes/Desplazable';
 
 export function TarjetaOm({ om, onPress }) {
   const t = useTema();
@@ -89,7 +90,7 @@ export default function OrdenesMantenimiento() {
   const sinOrden = planes.filter((p) => !p.con_orden);
 
   return (
-    <FlatList
+    <ListaConArriba
       key={columnas}
       style={{ backgroundColor: t.fondo }}
       contentContainerStyle={estilos.lista}

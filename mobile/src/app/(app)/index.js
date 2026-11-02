@@ -5,7 +5,7 @@
 //   Gerencia      → cómo viene la empresa (OT, pedidos, personal), tablón y accesos.
 //   Administrador → pendientes (accesos, tareas sin jefe…), tablón y accesos.
 import { useCallback, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tarjeta, FilaLista, Insignia, Boton } from '../../componentes/ui';
@@ -19,6 +19,7 @@ import { perfilRol } from '../../lib/roles';
 import { ESTADO_TAREA } from '../../modulos';
 import { espacio, radio, useTema, usePantalla } from '../../tema';
 import { useCargar } from '../../lib/cambios';
+import { ScrollConArriba } from '../../componentes/Desplazable';
 
 /** "Buen día" hasta las 13, "Buenas tardes" hasta las 20 y después "Buenas noches". */
 function saludo() {
@@ -124,7 +125,7 @@ export default function Inicio() {
   const dosColumnas = columnas >= 3;
 
   return (
-    <ScrollView style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido}
+    <ScrollConArriba style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido}
       refreshControl={<RefreshControl refreshing={recargando} onRefresh={async () => { setRecargando(true); await cargar(); setVuelta((v) => v + 1); setRecargando(false); }} />}>
       <View style={estilos.centrado}>
         {/* Encabezado imponente: degradado, chispas y sombra roja */}
@@ -202,7 +203,7 @@ export default function Inicio() {
           </View>
         </View>
       </View>
-    </ScrollView>
+    </ScrollConArriba>
   );
 }
 

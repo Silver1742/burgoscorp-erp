@@ -3,7 +3,7 @@
 //  - Gerencia y el administrador ven todas las áreas con su jefe y cuántos son; tocando una, sus
 //    integrantes con el detalle de cada uno.
 import { useCallback, useState } from 'react';
-import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -15,6 +15,7 @@ import { api } from '../../lib/api';
 import { perfilRol } from '../../lib/roles';
 import { espacio, radio, sombra, useTema, usePantalla } from '../../tema';
 import { useCargar } from '../../lib/cambios';
+import { ScrollConArriba } from '../../componentes/Desplazable';
 
 function ListaAreas() {
   const t = useTema();
@@ -36,7 +37,7 @@ function ListaAreas() {
   useCargar(cargar);
 
   return (
-    <ScrollView style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido}
+    <ScrollConArriba style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido}
       refreshControl={<RefreshControl refreshing={recargando} onRefresh={async () => { setRecargando(true); await cargar(); setRecargando(false); }} />}>
       <View style={estilos.centrado}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: espacio.s }}>
@@ -90,7 +91,7 @@ function ListaAreas() {
         </View>
       </Modal>
       <NuevaArea visible={creando} alCerrar={() => setCreando(false)} alCrear={() => { setCreando(false); cargar(); }} />
-    </ScrollView>
+    </ScrollConArriba>
   );
 }
 

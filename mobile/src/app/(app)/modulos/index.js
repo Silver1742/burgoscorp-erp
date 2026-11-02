@@ -6,6 +6,7 @@ import { EncabezadoPagina, Tarjeta, Vacio, Insignia } from '../../../componentes
 import { useSesion } from '../../../contexto/sesion';
 import { MODULOS } from '../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../tema';
+import { ListaConArriba } from '../../../componentes/Desplazable';
 
 export default function Modulos() {
   const { permisos } = useSesion();
@@ -15,7 +16,7 @@ export default function Modulos() {
   const visibles = MODULOS.filter((m) => permisos[m.codigo]?.ver);
 
   return (
-    <FlatList
+    <ListaConArriba
       key={columnas} // FlatList necesita remontarse si cambia la cantidad de columnas (rotación)
       data={visibles}
       numColumns={columnas}

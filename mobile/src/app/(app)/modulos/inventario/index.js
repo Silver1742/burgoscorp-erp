@@ -1,13 +1,14 @@
 // Stock: cuánto hay, cuánto está reservado para órdenes de trabajo y cuánto queda disponible.
 // Lo que está bajo el mínimo aparece primero.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { EncabezadoPagina, Campo, Opciones, Tarjeta, Insignia, Boton, EsqueletoLista, ErrorCarga, Vacio } from '../../../../componentes/ui';
 import { api } from '../../../../lib/api';
 import { TIPO_PRODUCTO, cantidad } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import { ListaConArriba } from '../../../../componentes/Desplazable';
 
 const FILTROS = [{ valor: 'todos', titulo: 'Todos' }, { valor: 'bajo', titulo: 'Bajo mínimo' }];
 
@@ -55,7 +56,7 @@ export default function Stock() {
   }, [cargar, busqueda]);
 
   return (
-    <FlatList
+    <ListaConArriba
       key={columnas}
       style={{ backgroundColor: t.fondo }}
       contentContainerStyle={estilos.lista}

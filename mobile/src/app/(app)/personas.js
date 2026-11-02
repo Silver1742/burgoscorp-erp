@@ -2,7 +2,7 @@
 // Junta lo que antes estaba repartido en Usuarios, Legajos y Personal. Tocando a alguien se abre su
 // ficha en una ventana encima de la lista: ahí se edita (administrador) o se consulta (gerencia).
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FichaPersona from '../../componentes/FichaPersona';
@@ -12,6 +12,7 @@ import { api } from '../../lib/api';
 import { perfilRol } from '../../lib/roles';
 import { espacio, radio, useTema } from '../../tema';
 import { useAlCambiar } from '../../lib/cambios';
+import { ListaConArriba } from '../../componentes/Desplazable';
 
 const POR_PAGINA = 40;
 
@@ -82,7 +83,7 @@ export default function Personas() {
 
   return (
     <>
-      <FlatList
+      <ListaConArriba
         style={{ backgroundColor: t.fondo }}
         contentContainerStyle={estilos.contenido}
         data={lista ?? []}

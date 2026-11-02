@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTema, espacio, radio, sombra } from '../tema';
 import { perfilRol } from '../lib/roles';
+import { BotonArriba, useArriba } from './Desplazable';
 
 // ---------------------------------------------------------------- estructura
 
@@ -33,6 +34,7 @@ export function Pantalla({ children, scroll = true, anchoMax = 720, bordes = ['b
   const scrollRef = useRef(null);
   const desplazamiento = useRef(0);
   const pendientes = useRef([]);
+  const arriba = useArriba();
 
   // Junta los errores que aparecen juntos (validación de todo el formulario) y va al de más arriba.
   const avisar = useCallback((ref) => {
@@ -71,11 +73,12 @@ export function Pantalla({ children, scroll = true, anchoMax = 720, bordes = ['b
           {scroll
             ? (
               <ScrollView ref={scrollRef} contentContainerStyle={estilos.scroll} keyboardShouldPersistTaps="handled" refreshControl={refreshControl}
-                scrollEventThrottle={64} onScroll={(e) => { desplazamiento.current = e.nativeEvent.contentOffset.y; }}>
+                scrollEventThrottle={64} onScroll={(e) => { desplazamiento.current = e.nativeEvent.contentOffset.y; arriba.alDesplazar(e); }}>
                 {contenido}
               </ScrollView>
             )
             : <View style={[estilos.scroll, { flex: 1 }]}>{contenido}</View>}
+          {scroll ? <BotonArriba visible={arriba.visible} alTocar={() => scrollRef.current?.scrollTo({ y: 0, animated: true })} /> : null}
         </ContextoErrores.Provider>
       </KeyboardAvoidingView>
     </SafeAreaView>

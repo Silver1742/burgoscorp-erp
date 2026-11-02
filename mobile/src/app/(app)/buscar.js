@@ -4,7 +4,7 @@
 //    proveedores y cuentas, según lo que el rol puede ver (GET /buscar).
 // Sin texto muestra el menú completo como una lista simple, agrupada por tema.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Cargando, Vacio } from '../../componentes/ui';
@@ -13,6 +13,7 @@ import { api } from '../../lib/api';
 import { perfilRol } from '../../lib/roles';
 import { MODULOS } from '../../modulos';
 import { espacio, radio, useTema } from '../../tema';
+import { ScrollConArriba } from '../../componentes/Desplazable';
 
 const ICONO_TIPO = {
   persona: 'person-outline', cliente: 'business-outline', pedido: 'briefcase-outline', ot: 'clipboard-outline',
@@ -108,7 +109,7 @@ export default function Buscar() {
   const sinResultados = texto.length >= 2 && !buscando && !error && datos && !datos.length && !atajos.length;
 
   return (
-    <ScrollView style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido} keyboardShouldPersistTaps="handled">
+    <ScrollConArriba style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido} keyboardShouldPersistTaps="handled">
       <View style={estilos.centrado}>
         <View style={[estilos.caja, { backgroundColor: t.superficie, borderColor: color }]}>
           <Ionicons name="search" size={20} color={color} />
@@ -157,7 +158,7 @@ export default function Buscar() {
           </>
         )}
       </View>
-    </ScrollView>
+    </ScrollConArriba>
   );
 }
 

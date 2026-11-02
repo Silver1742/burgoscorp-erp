@@ -1,6 +1,6 @@
 // Órdenes de trabajo: lo urgente y lo que vence antes primero, con el avance de cada una.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -10,6 +10,7 @@ import { usePuede } from '../../../../contexto/sesion';
 import { api } from '../../../../lib/api';
 import { ESTADO_OT, PRIORIDAD, TIPO_TRABAJO, fechaCorta } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import { ListaConArriba } from '../../../../componentes/Desplazable';
 
 const FILTROS = [
   { valor: 'abiertas', titulo: 'Abiertas' },
@@ -88,7 +89,7 @@ export default function OrdenesTrabajo() {
   }, [cargar, busqueda]);
 
   return (
-    <FlatList
+    <ListaConArriba
       key={columnas}
       style={{ backgroundColor: t.fondo }}
       contentContainerStyle={estilos.lista}

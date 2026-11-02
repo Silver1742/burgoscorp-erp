@@ -1,7 +1,7 @@
 // Usuarios (como el UsersPage de R3): buscar, filtrar por estado y rol, y entrar a cada cuenta para
 // verla, editarla, darla de baja, mandarle el código de contraseña o eliminarla.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
@@ -12,6 +12,7 @@ import { api } from '../../../../lib/api';
 import { ROLES } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
 import { estadoUsuario, haceCuanto } from '../../../../lib/usuarios';
+import { ListaConArriba } from '../../../../componentes/Desplazable';
 
 const ESTADOS = [
   { valor: '', titulo: 'Todos' },
@@ -66,7 +67,7 @@ export default function Usuarios() {
   const hayMas = lista && lista.length < total;
 
   return (
-    <FlatList
+    <ListaConArriba
       key={columnas}
       style={{ backgroundColor: t.fondo }}
       contentContainerStyle={estilos.lista}

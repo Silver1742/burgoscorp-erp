@@ -1,6 +1,6 @@
 // Ventas: solicitudes de los clientes y presupuestos, primero lo que espera una acción.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { EncabezadoPagina, Campo, Opciones, Tarjeta, Insignia, Boton, EsqueletoLista, ErrorCarga, Vacio } from '../../../../componentes/ui';
@@ -8,6 +8,7 @@ import { usePuede } from '../../../../contexto/sesion';
 import { api } from '../../../../lib/api';
 import { ESTADO_PRESUPUESTO, ESTADO_SOLICITUD, TIPO_TRABAJO, fechaCorta, pesosAr } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import { ListaConArriba } from '../../../../componentes/Desplazable';
 
 const VISTAS = [
   { valor: 'solicitudes', titulo: 'Solicitudes' },
@@ -53,7 +54,7 @@ export default function Ventas() {
   const esPresupuesto = vista === 'presupuestos';
 
   return (
-    <FlatList
+    <ListaConArriba
       key={columnas}
       style={{ backgroundColor: t.fondo }}
       contentContainerStyle={estilos.lista}

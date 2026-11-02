@@ -1,13 +1,14 @@
 // Listado genérico de un recurso de la API: búsqueda, paginación infinita,
 // "tirar para actualizar", esqueletos mientras carga y estados vacío / error.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Campo, EsqueletoLista, ErrorCarga, Insignia, Tarjeta, Vacio } from '../../../../componentes/ui';
 import { api } from '../../../../lib/api';
 import { buscarRecurso } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import { ListaConArriba } from '../../../../componentes/Desplazable';
 
 const POR_PAGINA = 20;
 
@@ -61,7 +62,7 @@ export default function ListaRecurso() {
   return (
     <View style={{ flex: 1, backgroundColor: t.fondo }}>
       <Stack.Screen options={{ title: recurso.titulo }} />
-      <FlatList
+      <ListaConArriba
         key={columnas}
         data={estado === 'cargando' ? [] : items}
         numColumns={columnas}

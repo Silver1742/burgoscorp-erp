@@ -1,6 +1,6 @@
 // Órdenes de compra: primero lo que espera una acción (aprobar, enviar, recibir).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { EncabezadoPagina, Campo, Opciones, Tarjeta, Insignia, Boton, EsqueletoLista, ErrorCarga, Vacio } from '../../../../componentes/ui';
@@ -8,6 +8,7 @@ import { usePuede } from '../../../../contexto/sesion';
 import { api } from '../../../../lib/api';
 import { ESTADO_OC, fechaCorta, pesosAr } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import { ListaConArriba } from '../../../../componentes/Desplazable';
 
 const FILTROS = [
   { valor: 'abiertas', titulo: 'En curso' },
@@ -55,7 +56,7 @@ export default function OrdenesCompra() {
   }, [cargar, busqueda]);
 
   return (
-    <FlatList
+    <ListaConArriba
       key={columnas}
       style={{ backgroundColor: t.fondo }}
       contentContainerStyle={estilos.lista}

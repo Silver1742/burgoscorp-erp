@@ -3,7 +3,7 @@
 // encima de la lista (ahí se edita, se le asigna una tarea, etc., según el rol de quien mira).
 // Lo usan "Mi equipo" (jefe) y la ventana de cada área (gerencia y administración).
 import { useCallback, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Avatar, ErrorCarga, EsqueletoLista, Insignia, InsigniaRol, Tarjeta, Vacio } from './ui';
 import FichaPersona from './FichaPersona';
@@ -11,6 +11,7 @@ import { api } from '../lib/api';
 import { horaCorta } from '../modulos';
 import { espacio, radio, useTema } from '../tema';
 import { useCargar } from '../lib/cambios';
+import { ScrollConArriba } from './Desplazable';
 
 const sinAcentos = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -71,7 +72,7 @@ export default function IntegrantesArea({ areaId }) {
   const presentes = (datos?.integrantes ?? []).filter((i) => i.entrada_hoy).length;
 
   return (
-    <ScrollView style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido} keyboardShouldPersistTaps="handled"
+    <ScrollConArriba style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido} keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={recargando} onRefresh={async () => { setRecargando(true); await cargar(); setRecargando(false); }} />}>
       <View style={estilos.centrado}>
         {error ? <Tarjeta><ErrorCarga error={error} onReintentar={cargar} /></Tarjeta> : null}
@@ -93,7 +94,7 @@ export default function IntegrantesArea({ areaId }) {
         ) : null}
       </View>
       <FichaPersona empleadoId={ficha} alCerrar={() => setFicha(null)} alCambiar={cargar} />
-    </ScrollView>
+    </ScrollConArriba>
   );
 }
 
