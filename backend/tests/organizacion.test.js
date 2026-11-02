@@ -1,0 +1,154 @@
+// Búsqueda general, integrantes de cada área y "un solo jefe por área".
+import { test, describe, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import request from 'supertest';
+import { crearApp } from '../src/app.js';
+import { pool, query } from '../src/config/db.js';
+
+const app = crearApp();
+const api = () => request(app);
+const PASSWORD = process.env.SEED_PASSWORD || 'BurgosCorp2026';
+const EMAILS = {
+  admin: 'admin@burgoscorp.test',
+  ricardo: 'ricardo.ferreyra@burgoscorp.test', // gerencia
+  jorge: 'jorge.dominguez@burgoscorp.test',    // jefe de Mecanizado
+  ramon: 'ramon.gimenez@burgoscorp.test',      // tornero de Mecanizado
+};
+const s = {};
+const como = (q) => ({ Authorization: `Bearer ${s[q].accessToken}` });
+const area = async (codigo) => (await query('SELECT id FROM areas WHERE codigo = ?', [codigo]))[0].id;
+const sello = Date.now() % 1e7;
+const areasDePrueba = [];
+
+before(async () => {
+  for (const [q, email] of Object.entries(EMAILS)) {
+    const r = await api().post('/api/v1/auth/login').send({ email, password: PASSWORD });
+    assert.equal(r.status, 200, `login ${email}`);
+    s[q] = r.body.data;
+  }
+});
+after(async () => {
+  for (const id of areasDePrueba) await query('UPDATE areas SET activo = 0 WHERE id = ?', [id]);
+  await pool.end();
+});
+
+async function areaNueva(nombre) {
+  const r = await query('INSERT INTO areas (codigo, nombre) VALUES (?, ?)', [`Z${sello}${areasDePrueba.length}`, `${nombre} ${sello}`]);
+  areasDePrueba.push(r.insertId);
+  return r.insertId;
+}
+const crearJefe = (nombre, areaId, jefeActual) => api().post('/api/v1/usuarios').set(como('admin')).send({
+  email: `${nombre.toLowerCase()}.${sello}@correo.test`, nombre, apellido: 'Prueba', rol: 'JEFE', area_id: areaId,
+  ...(jefeActual ? { jefe_actual: jefeActual } : {}),
+});
+const rolDe = async (usuarioId) => (await query('SELECT r.codigo FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.id = ?', [usuarioId]))[0].codigo;
+const jefeDeArea = async (areaId) => (await query('SELECT jefe_empleado_id FROM areas WHERE id = ?', [areaId]))[0].jefe_empleado_id;
+
+describe('un solo jefe por área', () => {
+  test('el primero queda a cargo; el segundo pide decidir qué hacer con el actual', async () => {
+    const t = await areaNueva('Taller A');
+    const a = await crearJefe('Ana', t);
+    assert.equal(a.status, 201, JSON.stringify(a.body));
+    assert.equal(await jefeDeArea(t), a.body.data.empleado_id);
+
+    const b = await crearJefe('Beto', t);
+    assert.equal(b.status, 409);
+    assert.equal(b.body.error.codigo, 'JEFE_OCUPADO');
+    assert.match(b.body.error.mensaje, /ya tiene jefe: Ana Prueba/);
+    assert.equal(b.body.error.detalles[0].jefes[0].nombre, 'Ana Prueba');
+    assert.ok(Array.isArray(b.body.error.detalles[0].areas_libres));
+    const [{ n }] = await query('SELECT COUNT(*) AS n FROM usuarios WHERE email = ?', [`beto.${sello}@correo.test`]);
+    assert.equal(Number(n), 0, 'no se creó nada a medias');
+  });
+
+  test('destituir: el anterior pasa a empleado y el nuevo queda a cargo', async () => {
+    const t = await areaNueva('Taller B');
+    const a = await crearJefe('Carla', t);
+    const b = await crearJefe('Dario', t, { accion: 'destituir' });
+    assert.equal(b.status, 201, JSON.stringify(b.body));
+    assert.equal(await jefeDeArea(t), b.body.data.empleado_id);
+    assert.equal(await rolDe(a.body.data.id), 'EMPLEADO');
+    const [sup] = await query('SELECT supervisor_id FROM empleados WHERE id = ?', [a.body.data.empleado_id]);
+    assert.equal(sup.supervisor_id, b.body.data.empleado_id, 'Carla ahora reporta a Darío');
+  });
+
+  test('mover: el anterior pasa a ser jefe de otra área sin jefe', async () => {
+    const t = await areaNueva('Taller C');
+    const libre = await areaNueva('Taller libre');
+    const a = await crearJefe('Elsa', t);
+    const ocupada = await crearJefe('Fito', t, { accion: 'mover', area_id: t });
+    assert.equal(ocupada.status, 400, 'no se puede mover a la misma área');
+    const b = await crearJefe('Gabi', t, { accion: 'mover', area_id: libre });
+    assert.equal(b.status, 201, JSON.stringify(b.body));
+    assert.equal(await jefeDeArea(t), b.body.data.empleado_id);
+    assert.equal(await jefeDeArea(libre), a.body.data.empleado_id);
+    assert.equal(await rolDe(a.body.data.id), 'JEFE');
+  });
+
+  test('cambiar el rol a jefe también respeta la regla', async () => {
+    const t = await areaNueva('Taller D');
+    await crearJefe('Hugo', t);
+    const emp = await api().post('/api/v1/usuarios').set(como('admin')).send({
+      email: `ines.${sello}@correo.test`, nombre: 'Ines', apellido: 'Prueba', rol: 'EMPLEADO', area_id: t,
+    });
+    assert.equal(emp.status, 201);
+    const sinDecidir = await api().put(`/api/v1/usuarios/${emp.body.data.id}`).set(como('admin')).send({ rol: 'JEFE' });
+    assert.equal(sinDecidir.status, 409);
+    assert.equal(sinDecidir.body.error.codigo, 'JEFE_OCUPADO');
+    const ok = await api().put(`/api/v1/usuarios/${emp.body.data.id}`).set(como('admin')).send({ rol: 'JEFE', jefe_actual: { accion: 'destituir' } });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    assert.equal(await jefeDeArea(t), emp.body.data.empleado_id);
+  });
+});
+
+describe('integrantes de cada área', () => {
+  test('gerencia y el administrador ven cualquier área con sus datos', async () => {
+    const mec = await area('MEC');
+    for (const q of ['ricardo', 'admin']) {
+      const r = await api().get(`/api/v1/personal/area/${mec}`).set(como(q));
+      assert.equal(r.status, 200, `${q}: ${JSON.stringify(r.body)}`);
+      assert.equal(r.body.data.area.nombre, 'Mecanizado');
+      const jorge = r.body.data.integrantes.find((i) => i.email === EMAILS.jorge);
+      assert.equal(jorge.es_jefe, true);
+      const ramon = r.body.data.integrantes.find((i) => i.email === EMAILS.ramon);
+      assert.match(ramon.habilidades, /Tornería/);
+      assert.equal(typeof ramon.tareas_abiertas, 'number');
+    }
+  });
+
+  test('un jefe ve su área pero no las otras; un empleado no ve el personal', async () => {
+    assert.equal((await api().get(`/api/v1/personal/area/${await area('MEC')}`).set(como('jorge'))).status, 200);
+    assert.equal((await api().get(`/api/v1/personal/area/${await area('SOL')}`).set(como('jorge'))).status, 403);
+    assert.equal((await api().get(`/api/v1/personal/area/${await area('MEC')}`).set(como('ramon'))).status, 403);
+  });
+});
+
+describe('búsqueda general', () => {
+  test('el administrador encuentra personas y cuentas en una sola búsqueda', async () => {
+    const r = await api().get('/api/v1/buscar').query({ q: 'Domínguez' }).set(como('admin'));
+    assert.equal(r.status, 200);
+    const tipos = r.body.data.grupos.map((g) => g.tipo);
+    assert.ok(tipos.includes('persona'));
+    assert.ok(tipos.includes('usuario'));
+  });
+
+  test('cada uno solo ve lo que su rol permite', async () => {
+    const r = await api().get('/api/v1/buscar').query({ q: 'Domínguez' }).set(como('ramon'));
+    assert.equal(r.status, 200);
+    const tipos = r.body.data.grupos.map((g) => g.tipo);
+    assert.ok(!tipos.includes('usuario'), 'un empleado no busca cuentas de usuario');
+    assert.ok(!(r.body.data.grupos.find((g) => g.tipo === 'persona')?.items ?? []).some((i) => /Domínguez/.test(i.titulo)),
+      'un empleado no ve el legajo de otros');
+  });
+
+  test('máquinas, materiales y clientes por código o nombre; menos de 2 letras → 400', async () => {
+    const maq = await api().get('/api/v1/buscar').query({ q: 'CNC-01' }).set(como('ricardo'));
+    assert.ok(maq.body.data.grupos.some((g) => g.tipo === 'maquina'));
+    const cli = await api().get('/api/v1/buscar').query({ q: 'Metalúrgica' }).set(como('ricardo'));
+    assert.ok(cli.body.data.grupos.some((g) => g.tipo === 'cliente'));
+    assert.equal((await api().get('/api/v1/buscar').query({ q: 'a' }).set(como('admin'))).status, 400);
+    const raro = await api().get('/api/v1/buscar').query({ q: "%' OR 1=1 --" }).set(como('admin'));
+    assert.equal(raro.status, 200);
+    assert.equal(raro.body.data.grupos.length, 0, 'los comodines y comillas se buscan como texto');
+  });
+});

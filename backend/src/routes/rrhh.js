@@ -202,6 +202,47 @@ router.get('/personal/resumen', autenticado, requierePermiso('RRHH', 'ver'), asy
   });
 });
 
+// Integrantes de un área con sus datos: para el administrador, gerencia y RRHH (toda la empresa)
+// y para el jefe (solo su área).
+router.get('/personal/area/:id', autenticado, requierePermiso('RRHH', 'ver'), validar({ params: paramsId }), async (req, res) => {
+  const areaId = req.validado.params.id;
+  const { alcance } = req.permiso;
+  if (!(alcance === 'todo' || (alcance === 'area' && req.usuario.area_id === areaId))) {
+    throw errores.prohibido('Solo podés ver el personal de tu área');
+  }
+  const area = await queryOne(`
+    SELECT a.id, a.codigo, a.nombre, a.descripcion, a.jefe_empleado_id, CONCAT(j.nombre, ' ', j.apellido) AS jefe_nombre
+    FROM areas a LEFT JOIN empleados j ON j.id = a.jefe_empleado_id WHERE a.id = ? AND a.activo = 1`, [areaId]);
+  if (!area) throw errores.noEncontrado('El área no existe');
+  const fecha = hoyEmpresa();
+  const integrantes = await query(`
+    SELECT e.id, e.legajo, e.nombre, e.apellido, e.estado, e.telefono, e.fecha_ingreso,
+           COALESCE(u.email, e.email_laboral) AS email, p.nombre AS puesto, r.codigo AS rol,
+           a.jefe_empleado_id = e.id AS es_jefe,
+           (SELECT GROUP_CONCAT(CONCAT(h.nombre, ' (', eh.nivel, ')') ORDER BY h.nombre SEPARATOR ', ')
+              FROM empleado_habilidades eh JOIN habilidades h ON h.id = eh.habilidad_id WHERE eh.empleado_id = e.id) AS habilidades,
+           (SELECT MIN(s.entrada_at) FROM asistencias s WHERE s.empleado_id = e.id AND s.fecha = ?) AS entrada_hoy,
+           EXISTS (SELECT 1 FROM asistencias s WHERE s.empleado_id = e.id AND s.fecha = ? AND s.salida_at IS NULL) AS trabajando,
+           (SELECT COUNT(*) FROM tarea_asignaciones ta JOIN tareas t ON t.id = ta.tarea_id
+             WHERE ta.empleado_id = e.id AND t.estado IN ('pendiente','en_curso','pausada','rechazada')) AS tareas_abiertas
+    FROM empleados e
+    JOIN areas a ON a.id = e.area_id
+    LEFT JOIN puestos p ON p.id = e.puesto_id
+    LEFT JOIN usuarios u ON u.empleado_id = e.id
+    LEFT JOIN roles r ON r.id = u.rol_id
+    WHERE e.area_id = ? AND e.estado <> 'baja'
+    ORDER BY es_jefe DESC, e.apellido, e.nombre`, [fecha, fecha, areaId]);
+  res.json({
+    ok: true,
+    data: {
+      area,
+      integrantes: integrantes.map((i) => ({
+        ...i, es_jefe: Boolean(i.es_jefe), trabajando: Boolean(i.trabajando), tareas_abiertas: Number(i.tareas_abiertas),
+      })),
+    },
+  });
+});
+
 router.get('/organigrama', autenticado, requierePermiso('ORG', 'ver'), async (req, res) => {
   const areas = await query(`
     SELECT a.id, a.codigo, a.nombre, a.descripcion, a.jefe_empleado_id,

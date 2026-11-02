@@ -13,6 +13,7 @@ import ventasRoutes from './ventas.js';
 import calidadRoutes from './calidad.js';
 import finanzasRoutes from './finanzas.js';
 import liquidacionRoutes from './liquidacion.js';
+import buscarRoutes from './buscar.js';
 
 const router = Router();
 
@@ -30,6 +31,7 @@ router.use('/', ventasRoutes);
 router.use('/', calidadRoutes);
 router.use('/', finanzasRoutes);
 router.use('/', liquidacionRoutes);
+router.use('/', buscarRoutes);
 router.use('/', adjuntosRoutes);
 router.use('/', catalogosRoutes);
 

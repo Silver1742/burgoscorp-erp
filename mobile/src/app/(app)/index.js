@@ -1,26 +1,21 @@
-// Inicio (como el DashboardPage de R3): saludo, rol, tarjetas con contador, fichaje y avisos.
+// Inicio: distinto para cada rol, con su color y solo lo que ese rol usa todos los días.
+//   Empleado      → "Mi día": fichaje, sus tareas abiertas y 4 accesos (tareas, licencia, QR, falla).
+//   Jefe de área  → "Mi área": lo que espera su decisión (tareas para asignar y revisar, licencias)
+//                   y quién vino hoy; accesos para asignar, ver el equipo y aprobar.
+//   Gerencia      → "La empresa": personal, órdenes de trabajo y pedidos abiertos; tablero y áreas.
+//   Administrador → "Administración": solicitudes de acceso, cuentas sin área y personal.
+// Arriba de todo, la barra de búsqueda lleva a Buscar (encontrar cualquier cosa sin recorrer menús).
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  EncabezadoPagina, Tarjeta, FilaLista, Texto, InsigniaRol, Insignia, IconoEstadistica,
-  Esqueleto, ErrorCarga, Vacio, Boton,
-} from '../../componentes/ui';
+import { Tarjeta, FilaLista, Insignia, Esqueleto, ErrorCarga, Vacio, Boton } from '../../componentes/ui';
 import Fichaje from '../../componentes/Fichaje';
 import { usePuede, useSesion } from '../../contexto/sesion';
 import { api } from '../../lib/api';
-import useContador from '../../lib/useContador';
-import { MODULOS } from '../../modulos';
-import { espacio, useTema, usePantalla } from '../../tema';
-
-const DESCRIPCION_ROL = {
-  ADMIN: 'Tenés acceso completo, incluida la administración de usuarios.',
-  GERENCIA: 'Podés consultar todos los módulos de la empresa.',
-  JEFE: 'Gestionás los módulos de tu área y las tareas de tu equipo.',
-  EMPLEADO: 'Tus tareas, tu fichaje y tus solicitudes.',
-};
-const TONOS = ['rojo', 'gris', 'exito', 'aviso'];
+import { perfilRol } from '../../lib/roles';
+import { ESTADO_TAREA } from '../../modulos';
+import { espacio, radio, useTema, usePantalla } from '../../tema';
 
 /** "Buen día" hasta las 13, "Buenas tardes" hasta las 20 y después "Buenas noches". */
 function saludo() {
@@ -28,32 +23,6 @@ function saludo() {
   if (h >= 5 && h < 13) return 'Buen día';
   if (h >= 13 && h < 20) return 'Buenas tardes';
   return 'Buenas noches';
-}
-
-/** Botón grande de "¿Qué querés hacer?". */
-function Atajo({ icono, texto, onPress }) {
-  const t = useTema();
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={texto}
-      style={({ pressed }) => [estilos.atajo, { backgroundColor: pressed ? t.superficieSec : t.superficie, borderColor: t.borde }]}>
-      <View style={[estilos.atajoIcono, { backgroundColor: t.rojoSuave }]}>
-        <Ionicons name={icono.replace('-outline', '')} size={24} color={t.primario} />
-      </View>
-      <Text style={[estilos.atajoTexto, { color: t.texto }]} numberOfLines={2}>{texto}</Text>
-    </Pressable>
-  );
-}
-
-function TarjetaEstadistica({ icono, etiqueta, valor, tono, onPress }) {
-  const t = useTema();
-  const mostrado = useContador(valor);
-  return (
-    <Tarjeta onPress={onPress} estilo={{ marginBottom: 0, flex: 1 }}>
-      <IconoEstadistica icono={icono} tono={tono} />
-      <Text style={[estilos.numero, { color: t.texto }]} accessibilityLiveRegion="polite">{mostrado ?? '—'}</Text>
-      <Text style={{ color: t.textoSuave, fontSize: 13 }}>{etiqueta}</Text>
-    </Tarjeta>
-  );
 }
 
 const hace = (fecha) => {
@@ -65,194 +34,242 @@ const hace = (fecha) => {
   return `hace ${Math.round(h / 24)} d`;
 };
 
+const total = (r) => r?.meta?.total ?? r?.data?.length ?? 0;
+const sinError = (p) => p.catch(() => null); // un dato que no carga no tapa el resto de Inicio
+
+/** Accesos de cada rol (solo los que su permiso habilita). */
+function accesosDe(usuario, puede) {
+  const a = {
+    EMPLEADO: [
+      { texto: 'Mis tareas', icono: 'checkbox', ruta: '/tareas', si: Boolean(usuario.empleadoId) },
+      { texto: 'Pedir licencia', icono: 'airplane', ruta: '/modulos/rrhh/licencias', si: Boolean(usuario.empleadoId) },
+      { texto: 'Escanear QR', icono: 'qr-code', ruta: '/modulos/escanear', si: true },
+      { texto: 'Reportar falla', icono: 'warning', ruta: '/modulos/mantenimiento/nueva', si: puede('MANT', 'crear') },
+    ],
+    JEFE: [
+      { texto: 'Asignar tarea', icono: 'add-circle', ruta: '/modulos/tareas/nueva', si: puede('TAR', 'crear') },
+      { texto: 'Tareas del área', icono: 'list', ruta: '/modulos/tareas', si: puede('TAR', 'aprobar') },
+      { texto: 'Mi equipo', icono: 'people', ruta: '/equipo', si: true },
+      { texto: 'Aprobar licencias', icono: 'checkmark-done', ruta: '/modulos/rrhh/aprobaciones', si: puede('RRHH', 'aprobar') },
+    ],
+    GERENCIA: [
+      { texto: 'Tablero', icono: 'stats-chart', ruta: '/modulos/tablero', si: puede('TAB', 'ver') },
+      { texto: 'Áreas y personal', icono: 'business', ruta: '/equipo', si: true },
+      { texto: 'Ventas', icono: 'briefcase', ruta: '/modulos/ventas', si: puede('VEN', 'ver') },
+      { texto: 'Producción', icono: 'construct', ruta: '/modulos/produccion', si: puede('PROD', 'ver') },
+      { texto: 'Sueldos', icono: 'wallet', ruta: '/modulos/finanzas/liquidacion', si: puede('FIN', 'ver') },
+    ],
+    ADMIN: [
+      { texto: 'Solicitudes de acceso', icono: 'hourglass', ruta: '/modulos/usuarios/solicitudes', si: puede('SEG', 'aprobar') },
+      { texto: 'Usuarios', icono: 'shield', ruta: '/modulos/usuarios', si: puede('SEG', 'ver') },
+      { texto: 'Nuevo usuario', icono: 'person-add', ruta: '/modulos/usuarios/nuevo', si: puede('SEG', 'crear') },
+      { texto: 'Áreas y personal', icono: 'business', ruta: '/equipo', si: true },
+      { texto: 'Asignar tarea', icono: 'add-circle', ruta: '/modulos/tareas/nueva', si: puede('TAR', 'crear') },
+      { texto: 'Sueldos', icono: 'wallet', ruta: '/modulos/finanzas/liquidacion', si: puede('FIN', 'ver') },
+    ],
+  }[usuario.rol] ?? [];
+  return a.filter((x) => x.si);
+}
+
+/** Qué contar en Inicio para cada rol: [etiqueta, ícono, consulta, a dónde lleva]. */
+async function indicadoresDe(usuario, puede) {
+  const rol = usuario.rol;
+  const pedidos = [];
+  const agregar = (etiqueta, icono, promesa, ruta, alerta) => pedidos.push(sinError(promesa).then((v) => (v === null ? null : { etiqueta, icono, valor: v, ruta, alerta })));
+  const personal = ['JEFE', 'GERENCIA', 'ADMIN'].includes(rol) ? sinError(api('/personal/resumen')) : Promise.resolve(null);
+
+  if (rol === 'JEFE') {
+    agregar('Tareas para asignar', 'person-add', api('/tareas', { consulta: { sin_asignar: 1, limite: 1 } }).then(total), '/modulos/tareas', true);
+    agregar('Tareas para revisar', 'eye', api('/tareas', { consulta: { estado: 'en_revision', limite: 1 } }).then(total), '/modulos/tareas', true);
+    if (puede('RRHH', 'aprobar')) agregar('Licencias por aprobar', 'airplane', api('/licencias', { consulta: { para_aprobar: 1, limite: 50 } }).then(total), '/modulos/rrhh/aprobaciones', true);
+  }
+  if (rol === 'GERENCIA') {
+    if (puede('PROD', 'ver')) agregar('Órdenes de trabajo abiertas', 'clipboard', api('/ordenes-trabajo', { consulta: { abiertas: 1, limite: 1 } }).then(total), '/modulos/produccion');
+    if (puede('VEN', 'ver')) agregar('Pedidos de clientes abiertos', 'briefcase', api('/solicitudes', { consulta: { abiertas: 1, limite: 1 } }).then(total), '/modulos/ventas');
+  }
+  if (rol === 'ADMIN') {
+    if (puede('SEG', 'aprobar')) agregar('Esperan acceso', 'hourglass', api('/usuarios', { consulta: { estado: 'pendientes', limite: 1 } }).then(total), '/modulos/usuarios/solicitudes', true);
+    agregar('Tareas sin asignar', 'person-add', api('/tareas', { consulta: { sin_asignar: 1, limite: 1 } }).then(total), '/modulos/tareas', true);
+  }
+  const [p, ...resto] = await Promise.all([personal, ...pedidos]);
+  const lista = resto.filter(Boolean);
+  if (p) {
+    const t = p.totales;
+    lista.push({ etiqueta: rol === 'JEFE' ? 'Vinieron hoy de tu equipo' : 'Vinieron hoy', icono: 'people', valor: `${t.vinieron_hoy}/${t.personal}`, ruta: '/equipo' });
+    if (rol === 'ADMIN' && p.cuentas_sin_area?.length) {
+      lista.push({ etiqueta: 'Cuentas sin área', icono: 'alert-circle', valor: p.cuentas_sin_area.length, ruta: '/equipo', alerta: true });
+    }
+  }
+  return lista;
+}
+
+function Indicador({ i, color, onPress }) {
+  const t = useTema();
+  const atencion = i.alerta && Number(i.valor) > 0;
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${i.etiqueta}: ${i.valor}`}
+      style={({ pressed }) => [estilos.indicador, { backgroundColor: pressed ? t.superficieSec : t.superficie, borderColor: atencion ? color : t.borde }]}>
+      <Ionicons name={i.icono} size={18} color={atencion ? color : t.textoSuave} />
+      <Text style={{ color: t.texto, fontSize: 26, fontWeight: '700' }}>{i.valor}</Text>
+      <Text style={{ color: t.textoSuave, fontSize: 13 }} numberOfLines={2}>{i.etiqueta}</Text>
+    </Pressable>
+  );
+}
+
+function Acceso({ a, color, suave, onPress }) {
+  const t = useTema();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={a.texto}
+      style={({ pressed }) => [estilos.acceso, { backgroundColor: pressed ? t.superficieSec : t.superficie, borderColor: t.borde }]}>
+      <View style={[estilos.accesoIcono, { backgroundColor: suave }]}>
+        <Ionicons name={a.icono} size={22} color={color} />
+      </View>
+      <Text style={{ color: t.texto, fontSize: 15, fontWeight: '600', flex: 1 }} numberOfLines={2}>{a.texto}</Text>
+    </Pressable>
+  );
+}
+
 export default function Inicio() {
-  const { usuario, permisos } = useSesion();
+  const { usuario } = useSesion();
+  const puede = usePuede();
   const router = useRouter();
   const t = useTema();
   const { columnas } = usePantalla();
-  const [resumen, setResumen] = useState(null);
+  const r = perfilRol(usuario.rol);
+  const [indicadores, setIndicadores] = useState(null);
+  const [tareas, setTareas] = useState(null);
   const [avisos, setAvisos] = useState(null);
   const [error, setError] = useState(null);
   const [recargando, setRecargando] = useState(false);
-  const [pendientes, setPendientes] = useState(0);
-  const [personal, setPersonal] = useState(null); // totales de /personal/resumen
-  const puede = usePuede();
-
-  // "¿Qué querés hacer?": las acciones marcadas como rápidas en los módulos que el rol puede ver.
-  // Para el administrador, lo primero es Usuarios.
-  const atajos = [];
-  // Para administración y gerencia, Usuarios, Personal y Sueldos van primero.
-  const prioridad = (m) => ({ SEG: 3, RRHH: 2, FIN: 1 }[m.codigo] ?? 0);
-  const ordenados = ['ADMIN', 'GERENCIA'].includes(usuario.rol) ? [...MODULOS].sort((a, b) => prioridad(b) - prioridad(a)) : MODULOS;
-  for (const m of ordenados) {
-    if (!permisos[m.codigo]?.ver) continue;
-    for (const a of m.acciones ?? []) {
-      if (!a.rapido || (a.visible && !a.visible({ usuario, puede }))) continue;
-      if (!atajos.some((x) => x.ruta === a.ruta(usuario))) atajos.push({ texto: a.rapido, icono: a.icono, ruta: a.ruta(usuario) });
-    }
-  }
-
-  // Hasta 4 recursos visibles para el rol, con su total de registros.
-  const accesos = MODULOS.filter((m) => permisos[m.codigo]?.ver)
-    .flatMap((m) => m.recursos.slice(0, 1).map((r) => ({ modulo: m, recurso: r })))
-    .slice(0, 4);
-  const claveAccesos = accesos.map((a) => a.recurso.ruta).join(',');
+  const conTareas = Boolean(usuario.empleadoId) && ['EMPLEADO', 'JEFE'].includes(usuario.rol);
 
   const cargar = useCallback(async () => {
     setError(null);
     try {
-      const [datos, notif] = await Promise.all([
-        Promise.all(accesos.map(async (a) => ({ ...a, total: (await api(`/${a.recurso.ruta}`, { consulta: { limite: 1 } })).meta.total }))),
+      const [ind, notif, mias] = await Promise.all([
+        indicadoresDe(usuario, puede),
         api('/notificaciones'),
+        conTareas ? sinError(api('/tareas', { consulta: { mias: 1, abiertas: 1, limite: 3 } })) : null,
       ]);
-      setResumen(datos);
+      setIndicadores(ind);
       setAvisos(notif);
-      if (puede('SEG', 'aprobar')) {
-        setPendientes((await api('/usuarios', { consulta: { estado: 'pendientes', limite: 1 } })).meta.total);
-      }
-      if (['ADMIN', 'GERENCIA', 'JEFE'].includes(usuario.rol)) {
-        setPersonal((await api('/personal/resumen')).totales);
-      }
+      setTareas(mias);
     } catch (err) {
       setError(err.message);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [claveAccesos]);
-
+  }, [usuario.id, usuario.rol]);
   useEffect(() => { cargar(); }, [cargar]);
 
-  const columna = columnas >= 3 ? { flex: 1 } : null; // ver comentario en el legajo
-  const porFila = Math.min(columnas, 4) >= 4 ? 4 : 2;
-  const nombre = `${usuario.nombre} ${usuario.apellido}`;
+  const ir = (ruta) => router.push(ruta, { withAnchor: true });
+  const accesos = accesosDe(usuario, puede);
+  const anchoAcceso = `${100 / (columnas >= 3 ? 3 : 2)}%`;
 
   return (
     <ScrollView style={{ backgroundColor: t.fondo }} contentContainerStyle={estilos.contenido}
       refreshControl={<RefreshControl refreshing={recargando} onRefresh={async () => { setRecargando(true); await cargar(); setRecargando(false); }} />}>
       <View style={estilos.centrado}>
-        <EncabezadoPagina titulo={`${saludo()}, ${usuario.nombre}`} sub={DESCRIPCION_ROL[usuario.rol]} />
-        <View style={[estilos.fila, { marginTop: -espacio.m, marginBottom: espacio.xl }]}>
-          <InsigniaRol rol={usuario.rol} />
-          {/* El administrador del sistema no pertenece a un área */}
-          {usuario.rol === 'ADMIN' ? null
-            : usuario.area ? <Insignia texto={usuario.area.nombre} icono="business-outline" /> : <Insignia texto="Sin área asignada" tono="aviso" />}
+        {/* Encabezado con el color del rol */}
+        <View style={[estilos.banda, { backgroundColor: r.suave, borderLeftColor: r.color }]}>
+          <View style={[estilos.bandaIcono, { backgroundColor: r.color }]}>
+            <Ionicons name={r.icono} size={22} color="#ffffff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: t.texto, fontSize: 20, fontWeight: '700' }}>{saludo()}, {usuario.nombre}</Text>
+            <Text style={{ color: t.textoSuave }}>
+              {r.panel} · {r.titulo}{usuario.rol !== 'ADMIN' && usuario.area ? ` · ${usuario.area.nombre}` : ''}
+            </Text>
+          </View>
         </View>
+
+        {/* Buscar */}
+        <Pressable onPress={() => router.navigate('/buscar')} accessibilityRole="search" accessibilityLabel="Buscar"
+          style={[estilos.buscar, { backgroundColor: t.superficie, borderColor: t.borde }]}>
+          <Ionicons name="search" size={20} color={r.color} />
+          <Text style={{ color: t.textoTenue, fontSize: 15 }}>Buscar una persona, pedido, máquina o lo que quieras hacer…</Text>
+        </Pressable>
 
         {error ? <Tarjeta><ErrorCarga error={error} onReintentar={cargar} /></Tarjeta> : null}
 
-        {personal ? (
-          <Tarjeta onPress={() => router.push('/modulos/rrhh/personal', { withAnchor: true })}>
-            <View style={estilos.fila}>
-              <IconoEstadistica icono="people" tono="rojo" />
-              <View style={{ flex: 1, minWidth: 180 }}>
-                <Text style={{ color: t.texto, fontWeight: '700', fontSize: 16 }}>
-                  {personal.personal} {personal.personal === 1 ? 'persona' : 'personas'} {usuario.rol === 'JEFE' ? 'en tu área' : 'trabajando en BurgosCorp'}
-                </Text>
-                <Text style={{ color: t.textoSuave }}>
-                  {personal.trabajando_ahora} ficharon y están trabajando · {personal.en_licencia} de licencia
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={t.textoTenue} />
-            </View>
+        {usuario.rol !== 'ADMIN' && !usuario.area ? (
+          <Tarjeta titulo="Tu cuenta todavía no tiene área" icono="information-circle-outline">
+            <Text style={{ color: t.textoSuave }}>Pedile a un administrador que te asigne tu área y tus habilidades.</Text>
           </Tarjeta>
         ) : null}
 
-        {pendientes > 0 ? (
-          <Tarjeta onPress={() => router.push('/modulos/usuarios/solicitudes', { withAnchor: true })} acentoArriba>
-            <View style={estilos.fila}>
-              <IconoEstadistica icono="person-add" tono="aviso" />
-              <View style={{ flex: 1, minWidth: 180 }}>
-                <Text style={{ color: t.texto, fontWeight: '700', fontSize: 16 }}>
-                  {pendientes === 1 ? 'Hay 1 persona esperando acceso' : `Hay ${pendientes} personas esperando acceso`}
-                </Text>
-                <Text style={{ color: t.textoSuave }}>Tocá para revisar y habilitar las solicitudes.</Text>
+        {/* Lo que espera una decisión, con números */}
+        {indicadores === null && usuario.rol !== 'EMPLEADO' ? (
+          <View style={estilos.grilla}>{[0, 1, 2].map((k) => <View key={k} style={{ width: '33%', padding: 4 }}><Esqueleto alto={84} /></View>)}</View>
+        ) : indicadores?.length ? (
+          <View style={estilos.grilla}>
+            {indicadores.map((i) => (
+              <View key={i.etiqueta} style={{ width: `${100 / Math.min(indicadores.length, columnas >= 3 ? 4 : 2)}%`, padding: 4 }}>
+                <Indicador i={i} color={r.color} onPress={() => ir(i.ruta)} />
               </View>
-              <Ionicons name="chevron-forward" size={20} color={t.textoTenue} />
-            </View>
-          </Tarjeta>
+            ))}
+          </View>
         ) : null}
 
-        {atajos.length ? (
+        {usuario.empleadoId ? <Fichaje /> : null}
+
+        {/* Accesos del rol */}
+        {accesos.length ? (
           <>
             <Text style={[estilos.seccion, { color: t.textoSuave }]}>¿QUÉ QUERÉS HACER?</Text>
-            <View style={[estilos.grilla, { marginBottom: espacio.l }]}>
-              {atajos.slice(0, 8).map((a) => (
-                <View key={a.ruta} style={{ width: `${100 / (columnas >= 3 ? 4 : 2)}%`, padding: espacio.xs }}>
-                  <Atajo icono={a.icono} texto={a.texto} onPress={() => router.push(a.ruta, { withAnchor: true })} />
+            <View style={estilos.grilla}>
+              {accesos.map((a) => (
+                <View key={a.ruta + a.texto} style={{ width: anchoAcceso, padding: 4 }}>
+                  <Acceso a={a} color={r.color} suave={r.suave} onPress={() => ir(a.ruta)} />
                 </View>
               ))}
             </View>
           </>
-        ) : !usuario.empleadoId && usuario.rol !== 'ADMIN' ? (
-          <Tarjeta titulo="Tu cuenta todavía no tiene área" icono="information-circle-outline">
-            <Texto suave>Pedile a un administrador que te asigne tu área y tus habilidades para ver los módulos.</Texto>
+        ) : null}
+
+        {/* Mis tareas abiertas (empleado y jefe) */}
+        {conTareas && tareas?.data?.length ? (
+          <Tarjeta titulo="Tus tareas abiertas" icono="checkbox-outline" sinRelleno
+            derecha={<Boton titulo="Ver todas" variante="texto" chico onPress={() => router.navigate('/tareas')} estilo={{ marginBottom: 0 }} />}>
+            {tareas.data.map((x, k) => (
+              <FilaLista key={x.id} ultima={k === tareas.data.length - 1} onPress={() => ir(`/tareas/${x.id}`)}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: t.texto, fontWeight: '600' }} numberOfLines={1}>{x.titulo}</Text>
+                  <Text style={{ color: t.textoSuave, fontSize: 13 }} numberOfLines={1}>{[x.ot_numero, x.centro_codigo].filter(Boolean).join(' · ') || x.area_nombre}</Text>
+                </View>
+                <Insignia texto={ESTADO_TAREA[x.estado]?.texto ?? x.estado} tono={ESTADO_TAREA[x.estado]?.tono} />
+              </FilaLista>
+            ))}
           </Tarjeta>
         ) : null}
 
-        <Text style={[estilos.seccion, { color: t.textoSuave }]}>RESUMEN</Text>
-
-        {/* Tarjetas con contador */}
-        <View style={estilos.grilla}>
-          {(resumen ?? accesos).map((a, i) => (
-            <View key={a.recurso.ruta} style={{ width: `${100 / porFila}%`, padding: espacio.xs }}>
-              {resumen ? (
-                <TarjetaEstadistica icono={a.modulo.icono.replace('-outline', '')} etiqueta={a.recurso.titulo} valor={a.total} tono={TONOS[i % TONOS.length]}
-                  onPress={() => router.push(`/modulos/${a.modulo.codigo}/${a.recurso.ruta}`, { withAnchor: true })} />
-              ) : (
-                <Tarjeta estilo={{ marginBottom: 0 }}>
-                  <Esqueleto ancho={40} alto={40} />
-                  <Esqueleto ancho="50%" alto={24} estilo={{ marginTop: 10 }} />
-                  <Esqueleto ancho="80%" alto={12} estilo={{ marginTop: 8 }} />
-                </Tarjeta>
-              )}
-            </View>
-          ))}
-        </View>
-
-        <View style={[estilos.dosColumnas, columnas >= 3 && { flexDirection: 'row' }]}>
-          <View style={columna}>
-            {usuario.empleadoId ? <Fichaje /> : null}
-            {!usuario.dosPasosActivo ? (
-              <Tarjeta titulo="Protegé tu cuenta" icono="shield-checkmark-outline">
-                <Texto suave estilo={{ marginBottom: espacio.m }}>Activá la verificación en dos pasos: al entrar te pedimos un código que llega a tu email.</Texto>
-                <Boton titulo="Activar ahora" variante="oscuro" chico icono="shield-checkmark" estilo={{ alignSelf: 'flex-start' }}
-                  onPress={() => router.push('/perfil/dos-pasos', { withAnchor: true })} />
-              </Tarjeta>
-            ) : null}
-            <Tarjeta onPress={() => router.push('/perfil/ayuda', { withAnchor: true })}>
-              <View style={estilos.fila}>
-                <IconoEstadistica icono="help-circle" tono="gris" />
-                <View style={{ flex: 1, minWidth: 160 }}>
-                  <Text style={{ color: t.texto, fontWeight: '600' }}>¿Cómo se usa?</Text>
-                  <Text style={{ color: t.textoSuave, fontSize: 13 }}>Guía rápida paso a paso para tu rol.</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={t.textoTenue} />
+        {/* Avisos */}
+        <Tarjeta titulo="Avisos" icono="notifications-outline" sinRelleno
+          derecha={avisos?.meta.sinLeer ? <Insignia texto={`${avisos.meta.sinLeer} nuevos`} tono="rojo" /> : null}>
+          {avisos === null ? (
+            <View style={{ padding: espacio.l, gap: 10 }}><Esqueleto ancho="70%" /><Esqueleto ancho="50%" /></View>
+          ) : avisos.data.length === 0 ? (
+            <Vacio icono="notifications-off-outline" titulo="No tenés avisos" />
+          ) : avisos.data.slice(0, 4).map((n, k, arr) => (
+            <FilaLista key={n.id} ultima={k === arr.length - 1} onPress={() => ir('/perfil/notificaciones')}>
+              <Ionicons name="ellipse" size={8} color={n.leida_at ? 'transparent' : r.color} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: t.texto, fontWeight: n.leida_at ? '400' : '600' }} numberOfLines={1}>{n.titulo}</Text>
+                <Text style={{ color: t.textoSuave, fontSize: 13 }} numberOfLines={1}>{n.mensaje ? `${n.mensaje} · ` : ''}{hace(n.created_at)}</Text>
               </View>
-            </Tarjeta>
-          </View>
+            </FilaLista>
+          ))}
+        </Tarjeta>
 
-          <View style={columna}>
-            <Tarjeta titulo="Avisos recientes" icono="notifications-outline" sinRelleno
-              derecha={avisos?.meta.sinLeer ? <Insignia texto={`${avisos.meta.sinLeer} nuevos`} tono="rojo" /> : null}>
-              {avisos === null ? (
-                <View style={{ padding: espacio.l, gap: 10 }}><Esqueleto ancho="70%" /><Esqueleto ancho="50%" /></View>
-              ) : avisos.data.length === 0 ? (
-                <Vacio icono="notifications-off-outline" titulo="No tenés avisos" />
-              ) : (
-                <>
-                  {avisos.data.slice(0, 4).map((n, i, arr) => (
-                    <FilaLista key={n.id} ultima={i === arr.length - 1} onPress={() => router.push('/perfil/notificaciones', { withAnchor: true })}>
-                      <Ionicons name="ellipse" size={8} color={n.leida_at ? 'transparent' : t.primario} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: t.texto, fontWeight: n.leida_at ? '400' : '600' }} numberOfLines={1}>{n.titulo}</Text>
-                        <Text style={{ color: t.textoSuave, fontSize: 13 }} numberOfLines={1}>{n.mensaje ? `${n.mensaje} · ` : ''}{hace(n.created_at)}</Text>
-                      </View>
-                    </FilaLista>
-                  ))}
-                </>
-              )}
-            </Tarjeta>
-          </View>
-        </View>
+        {!usuario.dosPasosActivo ? (
+          <Pressable onPress={() => ir('/perfil/dos-pasos')} accessibilityRole="button" style={estilos.pie}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={t.textoSuave} />
+            <Text style={{ color: t.textoSuave, fontSize: 13, flex: 1 }}>Protegé tu cuenta con la verificación en dos pasos (un código por email al entrar).</Text>
+          </Pressable>
+        ) : null}
+        <Pressable onPress={() => ir('/perfil/ayuda')} accessibilityRole="button" style={estilos.pie}>
+          <Ionicons name="help-circle-outline" size={16} color={t.textoSuave} />
+          <Text style={{ color: t.textoSuave, fontSize: 13, flex: 1 }}>¿Cómo se usa? Guía rápida para tu rol.</Text>
+        </Pressable>
       </View>
     </ScrollView>
   );
@@ -260,13 +277,14 @@ export default function Inicio() {
 
 const estilos = StyleSheet.create({
   contenido: { padding: espacio.l },
-  centrado: { width: '100%', maxWidth: 1140, alignSelf: 'center' },
-  fila: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, flexWrap: 'wrap' },
-  grilla: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -espacio.xs, marginBottom: espacio.l },
-  numero: { fontSize: 28, fontWeight: '600', marginTop: espacio.s },
-  dosColumnas: { gap: espacio.m },
-  seccion: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5, marginBottom: espacio.s, marginLeft: espacio.xs },
-  atajo: { borderWidth: 1, borderRadius: 10, padding: espacio.m, minHeight: 104, justifyContent: 'space-between', gap: espacio.s },
-  atajoIcono: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  atajoTexto: { fontSize: 15, fontWeight: '600' },
+  centrado: { width: '100%', maxWidth: 960, alignSelf: 'center' },
+  banda: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, borderLeftWidth: 5, borderRadius: radio.l, padding: espacio.m, marginBottom: espacio.m },
+  bandaIcono: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  buscar: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, borderWidth: 1, borderRadius: radio.xl, paddingHorizontal: espacio.m, minHeight: 48, marginBottom: espacio.l },
+  grilla: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, marginBottom: espacio.m },
+  indicador: { borderWidth: 1, borderRadius: radio.l, padding: espacio.m, minHeight: 104, gap: 2 },
+  acceso: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, borderWidth: 1, borderRadius: radio.l, padding: espacio.m, minHeight: 64 },
+  accesoIcono: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  seccion: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5, marginBottom: espacio.xs, marginLeft: espacio.xs },
+  pie: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, paddingVertical: espacio.s },
 });

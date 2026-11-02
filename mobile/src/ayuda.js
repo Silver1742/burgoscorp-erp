@@ -15,7 +15,8 @@ export const TEMAS_AYUDA = [
   {
     id: 'moverse', titulo: 'Cómo moverse en la app', icono: 'compass-outline', roles: [],
     pasos: [
-      'Abajo tenés cuatro pestañas: Inicio, Mis tareas, Módulos y Perfil.',
+      'Cada rol tiene su color y sus pestañas. En Inicio está lo que usás todos los días.',
+      'Buscar: escribí un nombre, un número de pedido u OT, una máquina o lo que querés hacer ("licencia", "sueldos").',
       'En Inicio, "¿Qué querés hacer?" te lleva directo a lo que más usás según tu rol.',
       'Arriba a la derecha está el botón del QR: escaneá la etiqueta de una OT, una máquina o un material.',
       'La campanita muestra tus avisos (aprobaciones, tareas nuevas, solicitudes).',

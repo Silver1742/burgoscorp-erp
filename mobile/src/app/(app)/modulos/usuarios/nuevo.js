@@ -11,12 +11,14 @@ import { api } from '../../../../lib/api';
 import { esEmail, esNombre } from '../../../../lib/validacion';
 import { ROLES } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import { useJefatura, esCancelado } from '../../../../componentes/Jefatura';
 
 const OPCIONES_ROL = ['EMPLEADO', 'JEFE', 'GERENCIA', 'ADMIN'].map((valor) => ({ valor, titulo: ROLES[valor] }));
 
 export default function NuevoUsuario() {
   const router = useRouter();
   const toast = useToast();
+  const { conJefatura, dialogoJefatura } = useJefatura();
   const t = useTema();
   const [datos, setDatos] = useState({ nombre: '', apellido: '', email: '', rol: 'EMPLEADO' });
   const [ubicacion, setUbicacion] = useState(UBICACION_VACIA);
@@ -36,13 +38,15 @@ export default function NuevoUsuario() {
 
     setGuardando(true);
     try {
-      const creado = await api('/usuarios', {
+      // Si va como jefe a un área que ya tiene uno, se pregunta qué hacer con el actual.
+      const creado = await conJefatura((jefeActual) => api('/usuarios', {
         metodo: 'POST',
         cuerpo: {
           nombre: datos.nombre.trim(), apellido: datos.apellido.trim(), email: datos.email.trim(), rol: datos.rol,
           ...(datos.rol !== 'ADMIN' && ubicacion.area_id ? cuerpoUbicacion(ubicacion) : {}),
+          ...(jefeActual ? { jefe_actual: jefeActual } : {}),
         },
-      });
+      }));
       let mensaje = `${datos.nombre} ya tiene cuenta${creado.legajo ? ` y el legajo ${creado.legajo}` : ''}.`;
       if (mandarCodigo) {
         try {
@@ -55,6 +59,7 @@ export default function NuevoUsuario() {
       toast.exito(mensaje, { duracion: 6000 });
       router.replace(`/modulos/usuarios/${creado.id}`);
     } catch (err) {
+      if (esCancelado(err)) { toast.info(err.message); return; }
       setErrores(err.porCampo ?? {});
       toast.error(err.codigo === 'DUPLICADO' ? 'Ya hay una cuenta con ese email' : err.message);
     } finally {
@@ -64,6 +69,7 @@ export default function NuevoUsuario() {
 
   return (
     <Pantalla anchoMax={640}>
+      {dialogoJefatura}
       <EncabezadoPagina titulo="Nuevo usuario" icono="person-add" sub="Cargá sus datos y dónde trabaja: el legajo se crea solo." />
       <Tarjeta titulo="Persona" icono="person-outline">
         <Campo etiqueta="Nombre" value={datos.nombre} onChangeText={cambiar('nombre')} maxLength={60} error={errores.nombre} />

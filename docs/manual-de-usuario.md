@@ -43,7 +43,7 @@ Para mostrar el sistema sin usar cuentas reales:
 |---|---|---|
 | Administrador | `admin@burgoscorp.test` | Todo, usuarios y tareas para mandar a las áreas |
 | Gerencia | `gerencia@burgoscorp.test` | Todos los módulos, sin modificar |
-| Jefe de área | `jefe@burgoscorp.test` | Mecanizado: asigna y aprueba tareas, aprueba licencias |
+| Jefe de área | `jorge.dominguez@burgoscorp.test` | Jefe de Mecanizado: asigna y aprueba tareas, aprueba licencias |
 | Empleado | `empleado@burgoscorp.test` | Mecanizado (tornero): sus tareas, fichaje y licencias |
 
 La contraseña de las tres últimas es la que se cargó en `PASSWORD_PRUEBA` en Render.
@@ -52,14 +52,23 @@ La contraseña de las tres últimas es la que se cargó en `PASSWORD_PRUEBA` en 
 
 ## 2. La pantalla de la app
 
-| Parte | Para qué |
-|---|---|
-| **Inicio** | Saludo, **"¿Qué querés hacer?"** con botones a lo que más usás, fichaje, resumen y avisos. |
-| **Mis tareas** | Las tareas que te asignaron. |
-| **Módulos** | Todas las áreas del sistema que tu rol puede ver. |
-| **Perfil** | Tus datos, verificación en dos pasos, avisos, **Ayuda**, modo claro/oscuro y cerrar sesión. |
-| Botón **QR** (arriba) | Escanear la etiqueta de una orden de trabajo, máquina, material u orden de compra. |
-| **Campanita** (arriba) | Tus avisos: tareas nuevas, aprobaciones, solicitudes. |
+Cada rol tiene **su color, su panel y sus pestañas**, así se nota enseguida desde dónde estás
+usando la app (el color aparece arriba, junto al escudo, y en la línea de la barra de abajo):
+
+| Rol | Color | Pestañas | En Inicio |
+|---|---|---|---|
+| **Empleado** | Azul | Mi día · Mis tareas · Buscar · Perfil | Fichaje, tus tareas abiertas y 4 accesos: tareas, licencia, QR y reportar falla |
+| **Jefe de área** | Naranja | Mi área · Mis tareas · Mi equipo · Buscar · Perfil | Tareas para asignar y para revisar, licencias por aprobar y quién vino hoy |
+| **Gerencia** | Violeta | La empresa · Áreas · Buscar · Perfil | Órdenes de trabajo y pedidos abiertos, personal; accesos al tablero, ventas y sueldos |
+| **Administrador** | Rojo | Administración · Áreas · Buscar · Perfil | Personas esperando acceso, tareas sin asignar, cuentas sin área |
+
+- **Buscar**: una sola caja para encontrar cualquier cosa. Escribí un nombre, un número de pedido
+  u OT, una máquina, un material o lo que querés hacer ("licencia", "sueldos", "falla"). Sin escribir
+  nada, muestra el menú completo como una lista.
+- **Mi equipo / Áreas**: el jefe ve a la gente de su área; gerencia y el administrador ven todas
+  las áreas y, tocando una, sus integrantes: quién es el jefe, puesto, si vino hoy, tareas abiertas
+  y habilidades. Tocando a alguien se ven su email y teléfono y se abre su legajo.
+- Botón **QR** (arriba): escanear la etiqueta de una OT, máquina, material u orden de compra.
 
 Los resultados de cada acción aparecen como un cartelito abajo de la pantalla (verde si salió
 bien, rojo si hubo un problema). Antes de algo que no se puede deshacer, la app te pide confirmar.
@@ -195,6 +204,11 @@ que conoce a su equipo.
 Si un área **no tiene jefe**, la tarea la asignás vos desde su ficha.
 
 ## 10. Para el administrador: usuarios
+
+**Un área tiene un solo jefe.** Si habilitás, creás o cambiás a alguien como jefe de un área que ya
+tiene uno, la app te pregunta qué hacer con el actual:
+- **Destituirlo**: sigue en el área como empleado y la persona nueva queda a cargo.
+- **Pasarlo a otra área**: queda como jefe de un área que hoy no tiene jefe.
 
 Todo está en **Módulos → Usuarios** (o el botón **Usuarios** en Inicio).
 

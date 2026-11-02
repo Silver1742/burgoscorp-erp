@@ -282,9 +282,10 @@ describe('administración de usuarios', () => {
   test('cambiar el rol de alguien cierra sus sesiones', async () => {
     const admin = await login('admin@burgoscorp.test');
     const victima = await login('nestor.romero@burgoscorp.test');
-    const res = await api().put(`/api/v1/usuarios/${victima.usuario.id}`).set(conToken(admin.accessToken)).send({ rol: 'JEFE' });
+    // (a jefe no: Soldadura ya tiene jefe y pediría decidir qué hacer con él)
+    const res = await api().put(`/api/v1/usuarios/${victima.usuario.id}`).set(conToken(admin.accessToken)).send({ rol: 'GERENCIA' });
     assert.equal(res.status, 200);
-    assert.equal(res.body.data.rol, 'JEFE');
+    assert.equal(res.body.data.rol, 'GERENCIA');
     assert.equal(res.body.data.password_hash, undefined);
     assert.equal((await api().post('/api/v1/auth/refresh').send({ refreshToken: victima.refreshToken })).status, 401);
     await api().put(`/api/v1/usuarios/${victima.usuario.id}`).set(conToken(admin.accessToken)).send({ rol: 'EMPLEADO' });

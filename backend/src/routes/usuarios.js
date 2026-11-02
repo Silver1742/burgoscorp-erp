@@ -10,7 +10,7 @@ import { revocarTodas } from '../services/tokens.js';
 import { notificar } from '../services/notificaciones.js';
 import { enviarAviso, enviarCodigo } from '../services/email.js';
 import { generarCodigo } from '../services/codigos.js';
-import { crearLegajo, actualizarLegajo } from '../services/legajos.js';
+import { crearLegajo, actualizarLegajo, resolverJefatura, jefeActual } from '../services/legajos.js';
 import { paramsId, consultaListado, email, nombrePersona } from '../validators/comunes.js';
 import { usuarioAdmin } from '../validators/catalogos.js';
 import { errores } from '../utils/errores.js';
@@ -59,7 +59,26 @@ const ubicacion = {
   }).strict()).max(20).optional(),
   dni: z.string().trim().regex(/^\d{7,8}$/, 'DNI de 7 u 8 dígitos, sin puntos').optional(),
   empleado_id: z.coerce.number().int().positive().nullable().optional(),
+  // Si el área ya tiene jefe: qué hacer con el actual (ver services/legajos.js).
+  jefe_actual: jefeActual.optional(),
 };
+
+/**
+ * Cambio de rol de alguien que ya tiene legajo: si pasa a ser jefe, el área no puede tener otro;
+ * si deja de serlo, el área queda sin jefe hasta que se ponga uno nuevo.
+ */
+async function ajustarJefatura(conn, empleadoId, rolNuevo, decision) {
+  if (!empleadoId) return;
+  const [[e]] = await conn.execute('SELECT e.id, e.area_id, a.jefe_empleado_id FROM empleados e JOIN areas a ON a.id = e.area_id WHERE e.id = ?', [empleadoId]);
+  if (!e) return;
+  if (rolNuevo === 'JEFE') {
+    await resolverJefatura(conn, { areaId: e.area_id, empleadoId, decision });
+    await conn.execute('UPDATE areas SET jefe_empleado_id = ? WHERE id = ?', [empleadoId, e.area_id]);
+    await conn.execute('UPDATE empleados SET supervisor_id = ? WHERE area_id = ? AND id <> ?', [empleadoId, e.area_id, empleadoId]);
+  } else if (e.jefe_empleado_id === empleadoId && rolNuevo !== 'GERENCIA') {
+    await conn.execute('UPDATE areas SET jefe_empleado_id = NULL WHERE id = ?', [e.area_id]);
+  }
+}
 
 /**
  * Devuelve el id del legajo de la persona: el existente que se eligió o uno nuevo con el área,
@@ -74,6 +93,7 @@ async function legajoPara(conn, persona, datos, rol) {
        FROM empleados e WHERE e.id = ? AND e.estado <> 'baja'`, [datos.empleado_id]);
     if (!emp) throw errores.validacion([{ campo: 'body.empleado_id', mensaje: 'El legajo no existe o está dado de baja' }]);
     if (emp.usuario_id && emp.usuario_id !== persona.id) throw errores.conflicto('Ese legajo ya tiene una cuenta vinculada');
+    if (rol === 'JEFE') await ajustarJefatura(conn, emp.id, 'JEFE', datos.jefe_actual);
     return emp.id;
   }
   if (!datos.area_id) throw errores.validacion([{ campo: 'body.area_id', mensaje: 'Elegí el área donde va a trabajar' }]);
@@ -181,14 +201,14 @@ router.put('/:id/legajo', requierePermiso('SEG', 'editar'), validar({
 // Cambiar nombre, rol, legajo vinculado o activar/desactivar (dar de baja).
 router.put('/:id', requierePermiso('SEG', 'editar'), validar({ params: paramsId, body: usuarioAdmin }), async (req, res) => {
   const { id } = req.validado.params;
-  const { nombre, apellido, rol, empleado_id: empleadoId, activo } = req.validado.body;
+  const { nombre, apellido, rol, empleado_id: empleadoId, activo, jefe_actual: decision } = req.validado.body;
 
   // Nadie puede cambiarse su propio rol ni desactivarse (evita escalar privilegios o quedar sin admin).
   if (id === req.usuario.id && (rol !== undefined || activo !== undefined)) {
     throw errores.prohibido('No podés cambiar tu propio rol ni desactivar tu cuenta');
   }
 
-  const actual = await queryOne('SELECT u.id, r.codigo AS rol, u.activo FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.id = ?', [id]);
+  const actual = await queryOne('SELECT u.id, r.codigo AS rol, u.activo, u.empleado_id FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.id = ?', [id]);
   if (!actual) throw errores.noEncontrado();
 
   await transaccion(async (conn) => {
@@ -198,6 +218,7 @@ router.put('/:id', requierePermiso('SEG', 'editar'), validar({ params: paramsId,
     if (apellido !== undefined) await conn.execute('UPDATE usuarios SET apellido = ? WHERE id = ?', [apellido, id]);
     if (rol !== undefined) {
       await conn.execute('UPDATE usuarios SET rol_id = (SELECT id FROM roles WHERE codigo = ?) WHERE id = ?', [rol, id]);
+      if (rol !== actual.rol) await ajustarJefatura(conn, empleadoId ?? actual.empleado_id, rol, decision);
     }
     if (empleadoId !== undefined) await conn.execute('UPDATE usuarios SET empleado_id = ? WHERE id = ?', [empleadoId, id]);
     if (activo !== undefined) await conn.execute('UPDATE usuarios SET activo = ? WHERE id = ?', [activo, id]);

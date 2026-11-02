@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTema, espacio, radio, sombra } from '../tema';
+import { perfilRol } from '../lib/roles';
 
 // ---------------------------------------------------------------- estructura
 
@@ -334,17 +335,15 @@ export function Insignia({ texto, tono = 'gris', icono }) {
   );
 }
 
-const ROL = {
-  ADMIN: { texto: 'Administrador', tono: 'rojo', icono: 'shield-half-outline' },
-  GERENCIA: { texto: 'Gerencia', tono: 'rojo', icono: 'briefcase-outline' },
-  JEFE: { texto: 'Jefe de área', tono: 'negro', icono: 'id-card-outline' },
-  EMPLEADO: { texto: 'Empleado', tono: 'gris', icono: 'person-outline' },
-};
-
-/** Insignia de rol con los colores del portal: admin rojo suave, jefe negro, empleado gris. */
+/** Insignia de rol con el color de cada rol (lib/roles.js): se distingue a simple vista. */
 export function InsigniaRol({ rol }) {
-  const r = ROL[rol] ?? ROL.EMPLEADO;
-  return <Insignia texto={r.texto} tono={r.tono} icono={r.icono} />;
+  const r = perfilRol(rol);
+  return (
+    <View style={[estilos.insignia, { backgroundColor: r.color }]}>
+      <Ionicons name={r.icono} size={11} color="#ffffff" style={{ marginRight: 3 }} />
+      <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: '700' }}>{r.titulo}</Text>
+    </View>
+  );
 }
 
 /** Tonos de la paleta corporativa para los avatares (mismos que R3). */

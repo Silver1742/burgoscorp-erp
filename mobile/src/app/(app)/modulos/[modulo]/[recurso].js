@@ -12,7 +12,8 @@ import { espacio, useTema, usePantalla } from '../../../../tema';
 const POR_PAGINA = 20;
 
 export default function ListaRecurso() {
-  const { recurso: ruta } = useLocalSearchParams();
+  // `q` viene de Buscar (ej. un cliente): la lista abre ya filtrada.
+  const { recurso: ruta, q: qInicial } = useLocalSearchParams();
   // useMemo: un objeto nuevo en cada render dispararía el efecto de carga en bucle.
   const encontrado = useMemo(() => buscarRecurso(String(ruta)), [ruta]);
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function ListaRecurso() {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [pagina, setPagina] = useState(1);
-  const [busqueda, setBusqueda] = useState('');
+  const [busqueda, setBusqueda] = useState(typeof qInicial === 'string' ? qInicial.slice(0, 100) : '');
   const [estado, setEstado] = useState('cargando'); // cargando | listo | error | mas
   const [error, setError] = useState(null);
   const [recargando, setRecargando] = useState(false);

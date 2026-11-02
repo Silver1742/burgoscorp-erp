@@ -1,9 +1,9 @@
 // Cuentas de prueba, una por rol, para mostrar y probar el sistema sin usar las de la gente:
 //
-//   admin@burgoscorp.test     Administrador (ya existe, no se toca)
-//   gerencia@burgoscorp.test  Gerencia, en Dirección
-//   jefe@burgoscorp.test      Jefe en Mecanizado (recibe las tareas que manda el administrador)
-//   empleado@burgoscorp.test  Empleado en Mecanizado, con tornería y CNC
+//   admin@burgoscorp.test            Administrador (ya existe, no se toca)
+//   gerencia@burgoscorp.test         Gerencia, en Dirección
+//   jorge.dominguez@burgoscorp.test  Jefe de Mecanizado (un área tiene un solo jefe: se usa el real)
+//   empleado@burgoscorp.test         Empleado en Mecanizado, con tornería y CNC
 //
 // La contraseña sale de la variable PASSWORD_PRUEBA (12 caracteres o más, con letras y números),
 // que se carga en el panel del hosting: nunca va en el código. Sin la variable no hace nada.
@@ -21,9 +21,10 @@ const PASSWORD = process.env.PASSWORD_PRUEBA;
 // email, nombre, apellido, rol, área, puesto, habilidades [código, nivel], costo por hora
 const CUENTAS = [
   ['gerencia@burgoscorp.test', 'Gerencia', 'De Prueba', 'GERENCIA', 'DIR', 'Gerente general', [], 20000],
-  ['jefe@burgoscorp.test', 'Jefe', 'De Prueba', 'JEFE', 'MEC', 'Jefe de mecanizado', [['TORNERIA', 'avanzado'], ['FRESADO_CNC', 'avanzado']], 16000],
   ['empleado@burgoscorp.test', 'Empleado', 'De Prueba', 'EMPLEADO', 'MEC', 'Tornero', [['TORNERIA', 'intermedio'], ['TORNO_CNC', 'basico']], 12000],
 ];
+// Cuentas que ya existen en los datos de prueba: solo reciben la contraseña de prueba.
+const EXISTENTES = ['jorge.dominguez@burgoscorp.test'];
 
 async function crearCuenta(conn, hash, [email, nombre, apellido, rol, codigoArea, puesto, habilidades, costoHora]) {
   const [[area]] = await conn.execute('SELECT id FROM areas WHERE codigo = ?', [codigoArea]);
@@ -51,7 +52,7 @@ async function main() {
     return;
   }
   const hash = await bcrypt.hash(PASSWORD, COSTO_BCRYPT);
-  for (const cuenta of CUENTAS) {
+  for (const cuenta of [...CUENTAS, ...EXISTENTES.map((e) => [e])]) {
     const email = cuenta[0];
     const existe = await queryOne('SELECT id, password_hash FROM usuarios WHERE email = ?', [email]);
     if (existe) {
@@ -64,6 +65,7 @@ async function main() {
       }
       continue;
     }
+    if (cuenta.length === 1) { console.log(`Cuenta de prueba ${email}: no existe en esta base.`); continue; }
     const legajo = await transaccion((conn) => crearCuenta(conn, hash, cuenta));
     console.log(`Cuenta de prueba ${email} creada (legajo ${legajo}).`);
   }

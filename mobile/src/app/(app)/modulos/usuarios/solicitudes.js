@@ -8,6 +8,7 @@ import {
   Pantalla, EncabezadoPagina, Tarjeta, Insignia, Boton, Campo, Opciones, EsqueletoLista, ErrorCarga, Vacio, Avatar, Dato, Casilla,
 } from '../../../../componentes/ui';
 import ConfirmDialog from '../../../../componentes/ConfirmDialog';
+import { useJefatura, esCancelado } from '../../../../componentes/Jefatura';
 import Selector from '../../../../componentes/Selector';
 import UbicacionLaboral, { UBICACION_VACIA, cuerpoUbicacion } from '../../../../componentes/UbicacionLaboral';
 import { useToast } from '../../../../contexto/toast';
@@ -130,6 +131,8 @@ export default function SolicitudesAcceso() {
   }, []);
   useEffect(() => { cargar(); }, [cargar]);
 
+  const { conJefatura, dialogoJefatura } = useJefatura();
+
   async function habilitar() {
     const h = habilitando;
     if (!h.existente && h.rol !== 'ADMIN' && !h.ubicacion.area_id) {
@@ -137,17 +140,20 @@ export default function SolicitudesAcceso() {
       throw new Error('falta el área');
     }
     try {
-      await api(`/usuarios/${h.usuario.id}/habilitar`, {
+      // Si va como jefe a un área que ya tiene uno, se pregunta qué hacer con el actual.
+      await conJefatura((jefeActual) => api(`/usuarios/${h.usuario.id}/habilitar`, {
         metodo: 'POST',
         cuerpo: {
           rol: h.rol,
           ...(h.rol === 'ADMIN' ? {} : h.existente ? { empleado_id: h.empleado_id ?? undefined } : cuerpoUbicacion(h.ubicacion)),
+          ...(jefeActual ? { jefe_actual: jefeActual } : {}),
         },
-      });
+      }));
       toast.exito(`${habilitando.usuario.nombre} ya puede entrar. Le avisamos por email.`);
       cargar();
     } catch (err) {
-      toast.error(err.message);
+      if (esCancelado(err)) toast.info(err.message);
+      else toast.error(err.message);
       throw err;
     }
   }
@@ -223,6 +229,7 @@ export default function SolicitudesAcceso() {
         ) : null}
       </ConfirmDialog>
 
+      {dialogoJefatura}
       <ConfirmDialog visible={Boolean(rechazando)} titulo="Rechazar solicitud" textoConfirmar="Rechazar"
         mensaje={rechazando ? `${rechazando.nombre} ${rechazando.apellido} no va a poder entrar. Le llega un email con el motivo.` : ''}
         alConfirmar={rechazar} alCerrar={() => { setRechazando(null); setMotivo(''); }}>

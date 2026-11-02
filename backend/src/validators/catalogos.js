@@ -114,4 +114,6 @@ export const usuarioAdmin = z.object({
   rol: z.enum(['ADMIN', 'GERENCIA', 'JEFE', 'EMPLEADO']).optional(),
   empleado_id: opcional(id),
   activo: booleano.optional(),
+  // Si pasa a ser jefe de un área que ya tiene: qué hacer con el actual.
+  jefe_actual: z.object({ accion: z.enum(['destituir', 'mover']), area_id: id.optional() }).strict().optional(),
 }).strict().refine((d) => Object.keys(d).length > 0, 'No se envió ningún campo para modificar');

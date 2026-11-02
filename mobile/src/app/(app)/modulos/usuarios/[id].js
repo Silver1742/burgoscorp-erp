@@ -7,6 +7,7 @@ import {
   Pantalla, Tarjeta, Insignia, InsigniaRol, Avatar, Boton, Campo, Opciones, Dato, Cargando, ErrorCarga, Texto,
 } from '../../../../componentes/ui';
 import ConfirmDialog from '../../../../componentes/ConfirmDialog';
+import { useJefatura, esCancelado } from '../../../../componentes/Jefatura';
 import UbicacionLaboral, { cuerpoUbicacion } from '../../../../componentes/UbicacionLaboral';
 import { usePuede, useSesion } from '../../../../contexto/sesion';
 import { useToast } from '../../../../contexto/toast';
@@ -24,6 +25,7 @@ export default function Usuario() {
   const puede = usePuede();
   const { usuario: yo } = useSesion();
   const toast = useToast();
+  const { conJefatura, dialogoJefatura } = useJefatura();
   const t = useTema();
   const [u, setU] = useState(null);
   const [error, setError] = useState(null);
@@ -56,7 +58,8 @@ export default function Usuario() {
       toast.exito(mensaje ?? r?.mensaje ?? 'Listo');
       await cargar();
     } catch (err) {
-      toast.error(err.message);
+      if (esCancelado(err)) toast.info(err.message);
+      else toast.error(err.message);
       throw err;
     }
   }
@@ -69,7 +72,10 @@ export default function Usuario() {
     if (!esYo && editando.rol !== u.rol) cuerpo.rol = editando.rol;
     if (!Object.keys(cuerpo).length) return;
     try {
-      await ejecutar(() => api(`/usuarios/${u.id}`, { metodo: 'PUT', cuerpo }), 'Cambios guardados');
+      // Pasar a jefe de un área que ya tiene uno: se pregunta qué hacer con el actual.
+      await ejecutar(() => conJefatura((jefeActual) => api(`/usuarios/${u.id}`, {
+        metodo: 'PUT', cuerpo: { ...cuerpo, ...(jefeActual ? { jefe_actual: jefeActual } : {}) },
+      })), 'Cambios guardados');
     } catch (err) {
       setErroresEdicion(err.porCampo ?? {});
       throw err;
@@ -81,12 +87,15 @@ export default function Usuario() {
       setUbicando((x) => ({ ...x, error: 'Elegí el área' }));
       throw new Error('falta el área');
     }
-    await ejecutar(() => api(`/usuarios/${u.id}/legajo`, { metodo: 'PUT', cuerpo: cuerpoUbicacion(ubicando) }),
+    await ejecutar(() => conJefatura((jefeActual) => api(`/usuarios/${u.id}/legajo`, {
+      metodo: 'PUT', cuerpo: { ...cuerpoUbicacion(ubicando), ...(jefeActual ? { jefe_actual: jefeActual } : {}) },
+    })),
       u.legajo ? 'Área y habilidades actualizadas' : 'Listo: se le creó el legajo');
   }
 
   return (
     <Pantalla>
+      {dialogoJefatura}
       <Stack.Screen options={{ title: nombre }} />
 
       <Tarjeta acentoArriba>
