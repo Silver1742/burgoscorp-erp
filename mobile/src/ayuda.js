@@ -15,7 +15,9 @@ export const TEMAS_AYUDA = [
   {
     id: 'moverse', titulo: 'Cómo moverse en la app', icono: 'compass-outline', roles: [],
     pasos: [
-      'Cada rol tiene su color y sus pestañas. En Inicio está lo que usás todos los días.',
+      'Cada rol tiene su color y sus pestañas. En Inicio: tus pendientes, el tablón de avisos y tus accesos.',
+      'Tocando a una persona (en Áreas, Personas o Buscar) se abre su ficha en una ventana, sin salir de la lista.',
+      'Arriba a la derecha, en tu avatar: Mi perfil, Notificaciones, Ayuda y Cerrar sesión.',
       'Buscar: escribí un nombre, un número de pedido u OT, una máquina o lo que querés hacer ("licencia", "sueldos").',
       'En Inicio, "¿Qué querés hacer?" te lleva directo a lo que más usás según tu rol.',
       'Arriba a la derecha está el botón del QR: escaneá la etiqueta de una OT, una máquina o un material.',
@@ -66,7 +68,8 @@ export const TEMAS_AYUDA = [
   {
     id: 'jefe', titulo: 'Si sos jefe de área', icono: 'id-card-outline', roles: ['JEFE'],
     pasos: [
-      '"Asignar tarea": creá la tarea y tocá "Asignar": podés marcar a varias personas a la vez.',
+      '"Nueva tarea": en "¿Quién la hace?" marcás a una o varias personas de tu equipo que pueden hacerla.',
+      'En Inicio, "Publicar" en el tablón deja un aviso para tu área (fijado, importante o con vencimiento).',
       'Si te llega "Tarea para asignar" (del administrador o de una OT de otra área), abrila y tocá "Asignar".',
       'Si sos jefe de Ingeniería, te llega cada pedido nuevo: asignalo en "Analiza" o desde Ventas → Para asignar.',
       'En "Tareas del área" aprobás o rechazás las tareas terminadas.',

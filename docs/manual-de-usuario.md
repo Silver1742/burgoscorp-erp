@@ -52,23 +52,37 @@ La contraseña de las tres últimas es la que se cargó en `PASSWORD_PRUEBA` en 
 
 ## 2. La pantalla de la app
 
-Cada rol tiene **su color, su panel y sus pestañas**, así se nota enseguida desde dónde estás
-usando la app (el color aparece arriba, junto al escudo, y en la línea de la barra de abajo):
+Cada rol tiene **su color y sus pestañas**, así se nota enseguida desde dónde estás usando la app
+(el color aparece arriba, junto al escudo, y en la línea de la barra de abajo):
 
-| Rol | Color | Pestañas | En Inicio |
-|---|---|---|---|
-| **Empleado** | Azul | Mi día · Mis tareas · Buscar · Perfil | Fichaje, tus tareas abiertas y 4 accesos: tareas, licencia, QR y reportar falla |
-| **Jefe de área** | Naranja | Mi área · Mis tareas · Mi equipo · Buscar · Perfil | Tareas para asignar y para revisar, licencias por aprobar y quién vino hoy |
-| **Gerencia** | Violeta | La empresa · Áreas · Buscar · Perfil | Órdenes de trabajo y pedidos abiertos, personal; accesos al tablero, ventas y sueldos |
-| **Administrador** | Rojo | Administración · Áreas · Buscar · Perfil | Personas esperando acceso, tareas sin asignar, cuentas sin área |
+| Rol | Color | Pestañas |
+|---|---|---|
+| **Empleado** | Azul | Inicio · Mis tareas · Buscar |
+| **Jefe de área** | Naranja | Inicio · Tareas (de su área) · Mi equipo · Buscar |
+| **Gerencia** | Violeta | Inicio · Tablero · Áreas · Personas · Buscar |
+| **Administrador** | Rojo | Inicio · Personas · Áreas · Buscar |
 
-- **Buscar**: una sola caja para encontrar cualquier cosa. Escribí un nombre, un número de pedido
-  u OT, una máquina, un material o lo que querés hacer ("licencia", "sueldos", "falla"). Sin escribir
-  nada, muestra el menú completo como una lista.
-- **Mi equipo / Áreas**: el jefe ve a la gente de su área; gerencia y el administrador ven todas
-  las áreas y, tocando una, sus integrantes: quién es el jefe, puesto, si vino hoy, tareas abiertas
-  y habilidades. Tocando a alguien se ven su email y teléfono y se abre su legajo.
-- Botón **QR** (arriba): escanear la etiqueta de una OT, máquina, material u orden de compra.
+- **Inicio**: arriba, el saludo con tus números del día y la búsqueda. Después:
+  - **Pendientes** (jefes y administrador): todo lo que espera tu decisión —personas que piden
+    acceso, licencias, tareas para asignar o revisar, compras— con el botón ahí mismo. Las licencias
+    se aprueban desde la fila.
+  - **Tablón de avisos**: lo ven todos. Publican el jefe (para su área) y el administrador (para toda
+    la empresa o un área). Un aviso puede ir **fijado arriba**, ser **importante** (le llega una
+    notificación a cada uno) y tener **fecha de vencimiento**. Lo que no leíste dice "Nuevo".
+  - Tu fichaje, tus accesos y tus tareas abiertas.
+- **Buscar**: una sola caja para encontrar cualquier cosa (un nombre, un pedido u OT, una máquina, un
+  material o lo que querés hacer: "licencia", "sueldos"). Sin escribir nada, muestra el menú completo.
+- **Personas** (gerencia y administrador): toda la gente, con buscador y filtro por área.
+- **Áreas / Mi equipo**: tocando un área se abre una **ventana** con sus integrantes.
+- **La ficha de una persona se abre en una ventana**, encima de la lista donde estás: tocás a
+  alguien, ves sus datos, área y habilidades, cuenta y tareas, y la cerrás sin perder tu lugar. Lo que
+  podés hacer ahí depende de tu rol:
+  - **Administrador**: cambiar el rol, el área, el puesto y las habilidades, mandarle un código para
+    su contraseña y darlo de baja.
+  - **Jefe de área**: ver a su gente y **asignarle una tarea**.
+  - **Gerencia**: solo consultar.
+- **Menú de tu avatar** (arriba a la derecha): Mi perfil, Notificaciones, Verificación en dos pasos,
+  Ayuda y Cerrar sesión. Al lado, el botón **QR** y el modo claro/oscuro.
 
 Los resultados de cada acción aparecen como un cartelito abajo de la pantalla (verde si salió
 bien, rojo si hubo un problema). Antes de algo que no se puede deshacer, la app te pide confirmar.
@@ -124,8 +138,10 @@ marcá si la máquina quedó parada. Mantenimiento recibe el aviso.
 
 ## 5. Para jefes de área
 
-- **Asignar tarea**: creá la tarea (solo te aparecen las máquinas de tu área y las habilidades que
-  tiene tu gente) y tocá **Asignar**: podés marcar **a varias personas a la vez**.
+- **Nueva tarea**: solo te aparecen las máquinas de tu área y las habilidades que tiene tu gente, y
+  en **"¿Quién la hace?"** marcás ahí mismo a una o varias personas: la lista muestra solo a quienes
+  pueden hacerla (con la habilidad y la certificación vigente), primero los menos cargados. También
+  podés asignarla después desde la tarea, o desde la ficha de una persona ("Asignarle una tarea").
 - **Tareas que te llegan**: del administrador, o de una orden de trabajo de otra área que usa
   máquinas tuyas. Te llega el aviso *"Tarea para asignar"*: tocalo (o entrá a **Tareas del área →
   Para asignar**) y asignala a alguien de tu equipo con **Asignar**.

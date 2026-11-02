@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Marca from './Marca';
+import { Particulas } from './Imponente';
 import SelectorTema from './SelectorTema';
 import { espacio, useTema, usePantalla } from '../tema';
 
@@ -52,6 +53,7 @@ export default function AuthLayout({ titulo, sub, children, sellado = false }) {
         {esAncho ? (
           <View style={estilos.hero}>
             <FondoHero />
+            <Particulas cantidad={22} alto={900} />
             <Marca tamano={56} sobreOscuro animado sellado={sellado} />
             <View>
               <Text style={estilos.heroTitulo}>Sistema de gestión</Text>

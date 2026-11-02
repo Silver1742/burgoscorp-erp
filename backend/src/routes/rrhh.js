@@ -253,7 +253,7 @@ router.get('/personas/:id', autenticado, requierePermiso('RRHH', 'ver'), validar
   const u = req.usuario;
   const e = await queryOne(`
     SELECT e.id, e.legajo, e.nombre, e.apellido, e.telefono, e.email_laboral, e.direccion, e.fecha_ingreso, e.estado,
-           e.area_id, a.nombre AS area_nombre, a.jefe_empleado_id = e.id AS es_jefe, p.nombre AS puesto,
+           e.area_id, a.codigo AS area_codigo, a.nombre AS area_nombre, a.jefe_empleado_id = e.id AS es_jefe, e.puesto_id, p.nombre AS puesto,
            CONCAT(s.nombre, ' ', s.apellido) AS supervisor
     FROM empleados e JOIN areas a ON a.id = e.area_id LEFT JOIN puestos p ON p.id = e.puesto_id
     LEFT JOIN empleados s ON s.id = e.supervisor_id WHERE e.id = ?`, [empleadoId]);
@@ -264,7 +264,7 @@ router.get('/personas/:id', autenticado, requierePermiso('RRHH', 'ver'), validar
 
   const fecha = hoyEmpresa();
   const [habilidades, cuenta, tareasAbiertas, hoy] = await Promise.all([
-    query(`SELECT h.nombre, eh.nivel, eh.certificado_vence, h.requiere_certificacion FROM empleado_habilidades eh
+    query(`SELECT h.id AS habilidad_id, h.nombre, eh.nivel, eh.certificado_vence, h.requiere_certificacion FROM empleado_habilidades eh
            JOIN habilidades h ON h.id = eh.habilidad_id WHERE eh.empleado_id = ? ORDER BY h.nombre`, [empleadoId]),
     queryOne(`SELECT u.id, u.email, r.codigo AS rol, u.estado_cuenta, u.activo, u.ultimo_login_at, u.totp_habilitado AS dos_pasos
               FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.empleado_id = ?`, [empleadoId]),

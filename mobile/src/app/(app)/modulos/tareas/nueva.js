@@ -5,9 +5,9 @@
 //    que la asigne a alguien de su equipo (el jefe es quien conoce a su gente).
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pantalla, EncabezadoPagina, Tarjeta, Campo, Opciones, Boton, Esqueleto, useMostrarError } from '../../../../componentes/ui';
+import { Pantalla, EncabezadoPagina, Tarjeta, Campo, Opciones, Boton, Esqueleto, Avatar, Insignia, useMostrarError } from '../../../../componentes/ui';
 import Selector from '../../../../componentes/Selector';
 import { useToast } from '../../../../contexto/toast';
 import { useSesion } from '../../../../contexto/sesion';
@@ -96,6 +96,51 @@ function Destino({ centroId, habilidadId, elegidas, alCambiar, error }) {
   );
 }
 
+/**
+ * "¿Quién la hace?": las personas que pueden hacer el trabajo (del área, con la habilidad de la máquina
+ * o la pedida, y la certificación vigente), primero las menos cargadas. Si la asigna el jefe del área,
+ * lo dice y no muestra la lista.
+ */
+function QuienLaHace({ areaId, centroId, habilidadId, elegidos, alCambiar }) {
+  const t = useTema();
+  const [datos, setDatos] = useState(null);
+  useEffect(() => {
+    let vigente = true;
+    setDatos(null);
+    api('/tareas/candidatos', { consulta: { area_id: areaId, centro_trabajo_id: centroId, habilidad_requerida_id: habilidadId } })
+      .then((d) => { if (vigente) { setDatos(d); alCambiar((x) => x.filter((id) => d.candidatos.some((c) => c.id === id))); } })
+      .catch(() => vigente && setDatos({ puede_asignar: false, candidatos: [], error: true }));
+    return () => { vigente = false; };
+  }, [areaId, centroId, habilidadId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!datos) return <Esqueleto ancho="60%" />;
+  if (!datos.puede_asignar) {
+    return <Text style={{ color: t.textoSuave }}>{datos.jefe ? `La asigna ${datos.jefe}, jefe del área: le llega el aviso.` : 'Elegí primero a qué área va.'}</Text>;
+  }
+  if (!datos.candidatos.length) return <Text style={{ color: t.textoSuave }}>Nadie del área tiene la habilidad pedida (o su certificación venció). Podés crearla y asignarla después.</Text>;
+  const alternar = (id) => alCambiar((x) => (x.includes(id) ? x.filter((i) => i !== id) : [...x, id]));
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ color: t.textoSuave, fontSize: 13 }}>Marcá a una o varias personas (opcional). Solo aparecen quienes pueden hacerla.</Text>
+      {datos.candidatos.map((c) => {
+        const activo = elegidos.includes(c.id);
+        return (
+          <Pressable key={c.id} onPress={() => alternar(c.id)} accessibilityRole="checkbox" accessibilityState={{ checked: activo }}
+            style={[estilos.area, { borderColor: activo ? t.primario : t.borde, backgroundColor: activo ? t.superficieSec : t.superficie }]}>
+            <Ionicons name={activo ? 'checkbox' : 'square-outline'} size={20} color={activo ? t.primario : t.textoSuave} />
+            <Avatar nombre={`${c.nombre} ${c.apellido}`} tamano={30} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: t.texto, fontWeight: '600' }}>{c.apellido}, {c.nombre}</Text>
+              <Text style={{ color: t.textoSuave, fontSize: 12 }}>{[c.puesto_nombre, c.nivel].filter(Boolean).join(' · ')}</Text>
+            </View>
+            <Insignia texto={`${c.carga} abiertas`} tono={Number(c.carga) >= 3 ? 'aviso' : 'gris'} />
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function NuevaTarea() {
   const router = useRouter();
   const toast = useToast();
@@ -106,6 +151,9 @@ export default function NuevaTarea() {
   const deEmpresa = permisos?.TAR?.alcance === 'todo';
   const [f, setF] = useState({ titulo: '', descripcion: '', prioridad: 'media', fecha: '', hora: '17:00', horas_estimadas: '', centro_trabajo_id: null, habilidad_requerida_id: null, checklist: '' });
   const [areas, setAreas] = useState([]);
+  // Desde la ficha de una persona ("Asignarle una tarea") viene preelegida.
+  const { empleado } = useLocalSearchParams();
+  const [asignados, setAsignados] = useState(empleado ? [Number(empleado)] : []);
   const [errores, setErrores] = useState({});
   const [enviando, setEnviando] = useState(false);
   const cambiar = (c) => (v) => setF((x) => ({ ...x, [c]: v }));
@@ -142,10 +190,14 @@ export default function NuevaTarea() {
           habilidad_requerida_id: f.habilidad_requerida_id ?? undefined,
           checklist: f.checklist.split('\n').map((x) => x.trim()).filter(Boolean),
           area_ids: deEmpresa ? areas : undefined,
+          empleado_ids: asignados.length && (!deEmpresa || areas.length === 1) ? asignados : undefined,
         },
       });
-      if (!deEmpresa) {
-        toast.exito('Tarea creada. Asignala a alguien de tu equipo.');
+      if (tarea.aviso_asignacion) {
+        toast.aviso(`La tarea se creó, pero no se asignó: ${tarea.aviso_asignacion}`, { duracion: 7000 });
+        router.replace(`/modulos/tareas/${tarea.id}`);
+      } else if (!deEmpresa) {
+        toast.exito(tarea.asignados_detalle?.length ? `Tarea creada y asignada a ${tarea.asignados_detalle.length === 1 ? tarea.asignados_detalle[0].nombre : `${tarea.asignados_detalle.length} personas`}. Les llegó el aviso.` : 'Tarea creada. Asignala a alguien de tu equipo.');
         router.replace(`/modulos/tareas/${tarea.id}`);
       } else if (tarea.creadas.length === 1) {
         const [c] = tarea.creadas;
@@ -196,6 +248,12 @@ export default function NuevaTarea() {
         <Tarjeta titulo="¿A qué área va?" icono="git-branch-outline">
           <Destino centroId={f.centro_trabajo_id} habilidadId={f.habilidad_requerida_id} elegidas={areas}
             alCambiar={(v) => { setAreas(v); setErrores((x) => ({ ...x, area_ids: undefined })); }} error={errores.area_ids} />
+        </Tarjeta>
+      ) : null}
+      {!deEmpresa || areas.length === 1 ? (
+        <Tarjeta titulo="¿Quién la hace?" icono="people-outline">
+          <QuienLaHace areaId={deEmpresa ? areas[0] : undefined} centroId={f.centro_trabajo_id ?? undefined}
+            habilidadId={f.habilidad_requerida_id ?? undefined} elegidos={asignados} alCambiar={setAsignados} />
         </Tarjeta>
       ) : null}
       <View style={estilos.fila}>
