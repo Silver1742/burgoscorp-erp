@@ -90,6 +90,14 @@ export function SesionProvider({ children }) {
     },
 
     async loginSocial(proveedor, datos) {
+      // Un ingreso nuevo nunca convive con la sesión anterior: si en este navegador había otra cuenta
+      // abierta, se cierra (y se revoca) antes. Si el ingreso falla —por ejemplo, la cuenta está
+      // pendiente—, se queda en el login sin sesión, nunca dentro de la cuenta anterior.
+      const anterior = await leerRefreshGuardado();
+      if (anterior) {
+        try { await api('/auth/logout', { metodo: 'POST', cuerpo: { refreshToken: anterior }, conToken: false }); } catch { /* sin conexión: igual se cierra local */ }
+        await cerrarLocal();
+      }
       const r = await api(`/auth/social/${proveedor}`, { metodo: 'POST', cuerpo: datos, conToken: false });
       return procesarRespuestaLogin(r);
     },
