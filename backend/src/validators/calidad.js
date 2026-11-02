@@ -1,3 +1,4 @@
+// Validación (zod) de Calidad: una inspección con sus mediciones y los filtros del listado.
 import { z } from 'zod';
 import { id, texto, textoOpcional } from './comunes.js';
 

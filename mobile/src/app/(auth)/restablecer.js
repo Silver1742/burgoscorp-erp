@@ -1,3 +1,4 @@
+// Crear una contraseña nueva con el código que llegó por email.
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AuthLayout from '../../componentes/AuthLayout';

@@ -1,3 +1,4 @@
+// Navegación del perfil: datos, verificación en dos pasos, avisos y ayuda.
 import { Stack } from 'expo-router';
 import { useTema, opcionesCabecera } from '../../../tema';
 

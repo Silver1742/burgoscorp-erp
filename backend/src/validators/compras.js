@@ -1,3 +1,4 @@
+// Validación (zod) de Compras: órdenes de compra, su recepción en el depósito y los filtros.
 import { z } from 'zod';
 import { id, texto, textoOpcional, fecha, importe, cantidad } from './comunes.js';
 

@@ -1,3 +1,5 @@
+// Validación (zod) de Producción: órdenes de trabajo, operaciones, tareas, asignaciones,
+// comentarios y la lista de control.
 import { z } from 'zod';
 import { id, texto, textoOpcional, fecha } from './comunes.js';
 

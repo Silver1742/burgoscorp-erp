@@ -26,7 +26,7 @@ const ALCANCE_ROL = {
   ADMIN: 'Acceso total, incluidos usuarios, roles y seguridad. Reservalo para quien administra el sistema.',
 };
 
-const METODO = { google: 'Google', github: 'GitHub', facebook: 'Facebook' };
+const METODO = { google: 'Google', github: 'GitHub', discord: 'Discord', facebook: 'Facebook' };
 
 /** Para comparar nombres sin mayúsculas, tildes ni espacios de más. */
 const normalizar = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();

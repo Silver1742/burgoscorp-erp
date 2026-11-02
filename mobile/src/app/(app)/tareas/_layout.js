@@ -1,3 +1,4 @@
+// Navegación de "Mis tareas": la lista y el detalle de cada una.
 import { Stack } from 'expo-router';
 import { useTema, opcionesCabecera } from '../../../tema';
 

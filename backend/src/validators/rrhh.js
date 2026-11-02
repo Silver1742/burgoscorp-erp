@@ -1,3 +1,4 @@
+// Validación (zod) de RRHH: legajos, habilidades, licencias, asistencias y entrega de EPP.
 import { z } from 'zod';
 import { id, texto, textoOpcional, email, fecha, importe, nombrePersona, cuit } from './comunes.js';
 

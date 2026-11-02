@@ -1,3 +1,4 @@
+// Pedir acceso: la cuenta queda pendiente hasta que un administrador la habilita (avisa por email).
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';

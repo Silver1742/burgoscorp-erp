@@ -1,3 +1,4 @@
+// Enlace para volver al login desde registro, recuperar contraseña y verificar el email.
 import { Link } from 'expo-router';
 import { Boton } from './ui';
 import { espacio } from '../tema';

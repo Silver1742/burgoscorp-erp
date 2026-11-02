@@ -1,3 +1,5 @@
+// Validación (zod) de Mantenimiento: reporte de fallas, órdenes de mantenimiento, repuestos,
+// planes preventivos y filtros de máquinas.
 import { z } from 'zod';
 import { id, texto, textoOpcional, importe, cantidad } from './comunes.js';
 

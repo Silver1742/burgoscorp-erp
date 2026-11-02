@@ -1,3 +1,4 @@
+// Validación (zod) de Ventas: solicitudes de clientes, presupuestos y su aprobación.
 import { z } from 'zod';
 import { id, texto, textoOpcional, fecha, importe, cantidad } from './comunes.js';
 import { TIPOS_TRABAJO, PRIORIDADES } from './produccion.js';

@@ -237,9 +237,9 @@ CREATE TABLE usuarios (
   rol_id              TINYINT UNSIGNED NOT NULL,
   empleado_id         INT UNSIGNED NULL UNIQUE,     -- vínculo con el legajo
   email_verificado_at DATETIME NULL,
-  totp_secret_cifrado VARCHAR(255) NULL,            -- AES-256-GCM (iv:tag:dato en base64)
-  totp_habilitado     BOOLEAN NOT NULL DEFAULT 0,       -- verificación en dos pasos (por email) activa
-  totp_ultimo_paso    BIGINT UNSIGNED NULL,         -- último intervalo de 30 s usado (evita reusar un código)
+  totp_secret_cifrado VARCHAR(255) NULL,            -- sin uso: era del 2FA con QR (siempre NULL; ver services/dosPasos.js)
+  totp_habilitado     BOOLEAN NOT NULL DEFAULT 0,       -- verificación en dos pasos (por email) activa; el nombre quedó del 2FA con QR
+  totp_ultimo_paso    BIGINT UNSIGNED NULL,         -- sin uso: era del 2FA con QR (siempre NULL)
   intentos_fallidos   TINYINT UNSIGNED NOT NULL DEFAULT 0,
   bloqueado_hasta     DATETIME NULL,
   ultimo_login_at     DATETIME NULL,

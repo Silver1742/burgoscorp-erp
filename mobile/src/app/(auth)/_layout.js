@@ -1,3 +1,4 @@
+// Grupo de pantallas sin sesión: login, registro y recuperar la contraseña.
 import { Stack } from 'expo-router';
 import { useTema, opcionesCabecera } from '../../tema';
 

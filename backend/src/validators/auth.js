@@ -1,3 +1,5 @@
+// Validación (zod) de lo que llega a /auth: registro, login, recuperar contraseña, verificación
+// en dos pasos por email y login con Google, GitHub o Discord.
 import { z } from 'zod';
 import { email, password, nombrePersona } from './comunes.js';
 
@@ -30,8 +32,8 @@ export const restablecer = z.object({
   nueva: password,
 }).strict();
 
-// Acepta un código TOTP (6 dígitos) o uno de respaldo (XXXX-XXXX), más la contraseña actual
-// (obligatoria si la cuenta tiene; la exige el servicio).
+// Desactivar la verificación en dos pasos: el código de 6 dígitos que llegó por email, más la
+// contraseña actual (obligatoria si la cuenta tiene; la exige el servicio).
 export const segundoFactor = z.object({
   codigo: codigoSeisDigitos,
   password: z.string().max(200).optional(),

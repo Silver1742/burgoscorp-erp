@@ -1,3 +1,5 @@
+// Validación (zod) de Inventario: movimientos de stock (ajuste, transferencia, reserva, consumo),
+// filtros y el escaneo de un código QR.
 import { z } from 'zod';
 import { id, texto, textoOpcional, cantidad } from './comunes.js';
 

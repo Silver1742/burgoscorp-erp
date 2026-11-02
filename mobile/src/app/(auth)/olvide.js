@@ -1,3 +1,4 @@
+// "Olvidé mi contraseña": pide el email y manda un código para crear una nueva (sigue en restablecer).
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import AuthLayout from '../../componentes/AuthLayout';

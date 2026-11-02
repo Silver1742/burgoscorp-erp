@@ -1,3 +1,4 @@
+// Detalle de una tarea abierta desde el módulo Tareas (el contenido está en componentes/DetalleTarea).
 import { useLocalSearchParams } from 'expo-router';
 import DetalleTarea from '../../../../componentes/DetalleTarea';
 

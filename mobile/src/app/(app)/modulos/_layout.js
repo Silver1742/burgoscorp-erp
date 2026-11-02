@@ -1,3 +1,4 @@
+// Navegación de los módulos (pila): el título de cada pantalla de Ventas, Producción, RRHH, etc.
 import { Stack } from 'expo-router';
 import { useTema, opcionesCabecera } from '../../../tema';
 

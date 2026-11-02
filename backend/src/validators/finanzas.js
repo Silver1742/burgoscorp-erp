@@ -1,3 +1,4 @@
+// Validación (zod) de Finanzas: facturas de venta y de proveedor, cobros/pagos y filtros.
 import { z } from 'zod';
 import { id, texto, textoOpcional, fecha, importe, cantidad } from './comunes.js';
 
