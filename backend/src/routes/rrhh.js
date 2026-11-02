@@ -41,6 +41,8 @@ router.use('/empleados', crearRecursoCrud({
   filtros: {
     area_id: { col: 't.area_id', esquema: id },
     estado: { col: 't.estado', esquema: z.enum(['activo', 'licencia', 'baja']) },
+    // vigentes=1: la misma gente que cuenta el resumen de Inicio (no está de baja y su área está activa).
+    vigentes: { sql: "t.estado <> 'baja' AND a.activo = ?", esquema: z.literal('1').transform(() => 1) },
   },
   ordenables: { apellido: 't.apellido', legajo: 't.legajo', ingreso: 't.fecha_ingreso', area: 'a.nombre' },
   ordenDefecto: 't.apellido',

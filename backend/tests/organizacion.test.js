@@ -216,3 +216,18 @@ describe('ficha de una persona', () => {
     assert.equal((await api().get(`/api/v1/personas/${s.jorge.usuario.empleadoId}`).set(como('ramon'))).status, 403, 'un empleado no ve la de otros');
   });
 });
+
+describe('Personas cuenta lo mismo que Inicio', () => {
+  test('el listado de vigentes coincide con el total del resumen (licencias incluidas)', async () => {
+    for (const q of ['admin', 'ricardo', 'jorge']) {
+      const resumen = await api().get('/api/v1/personal/resumen').set(como(q));
+      const lista = await api().get('/api/v1/empleados').query({ vigentes: '1', limite: 1 }).set(como(q));
+      assert.equal(lista.status, 200);
+      assert.equal(lista.body.meta.total, resumen.body.data.totales.personal, `${q}: Personas e Inicio deben dar lo mismo`);
+    }
+  });
+  test('el filtro solo acepta 1', async () => {
+    const r = await api().get('/api/v1/empleados').query({ vigentes: '0' }).set(como('admin'));
+    assert.equal(r.status, 400);
+  });
+});

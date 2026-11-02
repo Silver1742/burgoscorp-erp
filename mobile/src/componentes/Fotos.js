@@ -17,7 +17,7 @@ const LADO_MAX = 1600;
 const MINIATURA = 96;
 
 /** Convierte un Blob en data URL para mostrarlo con <Image> (funciona en el celular y en la web). */
-function aDataUrl(blob) {
+export function aDataUrl(blob) {
   return new Promise((resolver, rechazar) => {
     const lector = new FileReader();
     lector.onload = () => resolver(lector.result);
@@ -27,7 +27,7 @@ function aDataUrl(blob) {
 }
 
 /** Achica la foto y la vuelve a codificar como JPEG (sin EXIF). */
-async function prepararFoto(asset) {
+export async function prepararFoto(asset) {
   const { width = 0, height = 0 } = asset;
   let contexto = ImageManipulator.manipulate(asset.uri);
   if (Math.max(width, height) > LADO_MAX) {
@@ -37,6 +37,31 @@ async function prepararFoto(asset) {
   const resultado = await imagen.saveAsync({ compress: 0.7, format: SaveFormat.JPEG });
   const blob = await (await fetch(resultado.uri)).blob();
   return blob.type === 'image/jpeg' ? blob : new Blob([blob], { type: 'image/jpeg' });
+}
+
+/**
+ * Pide permiso, abre la cámara o la galería y devuelve la foto lista para subir:
+ * { blob, nombre, uri } (uri es una data URL para mostrarla antes de subirla), o null si se canceló.
+ */
+export async function elegirFoto(origen) {
+  const permiso = origen === 'camara'
+    ? await ImagePicker.requestCameraPermissionsAsync()
+    : await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!permiso.granted) {
+    throw new Error(origen === 'camara'
+      ? 'Sin permiso para usar la cámara. Habilitalo en los ajustes del teléfono.'
+      : 'Sin permiso para ver tus fotos. Habilitalo en los ajustes del teléfono.');
+  }
+  const opciones = { mediaTypes: ['images'], quality: 0.8, exif: false };
+  const r = origen === 'camara' ? await ImagePicker.launchCameraAsync(opciones) : await ImagePicker.launchImageLibraryAsync(opciones);
+  if (r.canceled || !r.assets?.length) return null;
+  const blob = await prepararFoto(r.assets[0]);
+  return { blob, nombre: r.assets[0].fileName ?? `foto-${Date.now()}.jpg`, uri: await aDataUrl(blob) };
+}
+
+/** Sube una foto ya preparada como adjunto de una entidad. */
+export function subirFoto(entidad, entidadId, foto) {
+  return api('/adjuntos', { metodo: 'POST', consulta: { entidad, entidad_id: entidadId, nombre: foto.nombre }, binario: foto.blob, timeout: 60000 });
 }
 
 function Miniatura({ adjunto, onPress }) {
@@ -92,27 +117,10 @@ export default function Fotos({ entidad, entidadId, titulo = 'Fotos', vacio = 'T
 
   async function agregar(origen) {
     try {
-      const permiso = origen === 'camara'
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permiso.granted) {
-        toast.error(origen === 'camara'
-          ? 'Sin permiso para usar la cámara. Habilitalo en los ajustes del teléfono.'
-          : 'Sin permiso para ver tus fotos. Habilitalo en los ajustes del teléfono.');
-        return;
-      }
-      const opciones = { mediaTypes: ['images'], quality: 0.8, exif: false };
-      const r = origen === 'camara' ? await ImagePicker.launchCameraAsync(opciones) : await ImagePicker.launchImageLibraryAsync(opciones);
-      if (r.canceled || !r.assets?.length) return;
-
       setSubiendo(true);
-      const foto = await prepararFoto(r.assets[0]);
-      await api('/adjuntos', {
-        metodo: 'POST',
-        consulta: { entidad, entidad_id: entidadId, nombre: r.assets[0].fileName ?? `foto-${Date.now()}.jpg` },
-        binario: foto,
-        timeout: 60000,
-      });
+      const foto = await elegirFoto(origen);
+      if (!foto) return;
+      await subirFoto(entidad, entidadId, foto);
       toast.exito('Foto agregada.');
       await cargar();
       alCambiar?.();

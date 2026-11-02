@@ -68,7 +68,8 @@ Cada rol tiene **su color y sus pestañas**, así se nota enseguida desde dónde
     se aprueban desde la fila.
   - **Tablón de avisos**: lo ven todos. Publican el jefe (para su área) y el administrador (para toda
     la empresa o un área). Un aviso puede ir **fijado arriba**, ser **importante** (le llega una
-    notificación a cada uno) y tener **fecha de vencimiento**. Lo que no leíste dice "Nuevo".
+    notificación a cada uno), tener **fecha de vencimiento** y llevar **hasta 4 imágenes** (foto o
+    galería; tocándolas se ven en grande). Lo que no leíste dice "Nuevo".
   - Tu fichaje, tus accesos y tus tareas abiertas.
 - **Buscar**: una sola caja para encontrar cualquier cosa (un nombre, un pedido u OT, una máquina, un
   material o lo que querés hacer: "licencia", "sueldos"). Sin escribir nada, muestra el menú completo.
@@ -154,6 +155,8 @@ marcá si la máquina quedó parada. Mantenimiento recibe el aviso.
 - **Tablero**: los números de tu área.
 
 ## 6. Ventas, producción y calidad (el recorrido de un pedido)
+
+Paso a paso, con la cuenta que hace cada parte: [tutorial de un pedido de punta a punta](tutorial-pedido.md).
 
 1. **Nuevo pedido** (Comercial, en Ventas): cliente, qué necesita y fotos de la pieza.
 2. **Le llega solo al jefe de Ingeniería** (aviso *"Pedido nuevo para asignar"*). El jefe lo abre

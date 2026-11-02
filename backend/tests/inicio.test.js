@@ -115,3 +115,44 @@ describe('crear una tarea y asignarla ahí mismo', () => {
     assert.equal(mal.body.data.asignados_detalle.length, 0);
   });
 });
+
+describe('imágenes en los avisos del tablón', () => {
+  // JPEG mínimo válido (firma + inicio de imagen) y un archivo que dice ser JPEG pero no lo es.
+  const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, 0x12, 0x34, 0xff, 0xd9]);
+  const subir = (q, avisoId, cuerpo = JPEG) => api().post('/api/v1/adjuntos')
+    .query({ entidad: 'aviso', entidad_id: avisoId, nombre: 'foto.jpg' })
+    .set(como(q)).set('Content-Type', 'image/jpeg').send(cuerpo);
+  let aviso;
+
+  before(async () => {
+    const r = await api().post('/api/v1/tablon').set(como('jorge')).send({ titulo: `Pañol nuevo ${sello}`, texto: 'Así quedó.' });
+    aviso = r.body.data.id;
+  });
+
+  test('quien publicó agrega imágenes; se ven en el tablón y las abre quien ve el aviso', async () => {
+    const r = await subir('jorge', aviso);
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    const tablon = await api().get('/api/v1/tablon').set(como('ramon'));
+    const a = tablon.body.data.find((x) => x.id === aviso);
+    assert.deepEqual(a.imagenes, [{ id: r.body.data.id, mime: 'image/jpeg' }]);
+    const foto = await api().get(`/api/v1/adjuntos/${r.body.data.id}`).set(como('ramon'));
+    assert.equal(foto.status, 200);
+    assert.equal(foto.headers['content-type'], 'image/jpeg');
+  });
+
+  test('otra área no ve la imagen; un empleado no agrega; no pasa un archivo falso', async () => {
+    const [{ id: idImg }] = await query("SELECT id FROM adjuntos WHERE entidad = 'aviso' AND entidad_id = ?", [aviso]);
+    assert.equal((await api().get(`/api/v1/adjuntos/${idImg}`).set(como('claudio'))).status, 404);
+    assert.equal((await subir('ramon', aviso)).status, 403);
+    assert.equal((await subir('jorge', aviso, Buffer.from('<script>alert(1)</script>'))).status, 400);
+  });
+
+  test('hasta 4 imágenes por aviso, y al borrar el aviso se borran sus imágenes', async () => {
+    for (let i = 0; i < 3; i++) assert.equal((await subir('jorge', aviso)).status, 201);
+    const quinta = await subir('jorge', aviso);
+    assert.equal(quinta.status, 422);
+    assert.equal((await api().delete(`/api/v1/tablon/${aviso}`).set(como('jorge'))).status, 204);
+    const [{ n }] = await query("SELECT COUNT(*) AS n FROM adjuntos WHERE entidad = 'aviso' AND entidad_id = ?", [aviso]);
+    assert.equal(Number(n), 0);
+  });
+});

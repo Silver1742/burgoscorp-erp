@@ -194,6 +194,15 @@ async function ventasSoloSusAreas(conn) {
 }
 
 /** Tablón de avisos de Inicio y quién leyó cada aviso. */
+/** Los avisos del tablón pueden llevar imágenes (se guardan como adjuntos de la entidad 'aviso'). */
+async function imagenesEnAvisos(conn) {
+  const [[col]] = await conn.query(
+    "SELECT COLUMN_TYPE AS tipo FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'adjuntos' AND COLUMN_NAME = 'entidad'");
+  if (!col || col.tipo.includes("'aviso'")) return;
+  await conn.query(`ALTER TABLE adjuntos MODIFY entidad ENUM('solicitud','presupuesto','orden_trabajo','tarea','orden_mantenimiento',
+    'inspeccion','orden_compra','empleado','licencia','comprobante','aviso') NOT NULL`);
+}
+
 async function tablonDeAvisos(conn) {
   await conn.query(`CREATE TABLE IF NOT EXISTS avisos_tablon (
     id          INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
@@ -222,6 +231,7 @@ async function tablonDeAvisos(conn) {
 
 export async function migrar(conn) {
   await tablonDeAvisos(conn);
+  await imagenesEnAvisos(conn);
   await dosPasosPorEmail(conn);
   await proveedorDiscord(conn);
   await ventasSoloSusAreas(conn);

@@ -21,6 +21,7 @@ import * as mantenimiento from './mantenimiento.js';
 import * as ventas from './ventas.js';
 import * as calidad from './calidad.js';
 import * as finanzas from './finanzas.js';
+import * as tablon from './tablon.js';
 
 export const MAX_BYTES = 8 * 1024 * 1024;
 export const MAX_POR_ENTIDAD = 12;
@@ -41,6 +42,7 @@ const ENTIDADES = {
   solicitud: ventas.accesoSolicitud,         // foto de la pieza que trae o manda el cliente
   inspeccion: calidad.acceso,                // foto de la pieza inspeccionada y de la falla
   comprobante: finanzas.acceso,              // foto o PDF de la factura del proveedor
+  aviso: tablon.acceso,                      // imágenes de un aviso del tablón (hasta 4)
 };
 export const NOMBRES_ENTIDAD = Object.keys(ENTIDADES);
 
@@ -91,17 +93,17 @@ const SELECT = `
   FROM adjuntos a JOIN usuarios u ON u.id = a.subido_por`;
 
 export async function listar(usuario, entidad, entidadId) {
-  const { puedeEscribir, puedeGestionar } = await acceso(usuario, entidad, entidadId);
+  const { puedeEscribir, puedeGestionar, maximo = MAX_POR_ENTIDAD } = await acceso(usuario, entidad, entidadId);
   const filas = await query(`${SELECT} WHERE a.entidad = ? AND a.entidad_id = ? ORDER BY a.created_at, a.id`, [entidad, entidadId]);
   return {
     data: filas.map((a) => ({ ...a, puede_borrar: puedeEscribir && (a.subido_por === usuario.id || puedeGestionar) })),
-    meta: { puede_agregar: puedeEscribir && filas.length < MAX_POR_ENTIDAD, maximo: MAX_POR_ENTIDAD },
+    meta: { puede_agregar: puedeEscribir && filas.length < maximo, maximo },
   };
 }
 
 export async function subir(usuario, entidad, entidadId, nombre, cuerpo, req) {
   if (!Buffer.isBuffer(cuerpo) || cuerpo.length === 0) throw errores.validacion([], 'No llegó ningún archivo');
-  const { puedeEscribir } = await acceso(usuario, entidad, entidadId);
+  const { puedeEscribir, maximo = MAX_POR_ENTIDAD } = await acceso(usuario, entidad, entidadId);
   if (!puedeEscribir) throw errores.prohibido('No podés agregar archivos acá');
 
   const tipo = detectarTipo(cuerpo);
@@ -125,7 +127,7 @@ export async function subir(usuario, entidad, entidadId, nombre, cuerpo, req) {
       // FOR UPDATE bloquea el rango: dos subidas simultáneas no pueden pasar las dos el tope.
       const [[{ total }]] = await conn.execute(
         'SELECT COUNT(*) AS total FROM adjuntos WHERE entidad = ? AND entidad_id = ? FOR UPDATE', [entidad, entidadId]);
-      if (total >= MAX_POR_ENTIDAD) throw errores.negocio(`Se pueden adjuntar hasta ${MAX_POR_ENTIDAD} archivos`);
+      if (total >= maximo) throw errores.negocio(`Se pueden adjuntar hasta ${maximo} archivos`);
       const [[dia]] = await conn.execute(
         `SELECT COUNT(*) AS archivos, COALESCE(SUM(tamano_bytes), 0) AS bytes FROM adjuntos
          WHERE subido_por = ? AND created_at > UTC_TIMESTAMP() - INTERVAL 1 DAY`, [usuario.id]);
@@ -170,4 +172,13 @@ export async function borrar(usuario, id, req) {
   await query('DELETE FROM adjuntos WHERE id = ?', [id]);
   await fs.rm(path.join(CARPETA, a.nombre_archivo), { force: true });
   await auditar(req, { accion: 'adjunto_borrado', entidad: a.entidad, entidadId: a.entidad_id, detalle: { adjunto: a.id } });
+}
+
+/** Borra todos los archivos de una entidad (por ejemplo, al borrar un aviso del tablón). */
+export async function borrarDe(entidad, entidadId) {
+  const filas = await query('SELECT id, nombre_archivo FROM adjuntos WHERE entidad = ? AND entidad_id = ?', [entidad, entidadId]);
+  await query('DELETE FROM adjuntos WHERE entidad = ? AND entidad_id = ?', [entidad, entidadId]);
+  for (const f of filas) {
+    if (/^[0-9a-f-]{36}$/.test(f.nombre_archivo)) await fs.rm(path.join(CARPETA, f.nombre_archivo), { force: true });
+  }
 }

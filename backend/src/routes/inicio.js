@@ -15,6 +15,8 @@ import { resolverPermiso } from '../services/permisos.js';
 import * as tareas from '../services/tareas.js';
 import * as licencias from '../services/licencias.js';
 import * as compras from '../services/compras.js';
+import * as adjuntos from '../services/adjuntos.js';
+import { puedeEditar, veTodos } from '../services/tablon.js';
 import { id, paramsId, fecha } from '../validators/comunes.js';
 
 const router = Router();
@@ -40,12 +42,11 @@ function areaPermitida(usuario, areaId) {
   }
   throw errores.prohibido('Publican en el tablón los jefes de área y el administrador');
 }
-const puedeEditar = (usuario, a) => usuario.rol === 'ADMIN' || a.autor_id === usuario.id;
 
 router.get('/tablon', autenticado, async (req, res) => {
   const u = req.usuario;
   // Gerencia y el administrador ven todos; el resto, los generales y los de su área.
-  const deTodos = ['ADMIN', 'GERENCIA'].includes(u.rol);
+  const deTodos = veTodos(u);
   const filas = await query(`
     SELECT t.id, t.titulo, t.texto, t.area_id, a.nombre AS area_nombre, t.fijado, t.importante, t.vence_el,
            t.autor_id, CONCAT(au.nombre, ' ', au.apellido) AS autor, t.created_at, t.updated_at,
@@ -55,9 +56,13 @@ router.get('/tablon', autenticado, async (req, res) => {
     JOIN usuarios au ON au.id = t.autor_id
     WHERE (t.vence_el IS NULL OR t.vence_el >= ?) AND (? OR t.area_id IS NULL OR t.area_id = ?)
     ORDER BY t.fijado DESC, t.created_at DESC, t.id DESC LIMIT 30`, [u.id, hoy(), deTodos ? 1 : 0, u.area_id ?? 0]);
+  // Las imágenes de cada aviso (solo id y tipo: el archivo se pide aparte, con el mismo control de acceso).
+  const imagenes = filas.length ? await query(
+    `SELECT id, entidad_id, mime FROM adjuntos WHERE entidad = 'aviso' AND entidad_id IN (${filas.map(() => '?').join(', ')})
+     ORDER BY created_at, id`, filas.map((f) => f.id)) : [];
   res.json({
     ok: true,
-    data: filas.map((f) => ({ ...f, fijado: Boolean(f.fijado), importante: Boolean(f.importante), leido: Boolean(f.leido), puede_editar: puedeEditar(u, f) })),
+    data: filas.map((f) => ({ ...f, imagenes: imagenes.filter((i) => i.entidad_id === f.id).map(({ id: idImg, mime }) => ({ id: idImg, mime })), fijado: Boolean(f.fijado), importante: Boolean(f.importante), leido: Boolean(f.leido), puede_editar: puedeEditar(u, f) })),
     meta: { puede_publicar: u.rol === 'ADMIN' || (u.rol === 'JEFE' && Boolean(u.area_id)) },
   });
 });
@@ -101,6 +106,7 @@ router.delete('/tablon/:id', autenticado, validar({ params: paramsId }), async (
   if (!a) throw errores.noEncontrado('El aviso no existe');
   if (!puedeEditar(req.usuario, a)) throw errores.prohibido('Solo quien lo publicó (o el administrador) puede borrarlo');
   await query('DELETE FROM avisos_tablon WHERE id = ?', [a.id]);
+  await adjuntos.borrarDe('aviso', a.id);
   await auditar(req, { accion: 'borrar', entidad: 'aviso_tablon', entidadId: a.id });
   res.status(204).end();
 });

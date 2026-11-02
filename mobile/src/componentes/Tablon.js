@@ -1,30 +1,75 @@
 // Tablón de avisos de Inicio. Lo leen todos (los avisos generales y los de su área); publican el jefe
 // (para su área) y el administrador (para toda la empresa o un área). Los fijados van primero, los
-// importantes en rojo, y lo que no leíste tiene "Nuevo" hasta que lo abrís.
+// importantes en rojo, y lo que no leíste tiene "Nuevo" hasta que lo abrís. Un aviso puede llevar
+// hasta 4 imágenes (foto o galería); se ven en el aviso y, tocándolas, en grande.
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Boton, Campo, Casilla, Esqueleto, Insignia, Opciones, Tarjeta } from './ui';
 import ConfirmDialog from './ConfirmDialog';
+import { aDataUrl, elegirFoto, subirFoto } from './Fotos';
 import { useSesion } from '../contexto/sesion';
 import { useToast } from '../contexto/toast';
 import { api } from '../lib/api';
 import { fechaCorta } from '../modulos';
 import { espacio, radio, useTema } from '../tema';
 
-const VACIO = { titulo: '', texto: '', fijado: false, importante: false, vence_el: '', area: 'empresa' };
+const VACIO = { titulo: '', texto: '', fijado: false, importante: false, vence_el: '', area: 'empresa', imagenes: [], nuevas: [], quitar: [] };
+const MAX_IMAGENES = 4;
 
-function Aviso({ a, alAbrir, abierto, alEditar, alBorrar }) {
+/** Una imagen de un aviso: se pide con la sesión (el servidor controla quién la ve). */
+function ImagenAviso({ id, estilo, alTocar }) {
+  const t = useTema();
+  const [src, setSrc] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    api(`/adjuntos/${id}`, { comoBlob: true }).then(aDataUrl).then((u) => vivo && setSrc(u)).catch(() => {});
+    return () => { vivo = false; };
+  }, [id]);
+  return (
+    <Pressable onPress={() => src && alTocar?.(src)} accessibilityRole="imagebutton" accessibilityLabel="Ver la imagen en grande"
+      style={[estilo, { backgroundColor: t.superficieSec, borderColor: t.borde }]}>
+      {src ? <Image source={{ uri: src }} style={StyleSheet.absoluteFill} resizeMode="cover" /> : null}
+    </Pressable>
+  );
+}
+
+/** Visor a pantalla completa. */
+function Visor({ src, alCerrar }) {
+  const { width, height } = useWindowDimensions();
+  return (
+    <Modal visible={Boolean(src)} transparent animationType="fade" onRequestClose={alCerrar}>
+      <Pressable style={estilos.visor} onPress={alCerrar} accessibilityLabel="Cerrar la imagen">
+        <Ionicons name="close" size={28} color="#fff" style={{ position: 'absolute', top: 24, right: 20, zIndex: 1 }} />
+        {src ? <Image source={{ uri: src }} style={{ width, height: height - 80 }} resizeMode="contain" /> : null}
+      </Pressable>
+    </Modal>
+  );
+}
+
+function Aviso({ a, alAbrir, abierto, alEditar, alBorrar, alVer }) {
   const t = useTema();
   return (
-    <Pressable onPress={alAbrir} accessibilityRole="button" accessibilityState={{ expanded: abierto }}
-      style={[estilos.aviso, { backgroundColor: t.superficie, borderColor: a.importante ? t.primario : t.borde, borderLeftColor: a.importante ? t.primario : a.fijado ? t.texto : t.borde }]}>
-      <View style={estilos.linea}>
-        {a.fijado ? <Ionicons name="pin" size={14} color={t.texto} /> : null}
-        <Text style={{ color: t.texto, fontWeight: '700', fontSize: 15, flex: 1 }} numberOfLines={abierto ? undefined : 1}>{a.titulo}</Text>
-        {!a.leido ? <Insignia texto="Nuevo" tono="rojo" /> : null}
-      </View>
-      <Text style={{ color: t.texto, fontSize: 14, marginTop: 4 }} numberOfLines={abierto ? undefined : 2}>{a.texto}</Text>
+    <View style={[estilos.aviso, { backgroundColor: t.superficie, borderColor: a.importante ? t.primario : t.borde, borderLeftColor: a.importante ? t.primario : a.fijado ? t.texto : t.borde }]}>
+      {/* El título y el texto abren y cierran; imágenes y botones quedan afuera (un botón no va dentro de otro). */}
+      <Pressable onPress={alAbrir} accessibilityRole="button" accessibilityState={{ expanded: abierto }}>
+        <View style={estilos.linea}>
+          {a.fijado ? <Ionicons name="pin" size={14} color={t.texto} /> : null}
+          <Text style={{ color: t.texto, fontWeight: '700', fontSize: 15, flex: 1 }} numberOfLines={abierto ? undefined : 1}>{a.titulo}</Text>
+          {!a.leido ? <Insignia texto="Nuevo" tono="rojo" /> : null}
+        </View>
+        <Text style={{ color: t.texto, fontSize: 14, marginTop: 4 }} numberOfLines={abierto ? undefined : 2}>{a.texto}</Text>
+      </Pressable>
+      {a.imagenes?.length ? (
+        // Cerrado, solo la primera; abierto, todas.
+        <View style={estilos.imagenes}>
+          {(abierto ? a.imagenes : a.imagenes.slice(0, 1)).map((img) => (
+            <ImagenAviso key={img.id} id={img.id} alTocar={alVer}
+              estilo={[estilos.imagen, abierto || a.imagenes.length === 1 ? estilos.imagenGrande : null]} />
+          ))}
+          {!abierto && a.imagenes.length > 1 ? <Text style={{ color: t.textoSuave, fontSize: 12, alignSelf: 'center' }}>+{a.imagenes.length - 1} más</Text> : null}
+        </View>
+      ) : null}
       <Text style={{ color: t.textoSuave, fontSize: 12, marginTop: 6 }}>
         {a.autor} · {a.area_nombre ?? 'Toda la empresa'} · {fechaCorta(a.created_at)}{a.vence_el ? ` · hasta el ${fechaCorta(a.vence_el)}` : ''}
       </Text>
@@ -34,7 +79,7 @@ function Aviso({ a, alAbrir, abierto, alEditar, alBorrar }) {
           <Boton titulo="Borrar" variante="contornoPeligro" chico icono="trash-outline" onPress={alBorrar} estilo={{ marginBottom: 0 }} />
         </View>
       ) : null}
-    </Pressable>
+    </View>
   );
 }
 
@@ -48,6 +93,7 @@ export default function Tablon() {
   const [errores, setErrores] = useState({});
   const [borrando, setBorrando] = useState(null);
   const [areas, setAreas] = useState([]);
+  const [viendo, setViendo] = useState(null);
   const esAdmin = usuario.rol === 'ADMIN';
 
   const cargar = useCallback(async () => {
@@ -79,8 +125,14 @@ export default function Tablon() {
       ...(esAdmin ? { area_id: form.area === 'empresa' ? null : form.area } : {}),
     };
     try {
-      await api(form.id ? `/tablon/${form.id}` : '/tablon', { metodo: form.id ? 'PUT' : 'POST', cuerpo });
-      toast.exito(form.id ? 'Aviso actualizado.' : form.importante ? 'Aviso publicado. Le llegó una notificación a cada uno.' : 'Aviso publicado en el tablón.');
+      const r = await api(form.id ? `/tablon/${form.id}` : '/tablon', { metodo: form.id ? 'PUT' : 'POST', cuerpo });
+      // Las imágenes van después: necesitan que el aviso exista. Si alguna falla, el aviso igual queda.
+      const avisoId = form.id ?? r.id;
+      let fallaron = 0;
+      for (const id of form.quitar) await api(`/adjuntos/${id}`, { metodo: 'DELETE' }).catch(() => { fallaron += 1; });
+      for (const foto of form.nuevas) await subirFoto('aviso', avisoId, foto).catch(() => { fallaron += 1; });
+      if (fallaron) toast.aviso(`El aviso se guardó, pero ${fallaron === 1 ? 'una imagen no se pudo guardar' : `${fallaron} imágenes no se pudieron guardar`}.`);
+      else toast.exito(form.id ? 'Aviso actualizado.' : form.importante ? 'Aviso publicado. Le llegó una notificación a cada uno.' : 'Aviso publicado en el tablón.');
       setForm(null);
       cargar();
     } catch (err) {
@@ -90,7 +142,17 @@ export default function Tablon() {
     }
   }
 
+  async function agregarImagen(origen) {
+    try {
+      const foto = await elegirFoto(origen);
+      if (foto) setForm((f) => ({ ...f, nuevas: [...f.nuevas, foto] }));
+    } catch (err) {
+      toast.error(err.message ?? 'No se pudo agregar la imagen.');
+    }
+  }
+
   const lista = datos?.data ?? [];
+  const cantImagenes = form ? form.imagenes.length - form.quitar.length + form.nuevas.length : 0;
   const nuevos = lista.filter((a) => !a.leido).length;
   return (
     <Tarjeta titulo="Tablón de avisos" icono="megaphone-outline"
@@ -100,8 +162,8 @@ export default function Tablon() {
       {datos && !lista.length ? <Text style={{ color: t.textoSuave }}>No hay avisos por ahora.</Text> : null}
       {lista.map((a) => (
         <Aviso key={a.id} a={a} abierto={abierto === a.id} alAbrir={() => abrir(a)}
-          alEditar={() => { setErrores({}); setForm({ id: a.id, titulo: a.titulo, texto: a.texto, fijado: a.fijado, importante: a.importante, vence_el: a.vence_el ? String(a.vence_el).slice(0, 10) : '', area: a.area_id ?? 'empresa' }); }}
-          alBorrar={() => setBorrando(a)} />
+          alEditar={() => { setErrores({}); setForm({ ...VACIO, id: a.id, titulo: a.titulo, texto: a.texto, fijado: a.fijado, importante: a.importante, vence_el: a.vence_el ? String(a.vence_el).slice(0, 10) : '', area: a.area_id ?? 'empresa', imagenes: a.imagenes ?? [] }); }}
+          alBorrar={() => setBorrando(a)} alVer={setViendo} />
       ))}
 
       <ConfirmDialog visible={Boolean(form)} titulo={form?.id ? 'Editar aviso' : 'Publicar en el tablón'} variante="primario"
@@ -120,6 +182,27 @@ export default function Tablon() {
             <Campo etiqueta="Visible hasta (opcional)" value={form.vence_el} onChangeText={(v) => setForm((f) => ({ ...f, vence_el: v }))} error={errores.vence_el} placeholder="AAAA-MM-DD" maxLength={10} />
             <Casilla marcada={form.fijado} alCambiar={(v) => setForm((f) => ({ ...f, fijado: v }))} etiqueta="Fijarlo arriba" />
             <Casilla marcada={form.importante} alCambiar={(v) => setForm((f) => ({ ...f, importante: v }))} etiqueta="Importante: avisar a cada uno con una notificación" />
+            <Text style={{ color: t.texto, marginTop: espacio.s, marginBottom: 6 }}>Imágenes ({cantImagenes} de {MAX_IMAGENES})</Text>
+            <View style={estilos.imagenes}>
+              {form.imagenes.filter((img) => !form.quitar.includes(img.id)).map((img) => (
+                <View key={img.id}>
+                  <ImagenAviso id={img.id} estilo={estilos.imagen} />
+                  <QuitarImagen alQuitar={() => setForm((f) => ({ ...f, quitar: [...f.quitar, img.id] }))} />
+                </View>
+              ))}
+              {form.nuevas.map((foto, i) => (
+                <View key={`n${i}`}>
+                  <Image source={{ uri: foto.uri }} style={[estilos.imagen, { borderColor: t.borde }]} />
+                  <QuitarImagen alQuitar={() => setForm((f) => ({ ...f, nuevas: f.nuevas.filter((_, j) => j !== i) }))} />
+                </View>
+              ))}
+            </View>
+            {cantImagenes < MAX_IMAGENES ? (
+              <View style={[estilos.linea, { marginTop: espacio.s }]}>
+                <Boton titulo="Sacar foto" icono="camera" variante="secundario" chico onPress={() => agregarImagen('camara')} estilo={{ marginBottom: 0 }} />
+                <Boton titulo="Galería" icono="images-outline" variante="secundario" chico onPress={() => agregarImagen('galeria')} estilo={{ marginBottom: 0 }} />
+              </View>
+            ) : null}
           </View>
         ) : null}
       </ConfirmDialog>
@@ -129,11 +212,25 @@ export default function Tablon() {
         alConfirmar={async () => {
           try { await api(`/tablon/${borrando.id}`, { metodo: 'DELETE' }); toast.exito('Aviso borrado.'); cargar(); } catch (err) { toast.error(err.message); throw err; }
         }} />
+      <Visor src={viendo} alCerrar={() => setViendo(null)} />
     </Tarjeta>
+  );
+}
+
+function QuitarImagen({ alQuitar }) {
+  return (
+    <Pressable onPress={alQuitar} accessibilityRole="button" accessibilityLabel="Quitar la imagen" hitSlop={8} style={estilos.quitar}>
+      <Ionicons name="close" size={14} color="#fff" />
+    </Pressable>
   );
 }
 
 const estilos = StyleSheet.create({
   aviso: { borderWidth: 1, borderLeftWidth: 4, borderRadius: radio.l, padding: espacio.m, marginBottom: espacio.s },
   linea: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  imagenes: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: espacio.s },
+  imagen: { width: 84, height: 84, borderRadius: radio.l, borderWidth: 1, overflow: 'hidden' },
+  imagenGrande: { width: '100%', maxWidth: 420, height: 200 },
+  quitar: { position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center' },
+  visor: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', alignItems: 'center', justifyContent: 'center' },
 });

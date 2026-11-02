@@ -951,7 +951,7 @@ CREATE TABLE pagos (
 CREATE TABLE adjuntos (
   id              INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   entidad         ENUM('solicitud','presupuesto','orden_trabajo','tarea','orden_mantenimiento',
-                       'inspeccion','orden_compra','empleado','licencia','comprobante') NOT NULL,
+                       'inspeccion','orden_compra','empleado','licencia','comprobante','aviso') NOT NULL,
   entidad_id      INT UNSIGNED NOT NULL,
   nombre_original VARCHAR(255) NOT NULL,
   nombre_archivo  CHAR(36)     NOT NULL UNIQUE,   -- UUID

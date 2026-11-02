@@ -37,7 +37,7 @@ export default function Personas() {
     const id = ++pedido.current;
     setError(null);
     try {
-      const r = await api('/empleados', { consulta: { q: q.trim() || undefined, area_id: area ?? undefined, estado: 'activo', limite: POR_PAGINA, pagina } });
+      const r = await api('/empleados', { consulta: { q: q.trim() || undefined, area_id: area ?? undefined, vigentes: '1', limite: POR_PAGINA, pagina } });
       if (id !== pedido.current) return;
       setLista((x) => (pagina === 1 ? r.data : [...(x ?? []), ...r.data]));
       setTotal(r.meta.total);
@@ -52,7 +52,7 @@ export default function Personas() {
       <View style={estilos.titulo}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: t.texto, fontSize: 22, fontWeight: '700' }}>Personas</Text>
-          <Text style={{ color: t.textoSuave }}>{lista ? `${total} personas activas` : 'Toda la gente de la empresa'}</Text>
+          <Text style={{ color: t.textoSuave }}>{lista ? `${total} ${total === 1 ? 'persona' : 'personas'}${area ? ' en esta área' : ''} (sin contar las de baja)` : 'Toda la gente de la empresa'}</Text>
         </View>
         {puede('SEG', 'crear') ? <Boton titulo="Nueva" icono="person-add" chico onPress={() => router.push('/modulos/usuarios/nuevo', { withAnchor: true })} estilo={{ marginBottom: 0 }} /> : null}
         {puede('SEG', 'aprobar') ? <Boton titulo="Solicitudes" variante="secundario" icono="hourglass-outline" chico onPress={() => router.push('/modulos/usuarios/solicitudes', { withAnchor: true })} estilo={{ marginBottom: 0 }} /> : null}
@@ -89,6 +89,14 @@ export default function Personas() {
         ListEmptyComponent={lista ? <Vacio icono="people-outline" titulo="Nadie coincide con la búsqueda" /> : null}
         onEndReached={() => { if (lista && lista.length < total) cargar(Math.floor(lista.length / POR_PAGINA) + 1); }}
         onEndReachedThreshold={0.4}
+        // Toda la página de una vez: así no parece que faltara gente hasta que se desplaza la lista.
+        initialNumToRender={POR_PAGINA}
+        ListFooterComponent={lista?.length ? (
+          <View style={estilos.pie}>
+            <Text style={{ color: t.textoSuave, fontSize: 13 }}>Mostrando {lista.length} de {total}</Text>
+            {lista.length < total ? <Boton titulo="Ver más" variante="secundario" chico onPress={() => cargar(Math.floor(lista.length / POR_PAGINA) + 1)} estilo={{ marginBottom: 0 }} /> : null}
+          </View>
+        ) : null}
         renderItem={({ item: e }) => (
           <Pressable onPress={() => setFicha(e.id)} accessibilityRole="button" accessibilityLabel={`Ver la ficha de ${e.nombre} ${e.apellido}`}
             style={({ pressed }) => [estilos.fila, { backgroundColor: pressed ? t.superficieSec : t.superficie, borderColor: t.borde }]}>
@@ -97,6 +105,7 @@ export default function Personas() {
               <Text style={{ color: t.texto, fontWeight: '600', fontSize: 15 }}>{e.apellido}, {e.nombre}</Text>
               <Text style={{ color: t.textoSuave, fontSize: 13 }} numberOfLines={1}>{[e.legajo, e.puesto_nombre, e.area_nombre].filter(Boolean).join(' · ')}</Text>
             </View>
+            {e.estado === 'licencia' ? <Insignia texto="De licencia" tono="gris" /> : null}
             {!e.usuario_id ? <Insignia texto="Sin cuenta" tono="aviso" /> : null}
             <Ionicons name="chevron-forward" size={18} color={t.textoTenue} />
           </Pressable>
@@ -112,6 +121,7 @@ const estilos = StyleSheet.create({
   titulo: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, flexWrap: 'wrap', marginBottom: espacio.m },
   buscar: { flexDirection: 'row', alignItems: 'center', gap: espacio.s, borderWidth: 2, borderRadius: radio.xl, paddingHorizontal: espacio.m, marginBottom: espacio.m },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: espacio.m },
+  pie: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: espacio.s, paddingVertical: espacio.s },
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: espacio.m, borderWidth: 1, borderRadius: radio.l, padding: espacio.m, marginBottom: 6 },
 });
