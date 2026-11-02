@@ -7,6 +7,7 @@ import { Tarjeta, Campo, Opciones, Boton } from './ui';
 import Selector from './Selector';
 import { useToast } from '../contexto/toast';
 import { espacio, useTema } from '../tema';
+import CampoFecha, { hoyIso } from './CampoFecha';
 
 const ESTADOS = [
   { valor: 'activo', titulo: 'Activo' },
@@ -49,9 +50,9 @@ export default function FormLegajo({ legajo, alGuardar, alCancelar }) {
     if (!f.apellido.trim()) e.apellido = 'Escribí el apellido';
     if (f.dni && !/^\d{7,8}$/.test(f.dni.trim())) e.dni = 'DNI de 7 u 8 dígitos, sin puntos';
     if (!f.area_id) e.area_id = 'Elegí el área';
-    if (!esFecha(f.fecha_ingreso)) e.fecha_ingreso = 'Formato AAAA-MM-DD';
-    if (f.fecha_nacimiento && !esFecha(f.fecha_nacimiento)) e.fecha_nacimiento = 'Formato AAAA-MM-DD';
-    if (f.estado === 'baja' && !esFecha(f.fecha_egreso)) e.fecha_egreso = 'Con la baja va la fecha de egreso (AAAA-MM-DD)';
+    if (!esFecha(f.fecha_ingreso)) e.fecha_ingreso = 'Elegí la fecha de ingreso';
+    if (f.fecha_nacimiento && !esFecha(f.fecha_nacimiento)) e.fecha_nacimiento = 'Elegí la fecha de nacimiento';
+    if (f.estado === 'baja' && !esFecha(f.fecha_egreso)) e.fecha_egreso = 'Con la baja va la fecha de egreso';
     if (f.costo_hora && !/^\d+([.,]\d{1,2})?$/.test(f.costo_hora)) e.costo_hora = 'Importe en pesos (ej. 12500,50)';
     return e;
   }
@@ -90,7 +91,7 @@ export default function FormLegajo({ legajo, alGuardar, alCancelar }) {
         <Campo etiqueta="Apellido" value={f.apellido} onChangeText={cambiar('apellido')} error={errores.apellido} maxLength={60} />
         <Campo etiqueta="DNI (opcional)" value={f.dni} onChangeText={cambiar('dni')} error={errores.dni} keyboardType="number-pad" maxLength={8} placeholder="Sin puntos" />
         <Campo etiqueta="CUIL (opcional)" value={f.cuil} onChangeText={cambiar('cuil')} error={errores.cuil} keyboardType="number-pad" maxLength={13} placeholder="20-12345678-3" />
-        <Campo etiqueta="Fecha de nacimiento (opcional)" value={f.fecha_nacimiento} onChangeText={cambiar('fecha_nacimiento')} error={errores.fecha_nacimiento} placeholder="AAAA-MM-DD" maxLength={10} />
+        <CampoFecha etiqueta="Fecha de nacimiento (opcional)" valor={f.fecha_nacimiento} alCambiar={cambiar('fecha_nacimiento')} error={errores.fecha_nacimiento} opcional maximo={hoyIso()} />
       </Tarjeta>
 
       <Tarjeta titulo="Contacto" icono="call-outline">
@@ -107,7 +108,7 @@ export default function FormLegajo({ legajo, alGuardar, alCancelar }) {
           valor={f.puesto_id} textoValor={f.puesto_texto} opcional deshabilitado={!f.area_id} error={errores.puesto_id}
           ayuda={f.area_id ? undefined : 'Primero elegí el área.'} mapear={(p) => ({ titulo: p.nombre })}
           alCambiar={(id, p) => setF((x) => ({ ...x, puesto_id: id, puesto_texto: p?.nombre ?? null }))} />
-        <Campo etiqueta="Fecha de ingreso" value={f.fecha_ingreso} onChangeText={cambiar('fecha_ingreso')} error={errores.fecha_ingreso} placeholder="AAAA-MM-DD" maxLength={10} />
+        <CampoFecha etiqueta="Fecha de ingreso" valor={f.fecha_ingreso} alCambiar={cambiar('fecha_ingreso')} error={errores.fecha_ingreso} />
         <Campo etiqueta="Costo por hora (opcional)" value={f.costo_hora} onChangeText={cambiar('costo_hora')} error={errores.costo_hora}
           keyboardType="decimal-pad" maxLength={15} ayuda="Se usa para calcular el costo de las tareas y la liquidación." />
         {edicion ? (
@@ -115,7 +116,7 @@ export default function FormLegajo({ legajo, alGuardar, alCancelar }) {
             <Text style={{ color: t.texto, marginBottom: 6 }}>Estado</Text>
             <Opciones opciones={ESTADOS} valor={f.estado} alCambiar={cambiar('estado')} />
             {f.estado === 'baja' ? (
-              <Campo etiqueta="Fecha de egreso" value={f.fecha_egreso} onChangeText={cambiar('fecha_egreso')} error={errores.fecha_egreso} placeholder="AAAA-MM-DD" maxLength={10} />
+              <CampoFecha etiqueta="Fecha de egreso" valor={f.fecha_egreso} alCambiar={cambiar('fecha_egreso')} error={errores.fecha_egreso} minimo={f.fecha_ingreso || undefined} />
             ) : null}
           </>
         ) : null}

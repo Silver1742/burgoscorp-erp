@@ -9,6 +9,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { TIPO_TRABAJO } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import CampoFecha, { hoyIso } from '../../../../componentes/CampoFecha';
 
 const TIPOS = Object.entries(TIPO_TRABAJO).map(([valor, titulo]) => ({ valor, titulo }));
 
@@ -26,7 +27,7 @@ export default function NuevaSolicitud() {
     if (!f.cliente_id) e.cliente_id = 'Elegí el cliente';
     if (!f.titulo.trim()) e.titulo = 'Contá en pocas palabras qué pide';
     if (!/^\d{1,6}$/.test(f.cantidad) || Number(f.cantidad) < 1) e.cantidad = 'Cantidad de piezas (1 o más)';
-    if (f.fecha_requerida && !/^\d{4}-\d{2}-\d{2}$/.test(f.fecha_requerida)) e.fecha_requerida = 'Formato AAAA-MM-DD';
+    if (f.fecha_requerida && !/^\d{4}-\d{2}-\d{2}$/.test(f.fecha_requerida)) e.fecha_requerida = 'Elegí una fecha válida';
     setErrores(e);
     if (Object.keys(e).length) return;
     setEnviando(true);
@@ -64,8 +65,8 @@ export default function NuevaSolicitud() {
         <Opciones opciones={TIPOS} valor={f.tipo_trabajo} alCambiar={cambiar('tipo_trabajo')} />
         <View style={estilos.fila}>
           <Campo etiqueta="Cantidad" value={f.cantidad} onChangeText={cambiar('cantidad')} error={errores.cantidad} keyboardType="number-pad" maxLength={6} estilo={{ flex: 1 }} />
-          <Campo etiqueta="Para cuándo (opcional)" value={f.fecha_requerida} onChangeText={cambiar('fecha_requerida')} error={errores.fecha_requerida}
-            placeholder="AAAA-MM-DD" maxLength={10} estilo={{ flex: 1 }} />
+          <CampoFecha etiqueta="Para cuándo (opcional)" valor={f.fecha_requerida} alCambiar={cambiar('fecha_requerida')} error={errores.fecha_requerida}
+            opcional minimo={hoyIso()} estilo={{ flex: 1 }} />
         </View>
       </Tarjeta>
       <Boton titulo="Crear y agregar fotos" icono="camera" onPress={crear} cargando={enviando} textoCargando="Creando…" />

@@ -14,6 +14,7 @@ import { useSesion } from '../../../../contexto/sesion';
 import { api } from '../../../../lib/api';
 import { PRIORIDAD } from '../../../../modulos';
 import { espacio, radio, useTema, usePantalla } from '../../../../tema';
+import CampoFecha, { hoyIso } from '../../../../componentes/CampoFecha';
 
 const OPC_PRIORIDAD = Object.entries(PRIORIDAD).map(([valor, p]) => ({ valor, titulo: p.texto }));
 
@@ -164,7 +165,7 @@ export default function NuevaTarea() {
   async function guardar() {
     const e = {};
     if (!f.titulo.trim()) e.titulo = 'Escribí qué hay que hacer';
-    if (f.fecha && !/^\d{4}-\d{2}-\d{2}$/.test(f.fecha)) e.fecha = 'Formato AAAA-MM-DD';
+    if (f.fecha && !/^\d{4}-\d{2}-\d{2}$/.test(f.fecha)) e.fecha = 'Elegí una fecha válida';
     else if (f.fecha && Number.isNaN(new Date(`${f.fecha}T00:00:00`).getTime())) e.fecha = 'Esa fecha no existe';
     if (f.fecha && !/^([01]\d|2[0-3]):[0-5]\d$/.test(f.hora)) e.hora = 'Formato HH:MM';
     if (f.horas_estimadas && !/^\d+([.,]\d{1,2})?$/.test(f.horas_estimadas)) e.horas_estimadas = 'Número de horas (ej. 2,5)';
@@ -229,7 +230,7 @@ export default function NuevaTarea() {
         <Text style={[estilos.etiqueta, { color: t.texto }]}>Prioridad</Text>
         <Opciones opciones={OPC_PRIORIDAD} valor={f.prioridad} alCambiar={cambiar('prioridad')} error={errores.prioridad} />
         <View style={dos && estilos.fila}>
-          <Campo etiqueta="Vence (opcional)" value={f.fecha} onChangeText={cambiar('fecha')} error={errores.fecha} placeholder="AAAA-MM-DD" maxLength={10} estilo={dos && { flex: 2 }} />
+          <CampoFecha etiqueta="Vence (opcional)" valor={f.fecha} alCambiar={cambiar('fecha')} error={errores.fecha} opcional minimo={hoyIso()} estilo={dos && { flex: 2 }} />
           <Campo etiqueta="Hora" value={f.hora} onChangeText={cambiar('hora')} error={errores.hora} placeholder="HH:MM" maxLength={5} estilo={dos && { flex: 1 }} />
           <Campo etiqueta="Horas estimadas" value={f.horas_estimadas} onChangeText={cambiar('horas_estimadas')} error={errores.horas_estimadas} keyboardType="decimal-pad" maxLength={6} estilo={dos && { flex: 1 }} />
         </View>

@@ -11,6 +11,7 @@ import { api } from '../../../../lib/api';
 import { ESTADO_COMPROBANTE, TIPO_COMPROBANTE, fechaCorta, pesosAr } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
 import { useCargar } from '../../../../lib/cambios';
+import CampoFecha from '../../../../componentes/CampoFecha';
 
 const VISTAS = [
   { valor: 'venta', titulo: 'A cobrar' },
@@ -78,7 +79,7 @@ export default function Finanzas() {
     const e = {};
     if (!/^\d{1,5}$/.test(fc.punto_venta) || Number(fc.punto_venta) < 1) e.punto_venta = 'Ej.: 3';
     if (!/^\d{1,8}$/.test(fc.numero) || Number(fc.numero) < 1) e.numero = 'Ej.: 12345';
-    if (fc.fecha_vencimiento && !/^\d{4}-\d{2}-\d{2}$/.test(fc.fecha_vencimiento)) e.fecha_vencimiento = 'AAAA-MM-DD';
+    if (fc.fecha_vencimiento && !/^\d{4}-\d{2}-\d{2}$/.test(fc.fecha_vencimiento)) e.fecha_vencimiento = 'Elegí una fecha válida';
     setErrores(e);
     if (Object.keys(e).length) throw new Error('datos inválidos');
     try {
@@ -169,8 +170,8 @@ export default function Finanzas() {
           <Campo etiqueta="Número" value={fc.numero} onChangeText={(v) => setFc((x) => ({ ...x, numero: v }))} error={errores.numero}
             keyboardType="number-pad" maxLength={8} estilo={{ flex: 2 }} />
         </View>
-        <Campo etiqueta="Vence (opcional, AAAA-MM-DD)" value={fc.fecha_vencimiento} onChangeText={(v) => setFc((x) => ({ ...x, fecha_vencimiento: v }))}
-          error={errores.fecha_vencimiento} maxLength={10} estilo={{ marginBottom: 0 }} />
+        <CampoFecha etiqueta="Vence (opcional)" valor={fc.fecha_vencimiento} alCambiar={(v) => setFc((x) => ({ ...x, fecha_vencimiento: v }))}
+          error={errores.fecha_vencimiento} opcional estilo={{ marginBottom: 0 }} />
       </ConfirmDialog>
     </Pantalla>
   );

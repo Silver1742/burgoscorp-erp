@@ -11,6 +11,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { cantidad, pesosAr } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
+import CampoFecha, { hoyIso } from '../../../../componentes/CampoFecha';
 
 const esNumero = (v, decimales) => new RegExp(`^\\d+([.,]\\d{1,${decimales}})?$`).test(v);
 const aNumero = (v) => Number(String(v).replace(',', '.'));
@@ -44,7 +45,7 @@ export default function NuevaOrdenCompra() {
   async function crear() {
     const e = {};
     if (!f.proveedor_id) e.proveedor_id = 'Elegí el proveedor';
-    if (f.fecha_entrega_esperada && !/^\d{4}-\d{2}-\d{2}$/.test(f.fecha_entrega_esperada)) e.fecha_entrega_esperada = 'Formato AAAA-MM-DD';
+    if (f.fecha_entrega_esperada && !/^\d{4}-\d{2}-\d{2}$/.test(f.fecha_entrega_esperada)) e.fecha_entrega_esperada = 'Elegí una fecha válida';
     items.forEach((it, i) => {
       if (!it.producto_id && !it.descripcion.trim()) e[`items.${i}.descripcion`] = 'Elegí un producto o escribí qué es';
       if (!esNumero(it.cantidad, 3) || aNumero(it.cantidad) <= 0) e[`items.${i}.cantidad`] = 'Cantidad mayor a cero';
@@ -92,8 +93,8 @@ export default function NuevaOrdenCompra() {
           alCambiar={cambiar('orden_trabajo_id')} opcional placeholder="Compra para stock"
           ayuda="Si es para una OT, al recibirla se le avisa al responsable."
           mapear={(o) => ({ titulo: `${o.numero} · ${o.titulo}`, sub: o.cliente_nombre ?? 'Trabajo interno' })} />
-        <Campo etiqueta="Entrega esperada (opcional)" value={f.fecha_entrega_esperada} onChangeText={cambiar('fecha_entrega_esperada')}
-          error={errores.fecha_entrega_esperada} placeholder="AAAA-MM-DD" maxLength={10} />
+        <CampoFecha etiqueta="Entrega esperada (opcional)" valor={f.fecha_entrega_esperada} alCambiar={cambiar('fecha_entrega_esperada')}
+          error={errores.fecha_entrega_esperada} opcional minimo={hoyIso()} />
         <Campo etiqueta="Observaciones (opcional)" value={f.observaciones} onChangeText={cambiar('observaciones')} multiline maxLength={2000} estilo={{ marginBottom: 0 }} />
       </Tarjeta>
 

@@ -16,6 +16,7 @@ import { descargarCsv } from '../../../../lib/archivos';
 import { fechaCorta, pesosAr } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
 import { useCargar } from '../../../../lib/cambios';
+import CampoFecha from '../../../../componentes/CampoFecha';
 
 const PERIODOS = [
   { valor: 'mes', titulo: 'Este mes' },
@@ -199,8 +200,8 @@ export default function Liquidacion() {
       <Opciones opciones={PERIODOS} valor={periodo} alCambiar={elegirPeriodo} />
       {periodo === 'otro' ? (
         <View style={estilos.fechas}>
-          <Campo etiqueta="Desde (AAAA-MM-DD)" value={fechas.desde} onChangeText={(desde) => setFechas((f) => ({ ...f, desde }))} maxLength={10} estilo={{ flex: 1 }} />
-          <Campo etiqueta="Hasta (AAAA-MM-DD)" value={fechas.hasta} onChangeText={(hasta) => setFechas((f) => ({ ...f, hasta }))} maxLength={10} estilo={{ flex: 1 }} />
+          <CampoFecha etiqueta="Desde" valor={fechas.desde} alCambiar={(desde) => setFechas((f) => ({ ...f, desde, hasta: f.hasta && f.hasta < desde ? desde : f.hasta }))} estilo={{ flex: 1 }} />
+          <CampoFecha etiqueta="Hasta" valor={fechas.hasta} alCambiar={(hasta) => setFechas((f) => ({ ...f, hasta }))} minimo={fechas.desde || undefined} estilo={{ flex: 1 }} />
         </View>
       ) : null}
       <Opciones opciones={[{ valor: '', titulo: 'Todas las áreas' }, ...areas.map((a) => ({ valor: a.id, titulo: a.nombre }))]} valor={area} alCambiar={setArea} />

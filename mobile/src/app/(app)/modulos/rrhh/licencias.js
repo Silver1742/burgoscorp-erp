@@ -12,6 +12,7 @@ import { api } from '../../../../lib/api';
 import { TIPO_LICENCIA, ESTADO_LICENCIA, fechaCorta, diasHabiles } from '../../../../modulos';
 import { espacio, useTema } from '../../../../tema';
 import { useCargar } from '../../../../lib/cambios';
+import CampoFecha from '../../../../componentes/CampoFecha';
 
 const esFecha = (v) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(new Date(`${v}T00:00:00Z`).getTime());
 const manana = () => new Date(Date.now() + 86400000).toISOString().slice(0, 10);
@@ -40,8 +41,8 @@ export default function MisLicencias() {
 
   async function pedir() {
     const e = {};
-    if (!esFecha(form.fecha_desde)) e.fecha_desde = 'Formato AAAA-MM-DD';
-    if (!esFecha(form.fecha_hasta)) e.fecha_hasta = 'Formato AAAA-MM-DD';
+    if (!esFecha(form.fecha_desde)) e.fecha_desde = 'Elegí desde cuándo';
+    if (!esFecha(form.fecha_hasta)) e.fecha_hasta = 'Elegí hasta cuándo';
     if (!e.fecha_desde && !e.fecha_hasta && form.fecha_hasta < form.fecha_desde) e.fecha_hasta = 'No puede ser anterior al inicio';
     setErrores(e);
     if (Object.keys(e).length) return;
@@ -81,10 +82,10 @@ export default function MisLicencias() {
         <Text style={[estilos.etiqueta, { color: t.texto }]}>Tipo</Text>
         <Opciones opciones={OPCIONES_TIPO} valor={form.tipo} alCambiar={(tipo) => setForm((f) => ({ ...f, tipo }))} />
         <View style={estilos.fila}>
-          <Campo etiqueta="Desde" value={form.fecha_desde} onChangeText={(v) => setForm((f) => ({ ...f, fecha_desde: v }))}
-            error={errores.fecha_desde} placeholder="AAAA-MM-DD" maxLength={10} estilo={{ flex: 1 }} />
-          <Campo etiqueta="Hasta" value={form.fecha_hasta} onChangeText={(v) => setForm((f) => ({ ...f, fecha_hasta: v }))}
-            error={errores.fecha_hasta} placeholder="AAAA-MM-DD" maxLength={10} estilo={{ flex: 1 }} />
+          <CampoFecha etiqueta="Desde" valor={form.fecha_desde} alCambiar={(v) => setForm((f) => ({ ...f, fecha_desde: v, fecha_hasta: f.fecha_hasta && f.fecha_hasta < v ? v : f.fecha_hasta }))}
+            error={errores.fecha_desde} estilo={{ flex: 1 }} />
+          <CampoFecha etiqueta="Hasta" valor={form.fecha_hasta} alCambiar={(v) => setForm((f) => ({ ...f, fecha_hasta: v }))}
+            error={errores.fecha_hasta} minimo={form.fecha_desde || undefined} estilo={{ flex: 1 }} />
         </View>
         <Campo etiqueta="Motivo (opcional)" value={form.motivo} onChangeText={(v) => setForm((f) => ({ ...f, motivo: v }))}
           error={errores.motivo} maxLength={500} multiline />

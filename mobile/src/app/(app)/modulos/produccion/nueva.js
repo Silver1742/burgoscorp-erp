@@ -9,6 +9,7 @@ import { useToast } from '../../../../contexto/toast';
 import { api } from '../../../../lib/api';
 import { PRIORIDAD, TIPO_TRABAJO } from '../../../../modulos';
 import { espacio, useTema, usePantalla } from '../../../../tema';
+import CampoFecha from '../../../../componentes/CampoFecha';
 
 const esFecha = (v) => !v || /^\d{4}-\d{2}-\d{2}$/.test(v);
 const OPC_TIPO = Object.entries(TIPO_TRABAJO).map(([valor, titulo]) => ({ valor, titulo }));
@@ -36,8 +37,8 @@ export default function NuevaOt() {
     const e = {};
     if (!f.titulo.trim()) e.titulo = 'Escribí un título';
     if (!/^\d+$/.test(f.cantidad) || Number(f.cantidad) < 1) e.cantidad = 'Cantidad entera mayor a 0';
-    if (!esFecha(f.fecha_inicio_plan)) e.fecha_inicio_plan = 'Formato AAAA-MM-DD';
-    if (!esFecha(f.fecha_entrega_plan)) e.fecha_entrega_plan = 'Formato AAAA-MM-DD';
+    if (!esFecha(f.fecha_inicio_plan)) e.fecha_inicio_plan = 'Elegí la fecha de inicio';
+    if (!esFecha(f.fecha_entrega_plan)) e.fecha_entrega_plan = 'Elegí la fecha de entrega';
     if (!e.fecha_inicio_plan && !e.fecha_entrega_plan && f.fecha_inicio_plan && f.fecha_entrega_plan && f.fecha_entrega_plan < f.fecha_inicio_plan) {
       e.fecha_entrega_plan = 'No puede ser anterior al inicio';
     }
@@ -85,8 +86,10 @@ export default function NuevaOt() {
         <Opciones opciones={OPC_PRIORIDAD} valor={f.prioridad} alCambiar={cambiar('prioridad')} />
         <View style={dos && estilos.fila}>
           <Campo etiqueta="Cantidad" value={f.cantidad} onChangeText={cambiar('cantidad')} error={errores.cantidad} keyboardType="number-pad" maxLength={6} estilo={dos && { flex: 1 }} />
-          <Campo etiqueta="Inicio" value={f.fecha_inicio_plan} onChangeText={cambiar('fecha_inicio_plan')} error={errores.fecha_inicio_plan} placeholder="AAAA-MM-DD" maxLength={10} estilo={dos && { flex: 1 }} />
-          <Campo etiqueta="Entrega" value={f.fecha_entrega_plan} onChangeText={cambiar('fecha_entrega_plan')} error={errores.fecha_entrega_plan} placeholder="AAAA-MM-DD" maxLength={10} estilo={dos && { flex: 1 }} />
+          <CampoFecha etiqueta="Inicio" valor={f.fecha_inicio_plan}
+            alCambiar={(v) => setF((x) => ({ ...x, fecha_inicio_plan: v, fecha_entrega_plan: x.fecha_entrega_plan && x.fecha_entrega_plan < v ? v : x.fecha_entrega_plan }))} error={errores.fecha_inicio_plan} estilo={dos && { flex: 1 }} />
+          <CampoFecha etiqueta="Entrega" valor={f.fecha_entrega_plan} alCambiar={cambiar('fecha_entrega_plan')} error={errores.fecha_entrega_plan}
+            minimo={f.fecha_inicio_plan || undefined} estilo={dos && { flex: 1 }} />
         </View>
         {todaLaEmpresa ? (
           <Selector etiqueta="Área responsable" ruta="/areas" consulta={{ activo: 'true' }} valor={f.area_id} textoValor={usuario.area?.nombre}

@@ -3,6 +3,7 @@
 // La sesión persiste: al abrir la app se renueva con el refresh token guardado en SecureStore.
 import { createContext, use, useCallback, useEffect, useMemo, useReducer } from 'react';
 import { api, tokens, renovarSesion, leerRefreshGuardado, borrarRefreshGuardado } from '../lib/api';
+import { guardarPreferencia } from '../lib/preferencias';
 
 const SesionContext = createContext(null);
 
@@ -146,6 +147,8 @@ export function SesionProvider({ children }) {
       } catch {
         // Aunque falle la llamada (sin conexión), la sesión local se cierra igual.
       }
+      // Al cerrar sesión se olvida el email recordado: el próximo que use este equipo no ve la cuenta anterior.
+      await guardarPreferencia('email-recordado', '');
       await cerrarLocal();
     },
   }), [abrirSesion, cargarPerfil, cerrarLocal, estado.pendiente2fa, procesarRespuestaLogin]);

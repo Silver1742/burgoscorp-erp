@@ -26,6 +26,13 @@ export async function usuariosRrhh() {
   return filas.map((f) => f.id);
 }
 
+/** Administradores activos (ven todo lo que se pide, por ejemplo cada licencia). */
+export async function usuariosAdmin() {
+  const filas = await query(`
+    SELECT u.id FROM usuarios u JOIN roles r ON r.id = u.rol_id WHERE u.activo = 1 AND r.codigo = 'ADMIN'`);
+  return filas.map((f) => f.id);
+}
+
 /** Usuario del jefe de un área (para avisarle de pedidos de su equipo). */
 export async function usuarioJefeDeArea(areaId) {
   const filas = await query(`

@@ -14,6 +14,7 @@ import { api } from '../lib/api';
 import { fechaCorta } from '../modulos';
 import { espacio, radio, useTema } from '../tema';
 import { useCargar } from '../lib/cambios';
+import CampoFecha, { hoyIso } from './CampoFecha';
 
 const VACIO = { titulo: '', texto: '', fijado: false, importante: false, vence_el: '', area: 'empresa', imagenes: [], nuevas: [], quitar: [] };
 const MAX_IMAGENES = 4;
@@ -117,7 +118,7 @@ export default function Tablon() {
     const e = {};
     if (!form.titulo.trim()) e.titulo = 'Escribí un título';
     if (!form.texto.trim()) e.texto = 'Escribí el aviso';
-    if (form.vence_el && !/^\d{4}-\d{2}-\d{2}$/.test(form.vence_el)) e.vence_el = 'Formato AAAA-MM-DD';
+    if (form.vence_el && !/^\d{4}-\d{2}-\d{2}$/.test(form.vence_el)) e.vence_el = 'Elegí una fecha válida';
     setErrores(e);
     if (Object.keys(e).length) throw new Error('datos');
     const cuerpo = {
@@ -180,7 +181,7 @@ export default function Tablon() {
             ) : <Text style={{ color: t.textoSuave, marginBottom: espacio.s }}>Lo ve la gente de {usuario.area?.nombre ?? 'tu área'}.</Text>}
             <Campo etiqueta="Título" value={form.titulo} onChangeText={(v) => setForm((f) => ({ ...f, titulo: v }))} error={errores.titulo} maxLength={120} />
             <Campo etiqueta="Aviso" value={form.texto} onChangeText={(v) => setForm((f) => ({ ...f, texto: v }))} error={errores.texto} maxLength={2000} multiline numberOfLines={4} />
-            <Campo etiqueta="Visible hasta (opcional)" value={form.vence_el} onChangeText={(v) => setForm((f) => ({ ...f, vence_el: v }))} error={errores.vence_el} placeholder="AAAA-MM-DD" maxLength={10} />
+            <CampoFecha etiqueta="Visible hasta (opcional)" valor={form.vence_el} alCambiar={(v) => setForm((f) => ({ ...f, vence_el: v }))} error={errores.vence_el} opcional minimo={hoyIso()} />
             <Casilla marcada={form.fijado} alCambiar={(v) => setForm((f) => ({ ...f, fijado: v }))} etiqueta="Fijarlo arriba" />
             <Casilla marcada={form.importante} alCambiar={(v) => setForm((f) => ({ ...f, importante: v }))} etiqueta="Importante: avisar a cada uno con una notificación" />
             <Text style={{ color: t.texto, marginTop: espacio.s, marginBottom: 6 }}>Imágenes ({cantImagenes} de {MAX_IMAGENES})</Text>

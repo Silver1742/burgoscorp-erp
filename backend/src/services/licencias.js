@@ -11,7 +11,7 @@ import { errores } from '../utils/errores.js';
 import { hoy, sumarDias, diasHabiles, fechaAr } from '../utils/fechas.js';
 import { resolverPermiso, filtroAlcance } from './permisos.js';
 import { auditar } from './auditoria.js';
-import { notificar, usuariosRrhh, usuarioJefeDeArea } from './notificaciones.js';
+import { notificar, usuariosAdmin, usuariosRrhh, usuarioJefeDeArea } from './notificaciones.js';
 
 const TIPOS = { vacaciones: 'Vacaciones', enfermedad: 'Enfermedad', estudio: 'Examen / estudio', personal: 'Trámite personal', otro: 'Otro' };
 
@@ -51,9 +51,10 @@ export async function solicitar(usuario, datos, req) {
   await auditar(req, { accion: 'crear', entidad: 'licencia', entidadId: r.insertId });
 
   const solicitud = await obtener(r.insertId);
-  // Aviso a quien tiene que aprobar primero.
+  // Aviso a quien tiene que aprobar primero, y siempre al administrador (ve todas las licencias).
   const jefe = solicitud.solicitante_es_jefe ? null : await usuarioJefeDeArea(solicitud.area_id);
-  await notificar(jefe ?? await usuariosRrhh(), {
+  const destinatarios = [...new Set([...(jefe ? [jefe] : await usuariosRrhh()), ...(await usuariosAdmin())])];
+  await notificar(destinatarios, {
     tipo: 'licencia_pendiente',
     titulo: `${solicitud.nombre} ${solicitud.apellido} pidió ${TIPOS[tipo].toLowerCase()}`,
     mensaje: `Del ${fechaAr(desde)} al ${fechaAr(hasta)} (${dias} ${dias === 1 ? 'día hábil' : 'días hábiles'})`,
@@ -78,6 +79,8 @@ export async function listar(usuario, filtros) {
   if (filtros.para_aprobar) {
     // Lo que este usuario puede resolver ahora, sin incluir lo propio.
     const condiciones = [];
+    // El administrador ve todas las que esperan una decisión, en cualquier paso.
+    if (usuario.rol === 'ADMIN') condiciones.push("l.estado IN ('pendiente', 'aprobada_jefe')");
     if (usuario.rol === 'JEFE' && usuario.area_id) {
       condiciones.push("(l.estado = 'pendiente' AND e.area_id = ? AND e.id <> a.jefe_empleado_id)");
       params.push(usuario.area_id);
@@ -137,7 +140,9 @@ export async function aprobar(id, usuario, comentario, req) {
   const vaDirectoARrhh = s.solicitante_es_jefe || !(await usuarioJefeDeArea(s.area_id));
 
   let nuevo;
-  if (s.estado === 'pendiente' && esJefeDelArea && !s.solicitante_es_jefe) nuevo = 'aprobada_jefe';
+  // El administrador puede aprobarla en cualquier paso (no espera al jefe).
+  if (usuario.rol === 'ADMIN' && ['pendiente', 'aprobada_jefe'].includes(s.estado)) nuevo = 'aprobada';
+  else if (s.estado === 'pendiente' && esJefeDelArea && !s.solicitante_es_jefe) nuevo = 'aprobada_jefe';
   else if (rrhh && (s.estado === 'aprobada_jefe' || (s.estado === 'pendiente' && vaDirectoARrhh))) nuevo = 'aprobada';
   else if (s.estado === 'pendiente' && rrhh) throw errores.negocio('Primero la tiene que aprobar el jefe del área');
   else if (!['pendiente', 'aprobada_jefe'].includes(s.estado)) throw errores.conflicto('La solicitud ya fue resuelta');

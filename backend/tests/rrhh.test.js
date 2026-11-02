@@ -229,3 +229,19 @@ describe('EPP y organigrama', () => {
     assert.ok(mec.empleados >= 5);
   });
 });
+
+describe('licencias: el administrador las ve todas', () => {
+  test('le llega el aviso, la ve en pendientes y la puede aprobar sin esperar al jefe', async () => {
+    const dia = habil(sumarDias(hoy(), 75));
+    const r = await api().post('/api/v1/licencias').set(como('lucia')).send({ tipo: 'personal', fecha_desde: dia, fecha_hasta: dia });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    const id = r.body.data.id;
+    const [{ n }] = await query("SELECT COUNT(*) AS n FROM notificaciones WHERE usuario_id = ? AND tipo = 'licencia_pendiente' AND entidad_id = ?", [s.admin.usuario.id, id]);
+    assert.equal(Number(n), 1, 'al administrador le llega el aviso');
+    const pendientes = await api().get('/api/v1/licencias').query({ para_aprobar: 1, limite: 100 }).set(como('admin'));
+    assert.ok(pendientes.body.data.some((l) => l.id === id), 'aparece en sus pendientes aunque todavía no la vio la jefa');
+    const a = await api().post(`/api/v1/licencias/${id}/aprobar`).set(como('admin')).send({});
+    assert.equal(a.status, 200, JSON.stringify(a.body));
+    assert.equal(a.body.data.estado, 'aprobada');
+  });
+});
