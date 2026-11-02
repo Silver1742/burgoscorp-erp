@@ -1,7 +1,8 @@
 // Intro de apertura (animación 10 del portal R3).
 // Pantalla negra con resplandor rojo: el escudo se dibuja, "BurgosCorp" aparece letra por letra,
 // una línea roja barre debajo y todo sale con fundido. Una vez por apertura de la app;
-// se saltea tocando la pantalla y no aparece con "reducir movimiento".
+// se saltea tocando la pantalla y no aparece con "reducir movimiento". Se queda hasta que la sesión
+// terminó de cargar (`listo`): si el servidor tarda en despertar, lo dice debajo del lema.
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
@@ -13,11 +14,12 @@ const VISIBLE_MS = 2000;
 const SALIDA_MS = 550;
 let yaSeMostro = false; // una vez por apertura de la app
 
-export default function IntroSplash() {
+export default function IntroSplash({ listo = true }) {
   const [fase, setFase] = useState(() => (yaSeMostro ? 'fin' : 'mostrando'));
   const salida = useRef(new Animated.Value(1)).current;
   const letras = useRef(LETRAS.map(() => new Animated.Value(0))).current;
   const linea = useRef(new Animated.Value(0)).current;
+  const [tiempoCumplido, setTiempoCumplido] = useState(false);
 
   useEffect(() => {
     if (fase !== 'mostrando') return undefined;
@@ -25,14 +27,17 @@ export default function IntroSplash() {
     let cancelado = false;
     AccessibilityInfo.isReduceMotionEnabled().then((reducir) => {
       if (cancelado) return;
-      if (reducir) { setFase('fin'); return; }
+      if (reducir) { setTiempoCumplido(true); return; }
       Animated.stagger(55, letras.map((v) => Animated.timing(v, { toValue: 1, duration: 260, delay: 700, useNativeDriver: true }))).start();
       Animated.timing(linea, { toValue: 1, duration: 700, delay: 1100, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }).start();
     });
-    const t = setTimeout(() => salir(), VISIBLE_MS);
+    const t = setTimeout(() => setTiempoCumplido(true), VISIBLE_MS);
     return () => { cancelado = true; clearTimeout(t); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fase]);
+
+  // Sale cuando pasó el tiempo de la animación y además la app ya tiene algo para mostrar.
+  useEffect(() => { if (tiempoCumplido && listo) salir(); }, [tiempoCumplido, listo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function salir() {
     setFase((f) => {
@@ -49,7 +54,7 @@ export default function IntroSplash() {
       opacity: salida,
       transform: [{ scale: salida.interpolate({ inputRange: [0, 1], outputRange: [1.04, 1] }) }],
     }]}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={salir} accessibilityLabel="Cargando BurgosCorp. Tocá para continuar">
+      <Pressable style={StyleSheet.absoluteFill} onPress={() => listo && salir()} accessibilityLabel={listo ? 'BurgosCorp. Tocá para continuar' : 'Cargando BurgosCorp'}>
         {/* El SVG va dentro de una capa absoluta: en la web, un <svg> suelto ocupa lugar en el flujo */}
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <Svg width="100%" height="100%">
@@ -76,8 +81,9 @@ export default function IntroSplash() {
             <Animated.View style={[estilos.linea, { transform: [{ scaleX: linea }] }]} />
           </View>
           <Text style={estilos.lema}>Sistema de gestión · Acceso seguro</Text>
+          {tiempoCumplido && !listo ? <Text style={estilos.conectando}>Conectando con el servidor…</Text> : null}
         </View>
-        <Text style={estilos.saltear}>Tocá para continuar</Text>
+        {listo ? <Text style={estilos.saltear}>Tocá para continuar</Text> : null}
       </Pressable>
     </Animated.View>
   );
@@ -91,5 +97,6 @@ const estilos = StyleSheet.create({
   carril: { width: 200, height: 2, marginTop: 12, overflow: 'hidden' },
   linea: { flex: 1, backgroundColor: '#e11d2e' },
   lema: { color: '#a1a1aa', marginTop: 14, fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' },
+  conectando: { color: '#71717a', marginTop: 10, fontSize: 12 },
   saltear: { position: 'absolute', bottom: 40, alignSelf: 'center', color: '#71717a', fontSize: 12 },
 });

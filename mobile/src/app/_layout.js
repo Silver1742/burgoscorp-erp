@@ -4,6 +4,7 @@
 //   sesión sin email verificado → verificar-email
 //   sesión completa            → (app): pestañas según el rol
 // Las rutas protegidas solo ordenan la navegación: los permisos reales los valida la API.
+import { useEffect } from 'react';
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -22,18 +23,25 @@ export default function Raiz() {
           <SesionProvider>
             <ControlSplash />
             <Navegador />
+            <Intro />
           </SesionProvider>
-          <IntroSplash />
         </ToastProvider>
       </TemaProvider>
     </SafeAreaProvider>
   );
 }
 
+// La pantalla de carga del sistema se saca enseguida: lo que tapa mientras se recupera la sesión es
+// la intro animada. Antes se sacaba al terminar de cargar y en el celular la intro ya estaba saliendo
+// (se veía un solo cuadro).
 function ControlSplash() {
-  const { cargando } = useSesion();
-  if (!cargando) SplashScreen.hide();
+  useEffect(() => { SplashScreen.hide(); }, []);
   return null;
+}
+
+function Intro() {
+  const { cargando } = useSesion();
+  return <IntroSplash listo={!cargando} />;
 }
 
 function Navegador() {
