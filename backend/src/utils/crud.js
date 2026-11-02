@@ -28,7 +28,8 @@ import { errores } from './errores.js';
  * @param {string} [cfg.select]      columnas del SELECT (por defecto `t.*`)
  * @param {string} [cfg.joins]       JOINs adicionales para el listado/detalle
  * @param {string[]} [cfg.busqueda]  columnas donde busca `q`
- * @param {object} [cfg.filtros]     { nombreParam: { col, esquema } }
+ * @param {object} [cfg.filtros]     { nombreParam: { col, esquema } } o { sql, esquema } con un `?`
+ *                                   (condición fija del código, ej. un EXISTS)
  * @param {object} [cfg.ordenables]  { nombreParam: columna }
  * @param {string} cfg.ordenDefecto  columna de orden por defecto
  * @param {import('zod').ZodObject} cfg.esquemaCrear
@@ -97,7 +98,7 @@ export function crearRecursoCrud(cfg) {
       if (!filtro) throw errores.validacion([{ campo: `query.${nombre}`, mensaje: 'Filtro desconocido' }]);
       const r = filtro.esquema.safeParse(valorCrudo);
       if (!r.success) throw errores.validacion([{ campo: `query.${nombre}`, mensaje: 'Valor de filtro inválido' }]);
-      where.push(`${filtro.col} = ?`);
+      where.push(filtro.sql ?? `${filtro.col} = ?`);
       params.push(r.data);
     }
 

@@ -42,6 +42,14 @@ router.use('/puestos', crearRecursoCrud({
 router.use('/habilidades', crearRecursoCrud({
   modulo: 'RRHH', tabla: 'habilidades', entidad: 'habilidad',
   busqueda: ['t.codigo', 't.nombre'],
+  // area_id: solo las habilidades que tiene alguien activo de esa área (para pedirlas en una tarea).
+  filtros: {
+    area_id: {
+      sql: `EXISTS (SELECT 1 FROM empleado_habilidades eh JOIN empleados e ON e.id = eh.empleado_id
+                    WHERE eh.habilidad_id = t.id AND e.area_id = ? AND e.estado = 'activo')`,
+      esquema: id,
+    },
+  },
   ordenables: { codigo: 't.codigo', nombre: 't.nombre' },
   ordenDefecto: 't.nombre',
   esquemaCrear: v.habilidad,

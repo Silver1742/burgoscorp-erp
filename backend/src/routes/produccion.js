@@ -50,7 +50,8 @@ router.get('/tareas/:id/candidatos', autenticado, requierePermiso('TAR', 'aproba
   res.json({ ok: true, data: await tareas.candidatos(req.usuario, req.validado.params.id) });
 });
 router.post('/tareas/:id/asignaciones', autenticado, requierePermiso('TAR', 'aprobar'), validar({ params: paramsId, body: v.asignacion }), async (req, res) => {
-  res.status(201).json({ ok: true, data: await tareas.asignar(req.usuario, req.validado.params.id, req.validado.body.empleado_id, req) });
+  const { empleado_id: uno, empleado_ids: varios } = req.validado.body;
+  res.status(201).json({ ok: true, data: await tareas.asignar(req.usuario, req.validado.params.id, varios ?? [uno], req) });
 });
 router.delete('/tareas/:id/asignaciones/:empleadoId', autenticado, requierePermiso('TAR', 'aprobar'), validar({ params: v.paramsAsignacion }), async (req, res) => {
   res.json({ ok: true, data: await tareas.desasignar(req.usuario, req.validado.params.id, req.validado.params.empleadoId, req) });

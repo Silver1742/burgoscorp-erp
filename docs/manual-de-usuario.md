@@ -124,7 +124,8 @@ marcá si la máquina quedó parada. Mantenimiento recibe el aviso.
 
 ## 5. Para jefes de área
 
-- **Asignar tarea**: creá la tarea y elegí a alguien con la habilidad necesaria.
+- **Asignar tarea**: creá la tarea (solo te aparecen las máquinas de tu área y las habilidades que
+  tiene tu gente) y tocá **Asignar**: podés marcar **a varias personas a la vez**.
 - **Tareas que te llegan**: del administrador, o de una orden de trabajo de otra área que usa
   máquinas tuyas. Te llega el aviso *"Tarea para asignar"*: tocalo (o entrá a **Tareas del área →
   Para asignar**) y asignala a alguien de tu equipo con **Asignar**.

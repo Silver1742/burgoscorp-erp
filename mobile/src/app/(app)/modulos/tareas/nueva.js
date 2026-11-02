@@ -100,7 +100,7 @@ export default function NuevaTarea() {
   const router = useRouter();
   const toast = useToast();
   const t = useTema();
-  const { permisos } = useSesion();
+  const { permisos, usuario } = useSesion();
   const { ancho } = usePantalla();
   // Quien ve las tareas de toda la empresa (el administrador) elige a qué áreas mandarla.
   const deEmpresa = permisos?.TAR?.alcance === 'todo';
@@ -110,6 +110,8 @@ export default function NuevaTarea() {
   const [enviando, setEnviando] = useState(false);
   const cambiar = (c) => (v) => setF((x) => ({ ...x, [c]: v }));
   const dos = ancho >= 520;
+  // Un jefe crea tareas de su área: solo ve las máquinas de su área y las habilidades que tiene su gente.
+  const delArea = !deEmpresa && usuario.area ? { area_id: usuario.area.id } : {};
 
   async function guardar() {
     const e = {};
@@ -181,10 +183,11 @@ export default function NuevaTarea() {
         </View>
       </Tarjeta>
       <Tarjeta titulo="Requisitos" icono="construct-outline">
-        <Selector etiqueta="Máquina / puesto (opcional)" ruta="/centros-trabajo" consulta={{ activo: 'true' }} valor={f.centro_trabajo_id} opcional
+        <Selector etiqueta="Máquina / puesto (opcional)" ruta="/centros-trabajo" consulta={{ activo: 'true', ...delArea }} valor={f.centro_trabajo_id} opcional
           placeholder="Sin máquina" alCambiar={cambiar('centro_trabajo_id')} error={errores.centro_trabajo_id}
           mapear={(c) => ({ titulo: `${c.codigo} · ${c.nombre}`, sub: c.area_nombre })} />
-        <Selector etiqueta="Habilidad requerida (opcional)" ruta="/habilidades" valor={f.habilidad_requerida_id} opcional
+        <Selector etiqueta="Habilidad requerida (opcional)" ruta="/habilidades" consulta={delArea} valor={f.habilidad_requerida_id} opcional
+          ayuda={deEmpresa ? undefined : 'Solo las que tiene alguien de tu área.'}
           placeholder="Si elegís una máquina, se usa la suya" alCambiar={cambiar('habilidad_requerida_id')} error={errores.habilidad_requerida_id}
           mapear={(h) => ({ titulo: h.nombre, sub: h.requiere_certificacion ? 'Requiere certificación' : null })} />
         <Campo etiqueta="Lista de control (una por línea, opcional)" value={f.checklist} onChangeText={cambiar('checklist')} error={errores.checklist} multiline numberOfLines={3} maxLength={2000} />

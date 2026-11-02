@@ -66,7 +66,7 @@ export const TEMAS_AYUDA = [
   {
     id: 'jefe', titulo: 'Si sos jefe de área', icono: 'id-card-outline', roles: ['JEFE'],
     pasos: [
-      '"Asignar tarea": creá la tarea y elegí a alguien con la habilidad necesaria.',
+      '"Asignar tarea": creá la tarea y tocá "Asignar": podés marcar a varias personas a la vez.',
       'Si te llega "Tarea para asignar" (del administrador o de una OT de otra área), abrila y tocá "Asignar".',
       'Si sos jefe de Ingeniería, te llega cada pedido nuevo: asignalo en "Analiza" o desde Ventas → Para asignar.',
       'En "Tareas del área" aprobás o rechazás las tareas terminadas.',

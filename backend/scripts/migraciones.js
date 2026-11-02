@@ -180,9 +180,23 @@ async function proveedorDiscord(conn) {
   }
 }
 
+/**
+ * Ventas (clientes, pedidos y presupuestos con precios) la ven solo las áreas que la manejan
+ * —Comercial e Ingeniería—, además de gerencia y el administrador. Antes cualquier jefe la podía
+ * consultar.
+ */
+async function ventasSoloSusAreas(conn) {
+  const [r] = await conn.execute(`
+    UPDATE permisos_rol p JOIN roles ro ON ro.id = p.rol_id JOIN modulos m ON m.id = p.modulo_id
+    SET p.requiere_area_duenia = 'todo'
+    WHERE ro.codigo = 'JEFE' AND m.codigo = 'VEN' AND p.requiere_area_duenia <> 'todo'`);
+  if (r.affectedRows) console.log('Migración: Ventas queda solo para Comercial, Ingeniería, gerencia y administración.');
+}
+
 export async function migrar(conn) {
   await dosPasosPorEmail(conn);
   await proveedorDiscord(conn);
+  await ventasSoloSusAreas(conn);
   await dniOpcional(conn);
   await jornadaLaboral(conn);
   await fichajesDeEjemplo(conn);

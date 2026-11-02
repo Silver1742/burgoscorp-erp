@@ -362,23 +362,37 @@ async function validarAsignable(t, empleadoId) {
   return e;
 }
 
-export async function asignar(usuario, id, empleadoId, req) {
+/**
+ * Asigna una o varias personas a la tarea. Es todo o nada: se validan todas antes de guardar
+ * (activas, del área, con la habilidad y la certificación vigente) y, si alguna no corresponde,
+ * no se asigna a nadie y el mensaje dice quién y por qué.
+ */
+export async function asignar(usuario, id, empleadoIds, req) {
   const { t, puedeAsignar, jefe } = await cargar(usuario, id);
   if (!puedeAsignar) throw errores.prohibido(jefe ? `La asigna ${jefe.nombre}, jefe del área` : 'Solo el jefe del área asigna tareas');
   if (['aprobada', 'cancelada'].includes(t.estado)) throw errores.conflicto('La tarea ya está cerrada');
-  const e = await validarAsignable(t, empleadoId);
+  const ids = [...new Set(empleadoIds)];
+  const personas = [];
+  for (const empleadoId of ids) personas.push(await validarAsignable(t, empleadoId));
 
-  const r = await query('INSERT IGNORE INTO tarea_asignaciones (tarea_id, empleado_id, asignado_por) VALUES (?, ?, ?)', [id, empleadoId, usuario.id]);
-  if (!r.affectedRows) throw errores.conflicto(`${e.nombre} ${e.apellido} ya está asignado`);
-  await auditar(req, { accion: 'asignar', entidad: 'tarea', entidadId: id, detalle: { empleadoId } });
-
-  const destinatario = await queryOne('SELECT id FROM usuarios WHERE empleado_id = ? AND activo = 1', [empleadoId]);
-  await notificar(destinatario?.id, {
-    tipo: 'tarea_asignada',
-    titulo: `Te asignaron: ${t.titulo}`,
-    mensaje: [t.ot_numero, t.centro_codigo && `Máquina ${t.centro_codigo}`, t.fecha_limite && `Vence ${fechaAr(new Date(t.fecha_limite).toISOString())}`].filter(Boolean).join(' · ') || null,
-    entidad: 'tarea', entidadId: id,
+  const nuevos = await transaccion(async (conn) => {
+    const agregados = [];
+    for (const e of personas) {
+      const [r] = await conn.execute('INSERT IGNORE INTO tarea_asignaciones (tarea_id, empleado_id, asignado_por) VALUES (?, ?, ?)', [id, e.id, usuario.id]);
+      if (r.affectedRows) agregados.push(e);
+    }
+    return agregados;
   });
+  if (!nuevos.length) {
+    throw errores.conflicto(ids.length === 1 ? `${personas[0].nombre} ${personas[0].apellido} ya está asignado` : 'Esas personas ya estaban asignadas');
+  }
+
+  const mensaje = [t.ot_numero, t.centro_codigo && `Máquina ${t.centro_codigo}`, t.fecha_limite && `Vence ${fechaAr(new Date(t.fecha_limite).toISOString())}`].filter(Boolean).join(' · ') || null;
+  for (const e of nuevos) {
+    await auditar(req, { accion: 'asignar', entidad: 'tarea', entidadId: id, detalle: { empleadoId: e.id } });
+    const destinatario = await queryOne('SELECT id FROM usuarios WHERE empleado_id = ? AND activo = 1', [e.id]);
+    await notificar(destinatario?.id, { tipo: 'tarea_asignada', titulo: `Te asignaron: ${t.titulo}`, mensaje, entidad: 'tarea', entidadId: id });
+  }
   return obtener(usuario, id);
 }
 

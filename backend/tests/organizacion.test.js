@@ -13,6 +13,9 @@ const EMAILS = {
   ricardo: 'ricardo.ferreyra@burgoscorp.test', // gerencia
   jorge: 'jorge.dominguez@burgoscorp.test',    // jefe de Mecanizado
   ramon: 'ramon.gimenez@burgoscorp.test',      // tornero de Mecanizado
+  mariana: 'mariana.ledesma@burgoscorp.test',  // jefa de Abastecimiento
+  diego: 'diego.acosta@burgoscorp.test',       // jefe Comercial
+  matias: 'matias.peralta@burgoscorp.test',    // operador CNC de Mecanizado
 };
 const s = {};
 const como = (q) => ({ Authorization: `Bearer ${s[q].accessToken}` });
@@ -150,5 +153,45 @@ describe('búsqueda general', () => {
     const raro = await api().get('/api/v1/buscar').query({ q: "%' OR 1=1 --" }).set(como('admin'));
     assert.equal(raro.status, 200);
     assert.equal(raro.body.data.grupos.length, 0, 'los comodines y comillas se buscan como texto');
+  });
+});
+
+describe('cada área ve lo suyo', () => {
+  test('Ventas (clientes, pedidos y presupuestos) solo la ven Comercial, Ingeniería, gerencia y el admin', async () => {
+    assert.equal((await api().get('/api/v1/solicitudes').set(como('mariana'))).status, 403, 'Abastecimiento no ve pedidos de clientes');
+    assert.equal((await api().get('/api/v1/clientes').set(como('mariana'))).status, 403);
+    assert.equal((await api().get('/api/v1/solicitudes').set(como('jorge'))).status, 403, 'Mecanizado tampoco');
+    assert.equal((await api().get('/api/v1/solicitudes').set(como('diego'))).status, 200);
+    assert.equal((await api().get('/api/v1/solicitudes').set(como('ricardo'))).status, 200);
+    const busca = await api().get('/api/v1/buscar').query({ q: 'Metalúrgica' }).set(como('mariana'));
+    assert.ok(!busca.body.data.grupos.some((g) => ['cliente', 'pedido'].includes(g.tipo)), 'ni en el buscador');
+    const yo = await api().get('/api/v1/auth/yo').set(como('mariana'));
+    assert.equal(yo.body.data.permisos.VEN, undefined, 'ni en el menú de la app');
+  });
+
+  test('habilidades de un área: solo las que tiene alguien de esa área', async () => {
+    const mec = await area('MEC');
+    const r = await api().get('/api/v1/habilidades').query({ area_id: mec, limite: 100 }).set(como('jorge'));
+    assert.equal(r.status, 200);
+    const codigos = r.body.data.map((h) => h.codigo);
+    assert.ok(codigos.includes('TORNERIA'));
+    assert.ok(!codigos.includes('SOLDADURA_TIG'), 'nadie de Mecanizado suelda TIG');
+    const maq = await api().get('/api/v1/centros-trabajo').query({ area_id: mec, limite: 100 }).set(como('jorge'));
+    assert.ok(maq.body.data.length && maq.body.data.every((m) => m.area_id === mec), 'máquinas solo de Mecanizado');
+  });
+
+  test('una tarea se puede asignar a varias personas a la vez (todo o nada)', async () => {
+    const t = await api().post('/api/v1/tareas').set(como('jorge')).send({ titulo: `Mover el torno ${sello}` });
+    assert.equal(t.status, 201);
+    const [{ id: ajeno }] = await query("SELECT e.id FROM empleados e JOIN areas a ON a.id = e.area_id WHERE a.codigo = 'SOL' AND e.estado = 'activo' LIMIT 1");
+    const mal = await api().post(`/api/v1/tareas/${t.body.data.id}/asignaciones`).set(como('jorge'))
+      .send({ empleado_ids: [s.ramon.usuario.empleadoId, ajeno] });
+    assert.equal(mal.status, 422, 'alguien de otra área: no se asigna a nadie');
+    const [{ n }] = await query('SELECT COUNT(*) AS n FROM tarea_asignaciones WHERE tarea_id = ?', [t.body.data.id]);
+    assert.equal(Number(n), 0);
+    const ok = await api().post(`/api/v1/tareas/${t.body.data.id}/asignaciones`).set(como('jorge'))
+      .send({ empleado_ids: [s.ramon.usuario.empleadoId, s.matias.usuario.empleadoId] });
+    assert.equal(ok.status, 201, JSON.stringify(ok.body));
+    assert.equal(ok.body.data.asignados_detalle.length, 2);
   });
 });

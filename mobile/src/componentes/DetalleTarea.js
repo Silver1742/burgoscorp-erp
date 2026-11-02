@@ -25,23 +25,24 @@ function DialogoAsignar({ visible, tarea, alCerrar, alAsignar }) {
   const toast = useToast();
   const [lista, setLista] = useState(null);
   const [error, setError] = useState(null);
-  const [elegido, setElegido] = useState(null);
+  // Se puede elegir a varias personas a la vez.
+  const [elegidos, setElegidos] = useState([]);
 
   useEffect(() => {
     if (!visible) return;
     setLista(null);
-    setElegido(null);
+    setElegidos([]);
     setError(null);
     api(`/tareas/${tarea.id}/candidatos`).then(setLista).catch((err) => setError(err.message));
   }, [visible, tarea.id]);
 
   async function asignar() {
-    if (!elegido) {
-      toast.aviso('Elegí a quién asignar');
+    if (!elegidos.length) {
+      toast.aviso('Elegí al menos una persona');
       throw new Error('sin elegir');
     }
     try {
-      await alAsignar(elegido);
+      await alAsignar(elegidos);
     } catch (err) {
       toast.error(err.message);
       throw err;
@@ -50,17 +51,20 @@ function DialogoAsignar({ visible, tarea, alCerrar, alAsignar }) {
 
   const disponibles = lista?.filter((e) => !e.ya_asignado) ?? [];
   return (
-    <ConfirmDialog visible={visible} titulo="Asignar persona" textoConfirmar="Asignar" variante="primario" alConfirmar={asignar} alCerrar={alCerrar}
+    <ConfirmDialog visible={visible} titulo="Asignar personas" variante="primario" alConfirmar={asignar} alCerrar={alCerrar}
+      textoConfirmar={elegidos.length > 1 ? `Asignar a ${elegidos.length}` : 'Asignar'}
       mensaje={tarea.habilidad_nombre ? `Solo aparecen personas de ${tarea.area_nombre} con "${tarea.habilidad_nombre}"${tarea.habilidad_certificada ? ' y la certificación vigente' : ''}.` : `Personas activas de ${tarea.area_nombre}.`}>
       <View style={{ marginTop: espacio.m }}>
         {error ? <ErrorCarga error={error} /> : null}
         {!lista && !error ? <Cargando /> : null}
         {lista && disponibles.length === 0 ? <Vacio icono="person-remove-outline" titulo="No hay personas aptas disponibles" /> : null}
         {disponibles.map((e) => {
-          const activo = elegido === e.id;
+          const activo = elegidos.includes(e.id);
           return (
-            <Pressable key={e.id} onPress={() => setElegido(e.id)} accessibilityRole="radio" accessibilityState={{ selected: activo }}
+            <Pressable key={e.id} onPress={() => setElegidos((x) => (activo ? x.filter((i) => i !== e.id) : [...x, e.id]))}
+              accessibilityRole="checkbox" accessibilityState={{ checked: activo }}
               style={[estilos.candidato, { borderColor: activo ? t.primario : t.borde, backgroundColor: activo ? t.rojoSuave : t.superficie }]}>
+              <Ionicons name={activo ? 'checkbox' : 'square-outline'} size={20} color={activo ? t.primario : t.textoSuave} />
               <Avatar nombre={`${e.nombre} ${e.apellido}`} tamano={32} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: t.texto, fontWeight: '600' }}>{e.apellido}, {e.nombre}</Text>
@@ -295,10 +299,10 @@ export default function DetalleTarea({ id }) {
       </View>
 
       <DialogoAsignar visible={dialogo === 'asignar'} tarea={tarea} alCerrar={() => setDialogo(null)}
-        alAsignar={async (empleadoId) => {
-          const r = await api(`/tareas/${id}/asignaciones`, { metodo: 'POST', cuerpo: { empleado_id: empleadoId } });
+        alAsignar={async (empleadoIds) => {
+          const r = await api(`/tareas/${id}/asignaciones`, { metodo: 'POST', cuerpo: { empleado_ids: empleadoIds } });
           setTarea(r);
-          toast.exito('Persona asignada. Le llegó un aviso.');
+          toast.exito(empleadoIds.length > 1 ? `${empleadoIds.length} personas asignadas. A cada una le llegó un aviso.` : 'Persona asignada. Le llegó un aviso.');
         }} />
 
       <ConfirmDialog

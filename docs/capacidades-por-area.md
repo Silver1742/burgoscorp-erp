@@ -35,6 +35,7 @@ ahora usa la app), se puede vincular ese en lugar de crear otro.
 | **Aprobar licencias** | Jefe del área, después RRHH | Recursos humanos → Aprobar licencias |
 | **Escanear QR** de piezas, máquinas, materiales y órdenes de compra | Todos (cada uno ve lo que su rol permite) | Botón QR arriba, o la cámara del teléfono |
 | **Reportar una falla** de máquina con **descripción y foto** | Todos | Mantenimiento → Reportar una falla, o el QR de la máquina |
+| **Ver Ventas** (clientes, pedidos y presupuestos) | Solo Comercial e Ingeniería, gerencia y el administrador: tienen datos comerciales | Ventas |
 | **Tomar un pedido de cliente** con la **descripción** de lo que necesita y **fotos de la pieza** | Comercial e Ingeniería | Ventas → Nueva solicitud |
 | **Llamar o mandar WhatsApp** al cliente o proveedor | Quien ve el pedido o la compra | Botones de contacto |
 | **Asignar un pedido nuevo** a quien lo analiza y presupuesta (le llega el aviso solo) | Jefe de Ingeniería (sin jefe: el administrador) | Ventas → Para asignar |

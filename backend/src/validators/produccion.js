@@ -83,7 +83,11 @@ export const filtroTareas = z.object({
   area_id: id.optional(),
 }).strict();
 
-export const asignacion = z.object({ empleado_id: id }).strict();
+// Una persona (empleado_id) o varias a la vez (empleado_ids).
+export const asignacion = z.object({
+  empleado_id: id.optional(),
+  empleado_ids: z.array(id).min(1, 'Elegí al menos una persona').max(20).optional(),
+}).strict().refine((d) => d.empleado_id || d.empleado_ids, { message: 'Elegí al menos una persona', path: ['empleado_ids'] });
 export const paramsAsignacion = z.object({ id, empleadoId: id });
 export const paramsChecklist = z.object({ id, itemId: id });
 export const comentario = z.object({ texto: texto(2000) }).strict();
