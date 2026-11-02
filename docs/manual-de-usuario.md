@@ -46,7 +46,7 @@ Para mostrar el sistema sin usar cuentas reales:
 | Jefe de área | `jorge.dominguez@burgoscorp.test` | Jefe de Mecanizado: asigna y aprueba tareas, aprueba licencias |
 | Empleado | `empleado@burgoscorp.test` | Mecanizado (tornero): sus tareas, fichaje y licencias |
 
-La contraseña de las tres últimas es la que se cargó en `PASSWORD_PRUEBA` en Render.
+La contraseña de las tres últimas es la que se cargó en `PASSWORD_PRUEBA` en Render (pedísela al administrador).
 
 ---
 

@@ -60,7 +60,7 @@ como *Blueprint* (**New → Blueprint** en Render) o crear el Web Service a mano
 | `SMTP_FROM` | `BurgosCorp ERP <tu.cuenta@gmail.com>` (el remitente verificado en Brevo) |
 | `CORS_ORIGINS` | `https://burgoscorp-erp.onrender.com` (la app web) |
 | `SEED_PASSWORD` | **Vos**, solo para el primer arranque. **Borrarla después** |
-| `PASSWORD_PRUEBA` | Opcional, **vos**: crea `gerencia@`, `jefe@` y `empleado@burgoscorp.test` con esa contraseña (12+ caracteres, letras y números). Se puede dejar |
+| `PASSWORD_PRUEBA` | Opcional, **vos**: crea `gerencia@` y `empleado@burgoscorp.test` y se la pone a `jorge.dominguez@burgoscorp.test` (jefe de Mecanizado; un área tiene un solo jefe) (12+ caracteres, letras y números). Se puede dejar |
 | `EMAIL_AVISOS` | Correo(s) que reciben el aviso de cada solicitud de acceso, separados por coma |
 | `WEB_URL` | `https://burgoscorp-erp.onrender.com` (para el enlace de los avisos) |
 
@@ -93,6 +93,8 @@ En la web la sesión vive en memoria (no se guardan tokens en el navegador): al 
 hay que volver a entrar.
 
 ## 5. APK con EAS Build
+
+**Último APK:** https://expo.dev/artifacts/eas/bUI-ztrR8BpPTdgw7ApcgL9xZoJ3JYgfoRgh_jT08cs.apk (se actualiza en cada entrega).
 
 1. `mobile/eas.json` ya apunta a la API publicada (`EXPO_PUBLIC_API_URL`). La app se niega a usar
    `http://` en producción.

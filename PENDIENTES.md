@@ -97,7 +97,7 @@ panel; nunca van en el chat ni en el repo.**
 
 ### 5.3 Cuentas de prueba en la web publicada
 - Ya existe el script `backend/scripts/usuarios-prueba.js` (corre en `npm start`): crea
-  `gerencia@`, `jefe@` y `empleado@burgoscorp.test` (Mecanizado) con la contraseña de la variable
+  `gerencia@` y `empleado@burgoscorp.test` y la de `jorge.dominguez@burgoscorp.test` (jefe de Mecanizado) con la contraseña de la variable
   `PASSWORD_PRUEBA`. **El usuario tiene que cargar esa variable en Render** (12+ caracteres, letras y
   números); hasta entonces las cuentas no existen en la publicada. El admin es `admin@burgoscorp.test`.
 
