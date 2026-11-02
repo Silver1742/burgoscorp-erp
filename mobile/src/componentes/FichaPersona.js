@@ -7,6 +7,7 @@
 //   Gerencia      → solo consultar.
 import { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Avatar, Boton, Cargando, ErrorCarga, Insignia, InsigniaRol, Opciones } from './ui';
@@ -47,6 +48,7 @@ export default function FichaPersona({ empleadoId, alCerrar, alCambiar }) {
   const router = useRouter();
   const toast = useToast();
   const { esAncho } = usePantalla();
+  const insets = useSafeAreaInsets();
   const { conJefatura, dialogoJefatura } = useJefatura();
   const [p, setP] = useState(null);
   const [error, setError] = useState(null);
@@ -104,7 +106,9 @@ export default function FichaPersona({ empleadoId, alCerrar, alCambiar }) {
     <>
       <Modal visible={Boolean(empleadoId)} transparent animationType={esAncho ? 'fade' : 'slide'} onRequestClose={alCerrar}>
         <View style={[estilos.fondo, esAncho && { justifyContent: 'center', alignItems: 'center' }]}>
-          <View style={[estilos.hoja, sombra, { backgroundColor: t.fondo, borderColor: t.borde }, esAncho ? estilos.hojaAncha : estilos.hojaCelular]}>
+          {/* En el celular la hoja sale desde abajo: se deja el alto de la barra del sistema (atrás, inicio,
+              apps abiertas) para que el botón de abajo no quede tapado. */}
+          <View style={[estilos.hoja, sombra, { backgroundColor: t.fondo, borderColor: t.borde }, esAncho ? estilos.hojaAncha : [estilos.hojaCelular, { paddingBottom: insets.bottom }]]}>
             {/* Cabecera */}
             <View style={[estilos.cabecera, { borderBottomColor: t.borde }]}>
               {p ? <Avatar nombre={nombre} tamano={48} /> : null}

@@ -4,6 +4,7 @@
 //    integrantes con el detalle de cada uno.
 import { useCallback, useState } from 'react';
 import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import IntegrantesArea from '../../componentes/IntegrantesArea';
@@ -26,6 +27,7 @@ function ListaAreas() {
   const [abierta, setAbierta] = useState(null); // área cuya ventana está abierta
   const [creando, setCreando] = useState(false);
   const { esAncho } = usePantalla();
+  const insets = useSafeAreaInsets();
 
   const cargar = useCallback(async () => {
     setError(null);
@@ -75,7 +77,8 @@ function ListaAreas() {
       {/* Ventana del área (como el AreaDetailModal de R3): integrantes y su ficha, sin salir de la lista. */}
       <Modal visible={Boolean(abierta)} transparent animationType={esAncho ? 'fade' : 'slide'} onRequestClose={() => setAbierta(null)}>
         <View style={[estilos.fondo, esAncho && { justifyContent: 'center', alignItems: 'center' }]}>
-          <View style={[estilos.ventana, sombra, { backgroundColor: t.fondo, borderColor: t.borde }, esAncho ? estilos.ventanaAncha : estilos.ventanaCelular]}>
+          {/* En el celular: lugar para la barra del sistema, para que la lista no quede debajo. */}
+          <View style={[estilos.ventana, sombra, { backgroundColor: t.fondo, borderColor: t.borde }, esAncho ? estilos.ventanaAncha : [estilos.ventanaCelular, { paddingBottom: insets.bottom }]]}>
             <View style={[estilos.barra, { borderBottomColor: t.borde }]}>
               <Text style={{ color: t.textoSuave, fontSize: 13, flex: 1 }}>Integrantes del área · tocá a alguien para ver su ficha</Text>
               <Pressable onPress={() => { setAbierta(null); cargar(); }} accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={10}>

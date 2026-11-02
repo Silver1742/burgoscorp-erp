@@ -1,16 +1,27 @@
 // "Volver" al lugar de donde se vino.
 //
-// Las pantallas de detalle (una tarea, una OT, un legajo) viven dentro de la pila de Módulos o de
-// Mis tareas. Si se abren desde otra pestaña (Inicio, Tareas del jefe, Buscar, la ficha de una
-// persona), el "atrás" de la pila llevaba a la grilla de Módulos en vez de volver a donde estabas.
-// Acá se recuerda el recorrido y, si lo anterior es de otra pestaña, se vuelve ahí.
+// Las pantallas de detalle (una tarea, una OT, un legajo, una notificación) viven dentro de una pila
+// (Módulos, Mis tareas o Perfil) cuya pantalla inicial es la grilla de Módulos, la lista de tareas o el
+// perfil. Si se abren desde otra pestaña (Inicio, Tareas del jefe, Buscar, Pendientes, la ficha de una
+// persona, el QR) o después de un alta que reemplaza la pantalla ("Nueva tarea" → la tarea creada),
+// lo que queda debajo en la pila es esa pantalla inicial, y el "atrás" de siempre llevaba ahí.
 //
-//   <RegistroRutas />                  una vez, en el layout con sesión
-//   botonVolver('/modulos')            headerLeft de la pila (flecha de la cabecera)
-//   useAtrasDelTelefono('/modulos')    el botón "atrás" de Android
+// Reglas:
+//   1. Al salir de una pila hacia otra pestaña, la pila vuelve a su pantalla inicial
+//      (useReiniciarAlSalir). Así no quedan pantallas viejas apiladas que aparezcan al volver.
+//   2. Al volver se mira qué hay realmente debajo en la pila:
+//      - una pantalla de verdad (la OT desde la que se abrió la tarea) → atrás normal;
+//      - solo la pantalla inicial, y no se vino de ella → se vuelve a donde estabas antes de entrar.
+// Lo mismo para la flecha de la cabecera y para el botón "atrás" de Android.
+//
+//   <RegistroRutas />                       una vez, en el layout con sesión
+//   useReiniciarAlSalir('modulos')          en el layout de cada pila (nombre de su pestaña)
+//   headerLeft: botonVolver('/modulos', { inicioOculto: true })
+//       inicioOculto: la pantalla inicial de la pila no es una pestaña visible (la grilla de Módulos,
+//       Perfil): ahí también hace falta la flecha para volver a donde estabas.
 import { useEffect } from 'react';
 import { BackHandler, Pressable } from 'react-native';
-import { usePathname, useRouter } from 'expo-router';
+import { useNavigation, usePathname, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 const historial = [];
@@ -26,45 +37,73 @@ export function RegistroRutas() {
   return null;
 }
 
-/** Vuelve: dentro de la misma pila, el atrás de siempre; si se vino de otra pestaña, a esa pestaña. */
-function volver(router, pila) {
-  const anterior = historial[historial.length - 2];
-  if (!anterior || anterior.startsWith(pila)) {
-    if (router.canGoBack()) router.back();
-    return;
+/** Posición en el historial de la última pantalla fuera de esta pila (o su pantalla inicial). */
+function indiceOrigen(pila) {
+  for (let i = historial.length - 2; i >= 0; i -= 1) {
+    if (!historial[i].startsWith(`${pila}/`)) return i;
   }
-  historial.pop(); // la pantalla que se deja; al llegar, la anterior queda última (no se duplica)
-  if (router.canGoBack()) router.back(); // deja la pila en su pantalla inicial para la próxima vez
-  router.navigate(anterior);
+  return -1;
 }
 
-function BotonVolver({ pila, color }) {
+/** Qué hace "volver" en esta pantalla: { tipo: 'atras' } | { tipo: 'origen', ruta, indice } | null. */
+function destinoVolver(navigation, pila, inicioOculto) {
+  const estado = navigation.getState();
+  const debajo = estado && estado.index > 0 ? estado.routes[estado.index - 1] : null;
+  const i = indiceOrigen(pila);
+  const origen = i >= 0 ? historial[i] : null;
+  const vengoDeOtroLado = origen && origen !== pila;
+  if (debajo && debajo.name !== 'index') return { tipo: 'atras' }; // una pantalla de verdad
+  // En la pantalla inicial de una pestaña visible (Mis tareas) no hay "volver": es una pestaña.
+  if (vengoDeOtroLado && (debajo || inicioOculto)) return { tipo: 'origen', ruta: origen, indice: i, debajo: Boolean(debajo) };
+  return debajo ? { tipo: 'atras' } : null;
+}
+
+function volver(router, navigation, pila, inicioOculto) {
+  const d = destinoVolver(navigation, pila, inicioOculto);
+  if (!d) return false;
+  if (d.tipo === 'atras') {
+    navigation.goBack(); // atrás dentro de esta pila (no el de las pestañas)
+    return true;
+  }
+  historial.length = d.indice + 1; // al llegar, el origen queda último (no se duplica)
+  router.navigate(d.ruta); // la pila se reinicia sola al perder el foco (useReiniciarAlSalir)
+  return true;
+}
+
+/**
+ * En el layout de una pila que es pestaña: cuando se va a otra pestaña, la pila vuelve a su
+ * pantalla inicial. `useNavigation` acá es la de la pestaña (el layout es su pantalla).
+ */
+export function useReiniciarAlSalir(pestana) {
+  const navigation = useNavigation();
+  useEffect(() => navigation.addListener('blur', () => {
+    const pila = navigation.getState()?.routes.find((r) => r.name === pestana)?.state;
+    if (pila?.key && pila.index > 0) navigation.dispatch({ type: 'POP_TO_TOP', target: pila.key });
+  }), [navigation, pestana]);
+}
+
+function FlechaVolver({ pila, inicioOculto, color }) {
   const router = useRouter();
+  const navigation = useNavigation();
+
+  // Botón "atrás" del teléfono: solo actúa la pantalla que está a la vista.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => (
+      navigation.isFocused() ? volver(router, navigation, pila, inicioOculto) : false
+    ));
+    return () => sub.remove();
+  }, [router, navigation, pila, inicioOculto]);
+
+  if (!destinoVolver(navigation, pila, inicioOculto)) return null;
   return (
-    <Pressable onPress={() => volver(router, pila)} accessibilityRole="button" accessibilityLabel="Volver"
+    <Pressable onPress={() => volver(router, navigation, pila, inicioOculto)} accessibilityRole="button" accessibilityLabel="Volver"
       hitSlop={10} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
       <Ionicons name="arrow-back" size={24} color={color} />
     </Pressable>
   );
 }
 
-/** Para `screenOptions.headerLeft` de una pila: la flecha aparece en todas sus pantallas menos la inicial. */
-export const botonVolver = (pila) => function FlechaVolver({ canGoBack, tintColor }) {
-  const anterior = historial[historial.length - 2];
-  if (!canGoBack && !(anterior && !anterior.startsWith(pila))) return null;
-  return <BotonVolver pila={pila} color={tintColor} />;
+/** Para `screenOptions.headerLeft` de una pila. */
+export const botonVolver = (pila, { inicioOculto = false } = {}) => function HeaderVolver({ tintColor }) {
+  return <FlechaVolver pila={pila} inicioOculto={inicioOculto} color={tintColor} />;
 };
-
-/** El "atrás" del teléfono hace lo mismo que la flecha (solo dentro de esa pila, no en su inicio). */
-export function useAtrasDelTelefono(pila) {
-  const router = useRouter();
-  useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      const actual = historial[historial.length - 1];
-      if (!actual?.startsWith(`${pila}/`)) return false; // otra pestaña, o la pantalla inicial de la pila
-      volver(router, pila);
-      return true;
-    });
-    return () => sub.remove();
-  }, [router, pila]);
-}
