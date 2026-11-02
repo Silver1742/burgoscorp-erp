@@ -44,11 +44,16 @@ Editar `.env`:
   la consola donde corre `npm run dev`. Para mandarlos de verdad con Gmail: `SMTP_HOST=smtp.gmail.com`,
   `SMTP_USER` = tu Gmail y `SMTP_PASS` = una
   [contraseña de aplicación](https://myaccount.google.com/apppasswords) (requiere tener 2FA en Google).
-- Redes sociales (opcional): ver [guia-oauth.md](guia-oauth.md).
+- `CODIGOS_HMAC_KEY`: otro valor aleatorio largo (protege los códigos que se mandan por email).
+- Redes sociales (opcional): `GOOGLE_CLIENT_IDS`, `GITHUB_CLIENT_ID/SECRET`, `DISCORD_CLIENT_ID/SECRET`
+  y `OAUTH_REDIRECT_URIS`; ver [guia-oauth.md](guia-oauth.md). Sin ellas los botones no aparecen.
+- Opcionales: `EMAIL_AVISOS` (correos que reciben cada solicitud de acceso), `WEB_URL` (para los
+  enlaces de los emails) y `PASSWORD_PRUEBA` (cuentas de prueba por rol, ver más abajo).
 
-Cargar los datos de prueba y arrancar:
+Crear las tablas, cargar los datos de prueba y arrancar:
 
 ```bash
+npm run db:init   # crea la base si no existe y aplica las migraciones (también corre en cada arranque en la nube)
 npm run seed
 npm run dev
 ```
@@ -76,6 +81,10 @@ Son datos de prueba: no usar esta contraseña en un servidor público.
 | Empleado | `julian.cabrera@burgoscorp.test` | Impresión 3D |
 
 La lista completa se imprime al correr `npm run seed`.
+
+Con `PASSWORD_PRUEBA` (12+ caracteres, letras y números) se crean además `gerencia@burgoscorp.test`
+y `empleado@burgoscorp.test`, y `jorge.dominguez@burgoscorp.test` recibe esa contraseña: es lo que se
+usa en la versión publicada, donde la contraseña de desarrollo no sirve.
 
 ## 4. App móvil
 
