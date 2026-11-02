@@ -69,7 +69,6 @@ export default function NuevoUsuario() {
 
   return (
     <Pantalla anchoMax={640}>
-      {dialogoJefatura}
       <EncabezadoPagina titulo="Nuevo usuario" icono="person-add" sub="Cargá sus datos y dónde trabaja: el legajo se crea solo." />
       <Tarjeta titulo="Persona" icono="person-outline">
         <Campo etiqueta="Nombre" value={datos.nombre} onChangeText={cambiar('nombre')} maxLength={60} error={errores.nombre} />
@@ -96,6 +95,8 @@ export default function NuevoUsuario() {
         </Texto>
         <Boton titulo="Crear usuario" icono="checkmark" onPress={guardar} cargando={guardando} textoCargando="Creando…" />
       </Tarjeta>
+      {/* Al final: así queda por encima de los otros diálogos de la pantalla. */}
+      {dialogoJefatura}
     </Pantalla>
   );
 }

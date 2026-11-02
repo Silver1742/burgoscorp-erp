@@ -95,7 +95,6 @@ export default function Usuario() {
 
   return (
     <Pantalla>
-      {dialogoJefatura}
       <Stack.Screen options={{ title: nombre }} />
 
       <Tarjeta acentoArriba>
@@ -253,6 +252,8 @@ export default function Usuario() {
       <ConfirmDialog visible={Boolean(confirmar)} titulo={confirmar?.titulo} mensaje={confirmar?.mensaje}
         textoConfirmar={confirmar?.texto} variante={confirmar?.variante}
         alConfirmar={() => confirmar.accion()} alCerrar={() => setConfirmar(null)} />
+      {/* Al final: así queda por encima de los otros diálogos de la pantalla. */}
+      {dialogoJefatura}
     </Pantalla>
   );
 }
