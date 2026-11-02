@@ -72,14 +72,14 @@ panel; nunca van en el chat ni en el repo.**
   - mysql2: para `IN (?)` con listas usar `pool.query`/`conn.query`, no `execute` ni el helper `query()`.
   - Errores de validación: la API responde `detalles: [{ campo: 'body.x', mensaje }]`, los mensajes
     de zod están en castellano (`validators/comunes.js`), y la app nombra el campo en el aviso
-    (`mobile/src/lib/campos.js`) y lleva la pantalla al primer campo en rojo (`useMostrarError`).
+    (`mobile/src/lib/campos.ts`) y lleva la pantalla al primer campo en rojo (`useMostrarError`).
 
 ## 5. Lo que falta (en orden de prioridad)
 
 ### 5.1 Login social en la app — **obligatorio para la consigna**
 - La API ya tiene `POST /auth/social/:proveedor` (Google, GitHub, Facebook), `GET /auth/social/proveedores`
   y `services/social.js`; el contexto de sesión ya tiene `loginSocial(proveedor, datos)`.
-- **Falta:** los botones en `mobile/src/app/(auth)/login.js` (y registro) con `expo-auth-session`,
+- **Falta:** los botones en `mobile/src/app/(auth)/login.tsx` (y registro) con `expo-auth-session`,
   y probarlo de verdad.
 - **Depende del usuario:** tiene que crear las apps OAuth siguiendo `docs/guia-oauth.md` y cargar
   los ids en Render (`GOOGLE_CLIENT_IDS`, `GITHUB_CLIENT_ID/SECRET`, `FACEBOOK_APP_ID/SECRET`,

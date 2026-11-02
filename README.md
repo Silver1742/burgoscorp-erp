@@ -4,7 +4,7 @@ Sistema de gestión empresarial (ERP tipo SAP R/3) para **BurgosCorp S.A.**, un 
 que trabaja a pedido: reparación, diseño, prototipos, fabricación y mecanizado de piezas con
 impresión 3D, torneado, CNC, soldadura y herrería.
 
-- **App:** React Native con Expo (Android y web), Context API, Expo Router.
+- **App:** React Native con Expo (Android y web) en **TypeScript (TSX)**, Context API, Expo Router.
 - **API:** Node.js + Express 5, REST en `/api/v1`, JWT de acceso + refresh rotativo.
 - **Base de datos:** MySQL 8 / MariaDB 10.4+.
 
@@ -81,7 +81,7 @@ búsqueda general encuentra personas, pedidos, OT, tareas, máquinas, materiales
 │   ├── src/            config, routes, middlewares, services, validators, utils
 │   ├── assets/         manual de usuario en PDF (adjunto del email de bienvenida)
 │   └── tests/          tests de la API (node --test + supertest)
-├── mobile/             App React Native (Expo)
+├── mobile/             App React Native (Expo) en TypeScript: componentes .tsx, lógica .ts
 │   └── src/            app (pantallas), componentes, contexto, lib, tema
 └── docs/               manual, guía de instalación, guía OAuth, publicación y cómo está hecho
 ```

@@ -8,6 +8,11 @@ encontrar rápido el código de cada parte.
 
 ---
 
+> **Lenguaje de la app:** TypeScript. Las pantallas y componentes son `.tsx` (llevan JSX) y la lógica
+> (API, sesión, almacenamiento, utilidades) es `.ts`. Cada componente declara el tipo de sus props y
+> los tipos compartidos están en `mobile/src/lib/tipos.ts`. Se verifica con `npm run tipos` (`tsc --noEmit`).
+> La API (backend) sigue en JavaScript con Node.js; ahí los datos se validan con zod en cada pedido.
+
 ## 1. La idea en dos párrafos
 
 BurgosCorp S.A. es un taller industrial ficticio que repara, diseña y fabrica piezas con
@@ -135,7 +140,7 @@ Otras protecciones del login:
 
 | Qué | Cómo funciona | Archivo |
 |---|---|---|
-| **Solicitud de acceso** | Como en el portal R3: quien se registra (o entra por primera vez con una red social) queda pendiente y no puede iniciar sesión hasta que un administrador lo habilita con su rol y legajo, o lo rechaza. En los dos casos le llega un email | [`services/auth.js`](../backend/src/services/auth.js), [`routes/usuarios.js`](../backend/src/routes/usuarios.js), [`modulos/usuarios/solicitudes.js`](../mobile/src/app/(app)/modulos/usuarios/solicitudes.js) |
+| **Solicitud de acceso** | Como en el portal R3: quien se registra (o entra por primera vez con una red social) queda pendiente y no puede iniciar sesión hasta que un administrador lo habilita con su rol y legajo, o lo rechaza. En los dos casos le llega un email | [`services/auth.js`](../backend/src/services/auth.js), [`routes/usuarios.js`](../backend/src/routes/usuarios.js), [`modulos/usuarios/solicitudes.js`](../mobile/src/app/(app)/modulos/usuarios/solicitudes.tsx) |
 | **Verificar email** | La primera vez que entra, le llega un código de 6 dígitos; hasta confirmarlo solo se puede usar la parte de login | [`services/verificacion.js`](../backend/src/services/verificacion.js) |
 | **Recuperar contraseña** | Se pide un código por email y con él se define una contraseña nueva | mismo archivo |
 | **Verificación en dos pasos (2FA)** | Además de la contraseña, un código de 6 dígitos que llega al email en cada ingreso | [`services/dosPasos.js`](../backend/src/services/dosPasos.js) |
@@ -408,41 +413,41 @@ pantalla, y la carpeta determina la ruta.
 
 | Pantalla | Archivo |
 |---|---|
-| Login | [`(auth)/login.js`](../mobile/src/app/(auth)/login.js) |
-| Registro | [`(auth)/registro.js`](../mobile/src/app/(auth)/registro.js) |
-| Olvidé / nueva contraseña | [`(auth)/olvide.js`](../mobile/src/app/(auth)/olvide.js), [`(auth)/restablecer.js`](../mobile/src/app/(auth)/restablecer.js) |
-| Segundo paso del login | [`dos-pasos.js`](../mobile/src/app/dos-pasos.js) |
-| Confirmar email | [`verificar-email.js`](../mobile/src/app/verificar-email.js) |
-| Inicio | [`(app)/index.js`](../mobile/src/app/(app)/index.js) |
+| Login | [`(auth)/login.js`](../mobile/src/app/(auth)/login.tsx) |
+| Registro | [`(auth)/registro.js`](../mobile/src/app/(auth)/registro.tsx) |
+| Olvidé / nueva contraseña | [`(auth)/olvide.js`](../mobile/src/app/(auth)/olvide.tsx), [`(auth)/restablecer.js`](../mobile/src/app/(auth)/restablecer.tsx) |
+| Segundo paso del login | [`dos-pasos.tsx`](../mobile/src/app/dos-pasos.tsx) |
+| Confirmar email | [`verificar-email.tsx`](../mobile/src/app/verificar-email.tsx) |
+| Inicio | [`(app)/index.js`](../mobile/src/app/(app)/index.tsx) |
 | Módulos | [`(app)/modulos/`](../mobile/src/app/(app)/modulos) |
-| Listado de cualquier recurso | [`(app)/modulos/[modulo]/[recurso].js`](../mobile/src/app/(app)/modulos/[modulo]/[recurso].js) |
+| Listado de cualquier recurso | [`(app)/modulos/[modulo]/[recurso].js`](../mobile/src/app/(app)/modulos/[modulo]/[recurso].tsx) |
 | Perfil, 2FA y avisos | [`(app)/perfil/`](../mobile/src/app/(app)/perfil) |
-| Mis licencias (pedir y cancelar) | [`(app)/modulos/rrhh/licencias.js`](../mobile/src/app/(app)/modulos/rrhh/licencias.js) |
-| Aprobar licencias (jefes y RRHH) | [`(app)/modulos/rrhh/aprobaciones.js`](../mobile/src/app/(app)/modulos/rrhh/aprobaciones.js) |
-| Legajo (datos, habilidades, contacto) | [`(app)/modulos/rrhh/legajo/[id].js`](../mobile/src/app/(app)/modulos/rrhh/legajo/[id].js) |
-| Organigrama | [`(app)/modulos/rrhh/organigrama.js`](../mobile/src/app/(app)/modulos/rrhh/organigrama.js) |
-| Tarjeta de fichaje (en Inicio) | [`componentes/Fichaje.js`](../mobile/src/componentes/Fichaje.js) |
+| Mis licencias (pedir y cancelar) | [`(app)/modulos/rrhh/licencias.js`](../mobile/src/app/(app)/modulos/rrhh/licencias.tsx) |
+| Aprobar licencias (jefes y RRHH) | [`(app)/modulos/rrhh/aprobaciones.js`](../mobile/src/app/(app)/modulos/rrhh/aprobaciones.tsx) |
+| Legajo (datos, habilidades, contacto) | [`(app)/modulos/rrhh/legajo/[id].js`](../mobile/src/app/(app)/modulos/rrhh/legajo/[id].tsx) |
+| Organigrama | [`(app)/modulos/rrhh/organigrama.js`](../mobile/src/app/(app)/modulos/rrhh/organigrama.tsx) |
+| Tarjeta de fichaje (en Inicio) | [`componentes/Fichaje.tsx`](../mobile/src/componentes/Fichaje.tsx) |
 | Órdenes de trabajo (lista, nueva, detalle con operaciones) | [`(app)/modulos/produccion/`](../mobile/src/app/(app)/modulos/produccion) |
 | Mis tareas (pestaña: iniciar, pausar, terminar) | [`(app)/tareas/`](../mobile/src/app/(app)/tareas) |
 | Tareas del área (jefes: asignar, aprobar, rechazar) | [`(app)/modulos/tareas/`](../mobile/src/app/(app)/modulos/tareas) |
-| Detalle de una tarea (lista de control, horas, comentarios, historial) | [`componentes/DetalleTarea.js`](../mobile/src/componentes/DetalleTarea.js) |
-| Selector con búsqueda (cliente, máquina, responsable) | [`componentes/Selector.js`](../mobile/src/componentes/Selector.js) |
-| Fotos con la cámara o la galería (tareas, certificados, remitos, fallas) | [`componentes/Fotos.js`](../mobile/src/componentes/Fotos.js) |
-| Escanear QR (ícono de la barra) | [`(app)/modulos/escanear.js`](../mobile/src/app/(app)/modulos/escanear.js), [`componentes/Escaner.js`](../mobile/src/componentes/Escaner.js) |
-| Etiqueta QR para imprimir (pieza, máquina, estante, OC) | [`componentes/EtiquetaQR.js`](../mobile/src/componentes/EtiquetaQR.js) |
-| Material de la OT (reservar, usar, liberar) | [`componentes/MaterialesOt.js`](../mobile/src/componentes/MaterialesOt.js) |
+| Detalle de una tarea (lista de control, horas, comentarios, historial) | [`componentes/DetalleTarea.tsx`](../mobile/src/componentes/DetalleTarea.tsx) |
+| Selector con búsqueda (cliente, máquina, responsable) | [`componentes/Selector.tsx`](../mobile/src/componentes/Selector.tsx) |
+| Fotos con la cámara o la galería (tareas, certificados, remitos, fallas) | [`componentes/Fotos.tsx`](../mobile/src/componentes/Fotos.tsx) |
+| Escanear QR (ícono de la barra) | [`(app)/modulos/escanear.js`](../mobile/src/app/(app)/modulos/escanear.tsx), [`componentes/Escaner.tsx`](../mobile/src/componentes/Escaner.tsx) |
+| Etiqueta QR para imprimir (pieza, máquina, estante, OC) | [`componentes/EtiquetaQR.tsx`](../mobile/src/componentes/EtiquetaQR.tsx) |
+| Material de la OT (reservar, usar, liberar) | [`componentes/MaterialesOt.tsx`](../mobile/src/componentes/MaterialesOt.tsx) |
 | Stock (lista y ficha con ajuste y transferencia) | [`(app)/modulos/inventario/`](../mobile/src/app/(app)/modulos/inventario) |
 | Órdenes de compra (lista, nueva, detalle con aprobación y recepción) | [`(app)/modulos/compras/`](../mobile/src/app/(app)/modulos/compras) |
 | Mantenimiento (fallas, reportar, detalle, ficha de la máquina) | [`(app)/modulos/mantenimiento/`](../mobile/src/app/(app)/modulos/mantenimiento) |
 | Ventas (solicitudes con foto, presupuestos, aprobación que crea la OT) | [`(app)/modulos/ventas/`](../mobile/src/app/(app)/modulos/ventas) |
-| Llamar o escribir por WhatsApp | [`componentes/Contacto.js`](../mobile/src/componentes/Contacto.js) |
+| Llamar o escribir por WhatsApp | [`componentes/Contacto.tsx`](../mobile/src/componentes/Contacto.tsx) |
 | Calidad (para inspeccionar, inspección con mediciones, detalle) | [`(app)/modulos/calidad/`](../mobile/src/app/(app)/modulos/calidad) |
 | Finanzas (saldos, por facturar, comprobantes, cobros y pagos) | [`(app)/modulos/finanzas/`](../mobile/src/app/(app)/modulos/finanzas) |
-| Tablero | [`(app)/modulos/tablero.js`](../mobile/src/app/(app)/modulos/tablero.js) |
+| Tablero | [`(app)/modulos/tablero.js`](../mobile/src/app/(app)/modulos/tablero.tsx) |
 
 ### 5.2 Qué pantalla se muestra (rutas protegidas)
 
-**Archivo:** [`mobile/src/app/_layout.js`](../mobile/src/app/_layout.js). Según el estado de la
+**Archivo:** [`mobile/src/app/_layout.tsx`](../mobile/src/app/_layout.tsx). Según el estado de la
 sesión, solo se puede ver un grupo de pantallas:
 
 ```
@@ -454,14 +459,14 @@ sesión, solo se puede ver un grupo de pantallas:
 
 ### 5.3 Estado global y sesión que no se pierde
 
-**Archivo:** [`mobile/src/contexto/sesion.js`](../mobile/src/contexto/sesion.js), con **Context
+**Archivo:** [`mobile/src/contexto/sesion.tsx`](../mobile/src/contexto/sesion.tsx), con **Context
 API + useReducer**, como pide la consigna. Guarda el usuario, sus permisos y el paso de 2FA
 pendiente, y expone las acciones `login`, `registrar`, `completar2fa`, `logout`, etc.
 
 - El token de renovación se guarda en **SecureStore**
-  ([`lib/almacen.js`](../mobile/src/lib/almacen.js)), que en Android usa el almacén cifrado del
+  ([`lib/almacen.ts`](../mobile/src/lib/almacen.ts)), que en Android usa el almacén cifrado del
   sistema. Al abrir la app, la sesión se recupera sola.
-- El cliente de la API ([`lib/api.js`](../mobile/src/lib/api.js)) agrega el token a cada pedido.
+- El cliente de la API ([`lib/api.ts`](../mobile/src/lib/api.ts)) agrega el token a cada pedido.
   Si el token venció, lo renueva y repite el pedido sin que el usuario se entere. También
   traduce cualquier error a un mensaje en castellano: sin conexión, tiempo agotado, sin permiso…
 
@@ -472,14 +477,14 @@ el mismo logo, las mismas animaciones y la misma forma de avisar, sin alertas.
 
 | Qué | Cómo | Archivo |
 |---|---|---|
-| Paleta | Los mismos tokens de R3: rojo `#c8102e` (`#ef3b4f` en oscuro), negro `#111` y grises zinc | [`tema.js`](../mobile/src/tema.js) |
-| Logo | El escudo negro con borde rojo y "BC" en serif (`BrandLogo` / `ShieldSeal` de R3), dibujado con SVG; "Burgos**Corp**" en Georgia | [`componentes/Marca.js`](../mobile/src/componentes/Marca.js) |
-| Intro de apertura | Pantalla negra con resplandor rojo, el escudo aparece y "BurgosCorp" se escribe letra por letra (una vez por apertura; se saltea tocando) | [`componentes/IntroSplash.js`](../mobile/src/componentes/IntroSplash.js) |
-| Login | Panel de marca (en pantallas anchas) + formulario; "Recordar mi email"; el botón pasa a "Verificando credenciales…" y, si son válidas, el escudo se sella y aparece "Acceso verificado" | [`componentes/AuthLayout.js`](../mobile/src/componentes/AuthLayout.js), [`(auth)/login.js`](../mobile/src/app/(auth)/login.js) |
-| Barra y pestañas | Negras en los dos modos; pestaña activa en blanco con línea roja; a la derecha, luna/sol y avatar | [`(app)/_layout.js`](../mobile/src/app/(app)/_layout.js) |
-| Sin alertas | Los resultados se informan con **toasts** abajo (verde, rojo, amarillo o negro), las confirmaciones usan un **diálogo propio** y los errores de un campo aparecen debajo del campo | [`contexto/toast.js`](../mobile/src/contexto/toast.js), [`componentes/ConfirmDialog.js`](../mobile/src/componentes/ConfirmDialog.js) |
-| Componentes | Botones y campos estilo Bootstrap, tarjetas con cabecera, insignias de rol (admin rojo suave, jefe negro, empleado gris), avatares con iniciales, esqueletos de carga, contadores animados, requisitos de contraseña que se tildan | [`componentes/ui.js`](../mobile/src/componentes/ui.js), [`lib/useContador.js`](../mobile/src/lib/useContador.js) |
-| Modo claro / oscuro | Sistema, Claro u Oscuro en Perfil, o luna/sol en la barra y el login; queda guardado en el dispositivo (dato no sensible) | [`componentes/SelectorTema.js`](../mobile/src/componentes/SelectorTema.js), [`lib/preferencias.js`](../mobile/src/lib/preferencias.js) |
+| Paleta | Los mismos tokens de R3: rojo `#c8102e` (`#ef3b4f` en oscuro), negro `#111` y grises zinc | [`tema.tsx`](../mobile/src/tema.tsx) |
+| Logo | El escudo negro con borde rojo y "BC" en serif (`BrandLogo` / `ShieldSeal` de R3), dibujado con SVG; "Burgos**Corp**" en Georgia | [`componentes/Marca.tsx`](../mobile/src/componentes/Marca.tsx) |
+| Intro de apertura | Pantalla negra con resplandor rojo, el escudo aparece y "BurgosCorp" se escribe letra por letra (una vez por apertura; se saltea tocando) | [`componentes/IntroSplash.tsx`](../mobile/src/componentes/IntroSplash.tsx) |
+| Login | Panel de marca (en pantallas anchas) + formulario; "Recordar mi email"; el botón pasa a "Verificando credenciales…" y, si son válidas, el escudo se sella y aparece "Acceso verificado" | [`componentes/AuthLayout.tsx`](../mobile/src/componentes/AuthLayout.tsx), [`(auth)/login.js`](../mobile/src/app/(auth)/login.tsx) |
+| Barra y pestañas | Negras en los dos modos; pestaña activa en blanco con línea roja; a la derecha, luna/sol y avatar | [`(app)/_layout.js`](../mobile/src/app/(app)/_layout.tsx) |
+| Sin alertas | Los resultados se informan con **toasts** abajo (verde, rojo, amarillo o negro), las confirmaciones usan un **diálogo propio** y los errores de un campo aparecen debajo del campo | [`contexto/toast.tsx`](../mobile/src/contexto/toast.tsx), [`componentes/ConfirmDialog.tsx`](../mobile/src/componentes/ConfirmDialog.tsx) |
+| Componentes | Botones y campos estilo Bootstrap, tarjetas con cabecera, insignias de rol (admin rojo suave, jefe negro, empleado gris), avatares con iniciales, esqueletos de carga, contadores animados, requisitos de contraseña que se tildan | [`componentes/ui.tsx`](../mobile/src/componentes/ui.tsx), [`lib/useContador.ts`](../mobile/src/lib/useContador.ts) |
+| Modo claro / oscuro | Sistema, Claro u Oscuro en Perfil, o luna/sol en la barra y el login; queda guardado en el dispositivo (dato no sensible) | [`componentes/SelectorTema.tsx`](../mobile/src/componentes/SelectorTema.tsx), [`lib/preferencias.ts`](../mobile/src/lib/preferencias.ts) |
 
 Con "reducir movimiento" activado en el sistema, las animaciones no se reproducen.
 
@@ -490,21 +495,21 @@ Con "reducir movimiento" activado en el sistema, las animaciones no se reproduce
 
 ### 5.5 Qué muestra cada rol
 
-Cada rol tiene su color, su panel y sus pestañas ([`lib/roles.js`](../mobile/src/lib/roles.js) y
-[`app/(app)/_layout.js`](../mobile/src/app/(app)/_layout.js)): Empleado (Mi día), Jefe de área (Mi
+Cada rol tiene su color, su panel y sus pestañas ([`lib/roles.ts`](../mobile/src/lib/roles.ts) y
+[`app/(app)/_layout.js`](../mobile/src/app/(app)/_layout.tsx)): Empleado (Mi día), Jefe de área (Mi
 área, Mi equipo), Gerencia (La empresa, Áreas) y Administrador (Administración, Áreas). Inicio muestra
 para cada uno lo que espera su decisión y sus accesos.
 
-**Buscar** ([`app/(app)/buscar.js`](../mobile/src/app/(app)/buscar.js)) reúne el menú completo y la
+**Buscar** ([`app/(app)/buscar.js`](../mobile/src/app/(app)/buscar.tsx)) reúne el menú completo y la
 búsqueda de datos de `GET /buscar`: personas, pedidos, OT, tareas, máquinas, materiales, clientes,
 proveedores y cuentas, cada grupo con el mismo alcance que su listado.
-[`mobile/src/modulos.js`](../mobile/src/modulos.js) sigue siendo el catálogo de módulos y define cómo
+[`mobile/src/modulos.ts`](../mobile/src/modulos.ts) sigue siendo el catálogo de módulos y define cómo
 se muestra cada recurso.
 
 **Un jefe por área:** al poner a alguien como jefe de un área que ya tiene uno, la API responde
 `409 JEFE_OCUPADO` y la app pregunta si se destituye al actual (pasa a empleado) o se lo pasa a un
 área sin jefe ([`services/legajos.js`](../backend/src/services/legajos.js),
-[`componentes/Jefatura.js`](../mobile/src/componentes/Jefatura.js)).
+[`componentes/Jefatura.tsx`](../mobile/src/componentes/Jefatura.tsx)).
 
 ### 5.6 Todo desde el celular: funciones del teléfono por área
 
@@ -551,7 +556,7 @@ necesita ningún permiso.
 | WhatsApp y llamadas | El número sale de la base y se reduce a dígitos antes de armar el enlace; nunca se abre un enlace escaneado | `componentes/Contacto.js` |
 | Compras (A01/A04) | La aprueba alguien distinto de quien la pidió; importes calculados en el servidor | `services/compras.js` |
 | Archivos subidos (A05/A06) | Tipo por contenido, tamaño y cantidad máximos (con bloqueo para que no se pase el tope), cuota diaria por usuario, control de espacio libre, nombre aleatorio, sin datos de ubicación | `services/adjuntos.js` |
-| Datos en el celular | Tokens en SecureStore, sin copias de seguridad, solo el permiso de cámara | `mobile/src/lib/almacen.js`, `mobile/app.json` |
+| Datos en el celular | Tokens en SecureStore, sin copias de seguridad, solo el permiso de cámara | `mobile/src/lib/almacen.ts`, `mobile/app.json` |
 
 **Auditoría del día 9.** El agente `revisor-owasp` (solo lectura) revisó todo el proyecto y
 encontró 15 problemas: 2 altos (cualquiera que se registrara solo podía leer datos y parar

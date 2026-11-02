@@ -33,7 +33,12 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "build:web": "expo export -p web && node scripts/ajustar-web.js"
+    "build:web": "expo export -p web && node scripts/ajustar-web.js",
+    "tipos": "tsc --noEmit"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "@types/react": "~19.3.0"
+  }
 }
