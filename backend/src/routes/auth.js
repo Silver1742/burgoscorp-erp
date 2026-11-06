@@ -8,13 +8,13 @@ import { errores } from '../utils/errores.js';
 import * as v from '../validators/auth.js';
 import { validar } from '../middlewares/validar.js';
 import { autenticar } from '../middlewares/auth.js';
-import { limiteAuth, limiteRefresh } from '../middlewares/limites.js';
+import { limiteAuth, limiteRefresh, limiteRegistro } from '../middlewares/limites.js';
 import { mapaPermisos } from '../services/permisos.js';
 import { perfilPublico } from '../services/usuarios.js';
 
 const router = Router();
 
-router.post('/registro', limiteAuth, validar({ body: v.registro }), async (req, res) => {
+router.post('/registro', limiteRegistro, limiteAuth, validar({ body: v.registro }), async (req, res) => {
   await auth.registrar(req.validado.body, req);
   // Misma respuesta exista o no el email: la cuenta queda pendiente hasta que la habilite un administrador.
   res.status(202).json({ ok: true, data: { mensaje: 'Solicitud enviada. Cuando un administrador habilite tu cuenta, te avisamos por email.' } });

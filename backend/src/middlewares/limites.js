@@ -23,5 +23,7 @@ export const limiteGeneral = crearLimite({ ventanaMin: 15, maximo: 600, nombre: 
 // Login, registro y verificación de códigos: pocos intentos para frenar fuerza bruta.
 export const limiteAuth = crearLimite({ ventanaMin: 15, maximo: 15, nombre: 'auth' });
 export const limiteRefresh = crearLimite({ ventanaMin: 15, maximo: 60, nombre: 'refresh' });
+// Registro: pocas solicitudes por IP y por hora (cada una manda avisos a los administradores).
+export const limiteRegistro = crearLimite({ ventanaMin: 60, maximo: 5, nombre: 'registro' });
 // Subida de fotos y archivos: frena que alguien llene el disco.
 export const limiteSubida = crearLimite({ ventanaMin: 15, maximo: 40, nombre: 'subida' });

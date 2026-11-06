@@ -12,7 +12,8 @@ import { AppError, errores } from '../utils/errores.js';
 import { auditar } from './auditoria.js';
 import { buscarUsuarioPorId, exigirCuentaHabilitada } from './usuarios.js';
 import { firmarTemporal, revocarTodas } from './tokens.js';
-import { avisarSolicitud, emitirSesion } from './auth.js';
+import { avisarSolicitud, emitirSesion, exigirCupoDeSolicitudes } from './auth.js';
+import { email as esquemaEmail, nombrePersona } from '../validators/comunes.js';
 import { iniciarSegundoPaso } from './dosPasos.js';
 
 const TIMEOUT_MS = 8000;
@@ -29,6 +30,24 @@ function separarNombre(completo, respaldo) {
   const partes = (completo || respaldo || 'Usuario').trim().split(/\s+/);
   const nombre = partes.shift().slice(0, 60);
   return { nombre, apellido: (partes.join(' ') || '-').slice(0, 60) };
+}
+
+/**
+ * El nombre y el email que manda el proveedor (en GitHub o Discord el nombre es texto libre) pasan
+ * por las mismas reglas que el registro común. Un nombre que no las cumple se reemplaza; un email
+ * inválido no permite entrar.
+ */
+function limpiarPerfil(perfil, proveedor) {
+  const correo = esquemaEmail.safeParse(perfil.email ?? '');
+  if (perfil.email && !correo.success) throw errores.validacion([], `El email de tu cuenta de ${proveedor} no es válido para el sistema.`);
+  const nombre = nombrePersona.safeParse(String(perfil.nombre ?? '').normalize('NFC'));
+  const apellido = nombrePersona.safeParse(String(perfil.apellido ?? '').normalize('NFC'));
+  return {
+    ...perfil,
+    email: correo.success ? correo.data : undefined,
+    nombre: nombre.success ? nombre.data : 'Usuario',
+    apellido: apellido.success ? apellido.data : '-',
+  };
 }
 
 // ---------------------------------------------------------------- Google (id_token firmado RS256)
@@ -164,7 +183,9 @@ async function perfilFacebook({ accessToken }) {
   return {
     uid: String(yo.cuerpo.id),
     email: yo.cuerpo.email?.toLowerCase(),
-    emailVerificado: Boolean(yo.cuerpo.email), // Facebook solo devuelve emails confirmados
+    // No se toma como verificado: con Facebook no se crean cuentas ni se vincula una existente por email
+    // (solo entra quien ya la tiene vinculada). Los demás proveedores sí confirman el email.
+    emailVerificado: false,
     nombre: (yo.cuerpo.first_name || 'Usuario').slice(0, 60),
     apellido: (yo.cuerpo.last_name || '-').slice(0, 60),
   };
@@ -203,7 +224,7 @@ export async function loginSocial(proveedor, datos, req) {
   const p = PROVEEDORES[proveedor];
   let perfil;
   try {
-    perfil = await p.perfil(datos);
+    perfil = limpiarPerfil(await p.perfil(datos), p.nombre);
   } catch (err) {
     if (!(err instanceof AppError)) console.error(`[social] error consultando ${p.nombre}`, err.message);
     await auditar(req, { accion: 'login_fallido', usuarioId: null, detalle: { metodo: proveedor } });
@@ -241,6 +262,7 @@ export async function loginSocial(proveedor, datos, req) {
         await conn.execute('UPDATE usuarios SET email_verificado_at = COALESCE(email_verificado_at, UTC_TIMESTAMP()) WHERE id = ?', [id]);
       } else {
         if (!env.registroAbierto) throw errores.prohibido('No hay una cuenta con ese email. Pedile la cuenta a un administrador.');
+        await exigirCupoDeSolicitudes();
         // Primera vez con una red social: es una solicitud de acceso, igual que registrarse.
         const [r] = await conn.execute(
           `INSERT INTO usuarios (email, nombre, apellido, rol_id, email_verificado_at, estado_cuenta)

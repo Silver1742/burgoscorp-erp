@@ -172,3 +172,17 @@ describe('recarga automática', () => {
     assert.equal(await v(), despues);
   });
 });
+
+describe('caracteres especiales', () => {
+  test('un aviso con emojis y comillas se guarda y se lee igual (utf8mb4, sin romper nada)', async () => {
+    const titulo = `Feliz día 🎉 "Robert'); DROP TABLE usuarios;--" ${sello}`;
+    const r = await api().post('/api/v1/tablon').set(como('admin')).send({ titulo, texto: 'Asado el viernes 🥩🔥' });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    const [fila] = await query('SELECT titulo, texto FROM avisos_tablon WHERE id = ?', [r.body.data.id]);
+    assert.equal(fila.titulo, titulo);
+    assert.equal(fila.texto, 'Asado el viernes 🥩🔥');
+    const [{ n }] = await query('SELECT COUNT(*) AS n FROM usuarios');
+    assert.ok(Number(n) > 0, 'la tabla usuarios sigue ahí');
+    await api().delete(`/api/v1/tablon/${r.body.data.id}`).set(como('admin'));
+  });
+});

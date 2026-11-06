@@ -17,6 +17,7 @@ const ERRORES_MYSQL = {
   ER_WARN_DATA_OUT_OF_RANGE: [400, 'VALIDACION', 'Uno de los valores está fuera de rango'],
   ER_TRUNCATED_WRONG_VALUE: [400, 'VALIDACION', 'Uno de los campos tiene un formato inválido'],
   WARN_DATA_TRUNCATED: [400, 'VALIDACION', 'Uno de los campos tiene un valor inválido'],
+  ER_TRUNCATED_WRONG_VALUE_FOR_FIELD: [400, 'VALIDACION', 'Uno de los campos tiene caracteres que no se pueden guardar'], // 1366
 };
 
 // eslint-disable-next-line no-unused-vars

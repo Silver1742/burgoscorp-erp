@@ -232,7 +232,7 @@ describe('EPP y organigrama', () => {
 
 describe('licencias: el administrador las ve todas', () => {
   test('le llega el aviso, la ve en pendientes y la puede aprobar sin esperar al jefe', async () => {
-    const dia = habil(sumarDias(hoy(), 75));
+    const dia = habil(sumarDias(hoy(), 100 + Math.floor(Math.random() * 250))); // lejos y al azar: no choca con corridas anteriores
     const r = await api().post('/api/v1/licencias').set(como('lucia')).send({ tipo: 'personal', fecha_desde: dia, fecha_hasta: dia });
     assert.equal(r.status, 201, JSON.stringify(r.body));
     const id = r.body.data.id;

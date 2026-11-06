@@ -172,6 +172,20 @@ describe('GitHub', () => {
     assert.equal(u.nombre, 'Leo');
   });
 
+  test('un nombre de GitHub con código o fórmulas no se guarda tal cual', async () => {
+    const id = Date.now() + 7;
+    sim.github = {
+      usuario: { id, login: 'raro', name: '<img src=x onerror=alert(1)> =HYPERLINK("x")' },
+      emails: [{ email: `raro.${id}@github.test`, primary: true, verified: true }],
+    };
+    const res = await api().post('/api/v1/auth/social/github')
+      .send({ code: 'codigo-github-valido', codeVerifier: verifier, redirectUri: 'burgoscorp://oauth' });
+    assert.equal(res.body.error?.codigo, 'CUENTA_PENDIENTE', JSON.stringify(res.body));
+    const [u] = await query('SELECT nombre, apellido FROM usuarios WHERE email = ?', [`raro.${id}@github.test`]);
+    assert.equal(u.nombre, 'Usuario');
+    assert.ok(!/[<>=]/.test(u.apellido), 'el apellido tampoco guarda código ni fórmulas');
+  });
+
   test('redirect URI no registrada → 400 y código inválido → 401', async () => {
     const r1 = await api().post('/api/v1/auth/social/github')
       .send({ code: 'codigo-github-valido', codeVerifier: verifier, redirectUri: 'https://atacante.test/cb' });
@@ -211,18 +225,16 @@ describe('Discord', () => {
 });
 
 describe('Facebook', () => {
-  test('token válido de nuestra app', async () => {
+  test('token válido, pero Facebook no crea cuentas ni vincula una existente por su email', async () => {
     const id = String(Date.now());
     sim.facebook = {
       debug: { is_valid: true, app_id: env.FACEBOOK_APP_ID, user_id: id },
       yo: { id, first_name: 'Sofía', last_name: 'Ruiz', email: `sofia.${id}@facebook.test` },
     };
     const res = await api().post('/api/v1/auth/social/facebook').send({ accessToken: 'EAAtokendeprueba1234567890' });
-    assert.equal(res.body.error?.codigo, 'CUENTA_PENDIENTE', JSON.stringify(res.body));
-    await habilitar(`sofia.${id}@facebook.test`);
-    const otraVez = await api().post('/api/v1/auth/social/facebook').send({ accessToken: 'EAAtokendeprueba1234567890' });
-    assert.equal(otraVez.status, 200, JSON.stringify(otraVez.body));
-    assert.equal(otraVez.body.data.usuario.apellido, 'Ruiz');
+    assert.equal(res.status, 400, JSON.stringify(res.body));
+    const filas = await query('SELECT id FROM usuarios WHERE email = ?', [`sofia.${id}@facebook.test`]);
+    assert.equal(filas.length, 0, 'no se creó ninguna cuenta');
   });
 
   test('token emitido para OTRA app de Facebook → 401', async () => {

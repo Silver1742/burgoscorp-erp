@@ -2,7 +2,7 @@
 import bcrypt from 'bcryptjs';
 import env from '../config/env.js';
 import { query, queryOne, transaccion } from '../config/db.js';
-import { errores } from '../utils/errores.js';
+import { AppError, errores } from '../utils/errores.js';
 import { auditar } from './auditoria.js';
 import { buscarUsuarioPorId, perfilPublico, exigirCuentaHabilitada } from './usuarios.js';
 import { firmarAcceso, firmarTemporal, emitirRefresh, rotarRefresh, revocarFamilia, revocarTodas } from './tokens.js';
@@ -48,6 +48,26 @@ function destinatariosDeAviso(admins) {
   return [...lista].map(([para, nombre]) => ({ para, nombre }));
 }
 
+// Topes contra el abuso del registro (OWASP A06): cada solicitud manda avisos, así que sin freno
+// alguien podría agotar el cupo diario de emails (y dejarían de llegar los códigos de ingreso).
+const MAX_SOLICITUDES_DIA = env.NODE_ENV === 'test' ? 100_000 : 40; // solicitudes nuevas por día, de toda la empresa
+const MINUTOS_ENTRE_EMAILS = 30;    // a cada administrador le llega como mucho un email cada media hora
+let ultimoEmailDeSolicitudes = 0;
+
+/** Para los tests: vuelve a habilitar el email de solicitudes como si no se hubiera mandado ninguno. */
+export function reiniciarFrenoDeAvisos() {
+  ultimoEmailDeSolicitudes = 0;
+}
+
+/** Corta si en las últimas 24 h ya entraron demasiadas solicitudes (registro y redes sociales). */
+export async function exigirCupoDeSolicitudes() {
+  const [{ n }] = await query(
+    "SELECT COUNT(*) AS n FROM usuarios WHERE estado_cuenta = 'pendiente' AND created_at > UTC_TIMESTAMP() - INTERVAL 1 DAY");
+  if (Number(n) >= MAX_SOLICITUDES_DIA) {
+    throw new AppError(429, 'CUPO_SOLICITUDES', 'Hoy se recibieron muchas solicitudes de acceso. Probá de nuevo mañana o pedile la cuenta a un administrador.');
+  }
+}
+
 /** Avisa a los administradores (campanita y email) que hay una solicitud de acceso para revisar. */
 export async function avisarSolicitud(usuarioId, nombre, apellido) {
   const admins = await administradores();
@@ -55,15 +75,20 @@ export async function avisarSolicitud(usuarioId, nombre, apellido) {
     tipo: 'cuenta_pendiente', titulo: `Solicitud de acceso: ${nombre} ${apellido}`.slice(0, 120),
     mensaje: 'Revisala en Usuarios → Solicitudes de acceso.', entidad: 'usuario', entidadId: usuarioId,
   });
+  // El email va como mucho una vez cada media hora (la campanita avisa de cada una) y no lleva el
+  // nombre que escribió quien se registró: así nadie puede usarlo para mandar texto engañoso.
+  if (Date.now() - ultimoEmailDeSolicitudes < MINUTOS_ENTRE_EMAILS * 60 * 1000) return;
+  ultimoEmailDeSolicitudes = Date.now();
+  const [{ pendientes }] = await query("SELECT COUNT(*) AS pendientes FROM usuarios WHERE estado_cuenta = 'pendiente'");
   // Sin esperar: el email no demora la respuesta (el tiempo no revela si la cuenta es nueva) y si
   // falla, la solicitud igual queda guardada y avisada en la campanita.
   const enlace = env.WEB_URL ? `${env.WEB_URL.replace(/\/$/, '')}/modulos/usuarios/solicitudes` : null;
   for (const d of destinatariosDeAviso(admins)) {
     enviarAviso({
-      para: d.para, nombre: d.nombre, asunto: 'Nueva solicitud de acceso',
+      para: d.para, nombre: d.nombre, asunto: 'Hay solicitudes de acceso para revisar',
       lineas: [
-        `${nombre} ${apellido} pidió acceso al sistema.`,
-        'Revisala en Usuarios → Solicitudes de acceso: elegí su rol, área y habilidades y habilitala, o rechazala.',
+        `Hay ${pendientes} ${Number(pendientes) === 1 ? 'solicitud de acceso pendiente' : 'solicitudes de acceso pendientes'}.`,
+        'Revisalas en Usuarios → Solicitudes de acceso: elegí rol, área y habilidades y habilitalas, o rechazalas.',
         ...(enlace ? [`Abrir: ${enlace}`] : []),
       ],
     }).catch((err) => console.error('No se pudo mandar el aviso de solicitud:', err.message));
@@ -83,6 +108,7 @@ export async function registrar({ email, password, nombre, apellido }, req) {
     await auditar(req, { accion: 'registro_duplicado', usuarioId: existe.id, detalle: { estado: existe.estado_cuenta } });
     return;
   }
+  await exigirCupoDeSolicitudes();
   try {
     const res = await query(
       `INSERT INTO usuarios (email, password_hash, nombre, apellido, rol_id, estado_cuenta)

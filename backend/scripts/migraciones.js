@@ -212,6 +212,25 @@ async function jefesSoloSuArea(conn) {
     SET p.alcance = 'area' WHERE r.codigo = 'JEFE' AND m.codigo IN ('CAL', 'COM') AND p.alcance = 'todo'`);
 }
 
+/**
+ * Todas las tablas en utf8mb4 (acepta emojis y cualquier carácter): si una base se creó con otro
+ * juego de caracteres, se convierte. No hace nada si ya está todo en utf8mb4.
+ */
+async function todoEnUtf8mb4(conn) {
+  const [tablas] = await conn.query(`SELECT TABLE_NAME AS tabla FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE' AND TABLE_COLLATION NOT LIKE 'utf8mb4%'`);
+  if (!tablas.length) return;
+  await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+  try {
+    for (const { tabla } of tablas) {
+      await conn.query(`ALTER TABLE \`${tabla.replace(/`/g, '')}\` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+    }
+  } finally {
+    await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+  }
+  console.log(`Migración: ${tablas.length} tablas pasaron a utf8mb4.`);
+}
+
 async function tablonDeAvisos(conn) {
   await conn.query(`CREATE TABLE IF NOT EXISTS avisos_tablon (
     id          INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
@@ -239,6 +258,7 @@ async function tablonDeAvisos(conn) {
 }
 
 export async function migrar(conn) {
+  await todoEnUtf8mb4(conn);
   await tablonDeAvisos(conn);
   await jefesSoloSuArea(conn);
   await imagenesEnAvisos(conn);

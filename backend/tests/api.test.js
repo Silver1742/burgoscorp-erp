@@ -10,6 +10,7 @@ import { crearApp } from '../src/app.js';
 import { pool, query } from '../src/config/db.js';
 import { claveDe } from '../src/services/intentos.js';
 import { bandejaDePrueba } from '../src/services/email.js';
+import { reiniciarFrenoDeAvisos } from '../src/services/auth.js';
 
 const app = crearApp();
 const PASSWORD = process.env.SEED_PASSWORD || 'BurgosCorp2026';
@@ -204,23 +205,23 @@ describe('registro', () => {
     assert.equal(rechazada.body.error.codigo, 'CUENTA_RECHAZADA');
   });
 
-  test('cada solicitud manda un email a los administradores con correo real (no a los @*.test)', async () => {
+  test('a los administradores con correo real les llega un email por tanda, sin el nombre del que se registró', async () => {
     const real = `dueno.${Date.now()}@burgoscorp.com.ar`;
     const res = await query(`INSERT INTO usuarios (email, password_hash, nombre, apellido, rol_id, estado_cuenta)
       VALUES (?, 'x', 'Dueño', 'Prueba', (SELECT id FROM roles WHERE codigo = 'ADMIN'), 'habilitada')`, [real]);
     try {
+      reiniciarFrenoDeAvisos();
       const antes = bandejaDePrueba.length;
-      const pide = `aviso.${Date.now()}@ejemplo.com.ar`;
-      const r = await api().post('/api/v1/auth/registro')
-        .send({ email: pide, password: 'unaClaveLarga123', nombre: 'Lucía', apellido: 'Pérez' });
-      assert.equal(r.status, 202);
+      const pedir = (n) => api().post('/api/v1/auth/registro')
+        .send({ email: `aviso.${n}.${Date.now()}@ejemplo.com.ar`, password: 'unaClaveLarga123', nombre: 'Lucía', apellido: 'Pérez' });
+      assert.equal((await pedir(1)).status, 202);
+      assert.equal((await pedir(2)).status, 202);
       await new Promise((ok) => { setTimeout(ok, 50); }); // el email sale sin demorar la respuesta
-      const nuevos = bandejaDePrueba.slice(antes);
-      const aviso = nuevos.find((c) => c.para === real);
-      assert.ok(aviso, 'le llega al administrador con email real');
-      assert.match(aviso.asunto, /Nueva solicitud de acceso/);
-      assert.match(aviso.texto, /Lucía Pérez pidió acceso/);
-      assert.ok(!nuevos.some((c) => c.para.endsWith('.test')), 'las cuentas de prueba no reciben correos');
+      const avisos = bandejaDePrueba.slice(antes).filter((c) => c.para === real);
+      assert.equal(avisos.length, 1, 'dos solicitudes seguidas: un solo email (las dos quedan en la campanita)');
+      assert.match(avisos[0].asunto, /solicitudes de acceso/);
+      assert.ok(!/Lucía|Pérez/.test(avisos[0].texto), 'el email no lleva el nombre que escribió quien se registró');
+      assert.ok(!bandejaDePrueba.slice(antes).some((c) => c.para.endsWith('.test')), 'las cuentas de prueba no reciben correos');
     } finally {
       await query('DELETE FROM notificaciones WHERE usuario_id = ?', [res.insertId]);
       await query('DELETE FROM usuarios WHERE id = ?', [res.insertId]);
