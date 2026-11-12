@@ -13,7 +13,7 @@ import { resolverPermiso, filtroAlcance } from './permisos.js';
 import { auditar } from './auditoria.js';
 import { notificar, usuariosAdmin, usuariosRrhh, usuarioJefeDeArea } from './notificaciones.js';
 
-const TIPOS = { vacaciones: 'Vacaciones', enfermedad: 'Enfermedad', estudio: 'Examen / estudio', personal: 'Trámite personal', otro: 'Otro' };
+export const TIPOS = { vacaciones: 'Vacaciones', enfermedad: 'Enfermedad', estudio: 'Examen / estudio', personal: 'Trámite personal', otro: 'Otro' };
 
 const SELECT = `
   SELECT l.*, e.legajo, e.nombre, e.apellido, e.area_id, a.nombre AS area_nombre,

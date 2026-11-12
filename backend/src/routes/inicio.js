@@ -8,7 +8,7 @@ import { query, queryOne } from '../config/db.js';
 import { autenticado } from '../middlewares/auth.js';
 import { validar } from '../middlewares/validar.js';
 import { errores } from '../utils/errores.js';
-import { hoy } from '../utils/fechas.js';
+import { fechaAr, hoy } from '../utils/fechas.js';
 import { auditar } from '../services/auditoria.js';
 import { notificar } from '../services/notificaciones.js';
 import { resolverPermiso } from '../services/permisos.js';
@@ -142,7 +142,7 @@ router.get('/pendientes', autenticado, async (req, res) => {
   if ((await resolverPermiso(u, 'RRHH', 'aprobar')).permitido) {
     const l = await licencias.listar(u, { para_aprobar: 1, pagina: 1, limite: POR_GRUPO });
     agregar('licencia', 'Licencias por aprobar', l.meta.total, l.data.map((x) => ({
-      id: x.id, titulo: `${x.nombre ?? ''} ${x.apellido ?? ''}`.trim() || 'Licencia', sub: `${x.tipo} · ${String(x.fecha_desde).slice(0, 10)} al ${String(x.fecha_hasta).slice(0, 10)}`,
+      id: x.id, titulo: `${x.nombre ?? ''} ${x.apellido ?? ''}`.trim() || 'Licencia', sub: `${licencias.TIPOS[x.tipo] ?? x.tipo} · ${fechaAr(x.fecha_desde) === fechaAr(x.fecha_hasta) ? fechaAr(x.fecha_desde) : `${fechaAr(x.fecha_desde)} al ${fechaAr(x.fecha_hasta)}`}`,
     })));
   }
   if ((await resolverPermiso(u, 'TAR', 'aprobar')).permitido) {

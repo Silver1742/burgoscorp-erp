@@ -159,6 +159,9 @@ function QuienLaHace({ areaId, centroId, habilidadId, elegidos, alCambiar }: Qui
   );
 }
 
+/** Horas para el vencimiento: las del turno, con un toque. */
+const HORAS_VENCE = ['08:00', '10:00', '12:00', '14:00', '17:00', '20:00'].map((h) => ({ valor: h, titulo: h }));
+
 export default function NuevaTarea() {
   const router = useRouter();
   const toast = useToast();
@@ -248,9 +251,15 @@ export default function NuevaTarea() {
         <Opciones opciones={OPC_PRIORIDAD} valor={f.prioridad} alCambiar={cambiar('prioridad')} error={errores.prioridad} />
         <View style={dos && estilos.fila}>
           <CampoFecha etiqueta="Vence (opcional)" valor={f.fecha} alCambiar={cambiar('fecha')} error={errores.fecha} opcional minimo={hoyIso()} estilo={dos && { flex: 2 }} />
-          <Campo etiqueta="Hora" value={f.hora} onChangeText={cambiar('hora')} error={errores.hora} placeholder="HH:MM" maxLength={5} estilo={dos && { flex: 1 }} />
           <Campo etiqueta="Horas estimadas" value={f.horas_estimadas} onChangeText={cambiar('horas_estimadas')} error={errores.horas_estimadas} keyboardType="decimal-pad" maxLength={6} estilo={dos && { flex: 1 }} />
         </View>
+        {/* La hora se elige con un toque (no se tipea); solo si hay fecha de vencimiento. */}
+        {f.fecha ? (
+          <>
+            <Text style={[estilos.etiqueta, { color: t.texto }]}>¿Hasta qué hora?</Text>
+            <Opciones opciones={HORAS_VENCE} valor={f.hora} alCambiar={cambiar('hora')} error={errores.hora} />
+          </>
+        ) : null}
       </Tarjeta>
       <Tarjeta titulo="Requisitos" icono="construct-outline">
         <Selector etiqueta="Máquina / puesto (opcional)" ruta="/centros-trabajo" consulta={{ activo: 'true', ...delArea }} valor={f.centro_trabajo_id} opcional

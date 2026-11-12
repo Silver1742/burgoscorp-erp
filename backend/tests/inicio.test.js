@@ -186,3 +186,20 @@ describe('caracteres especiales', () => {
     await api().delete(`/api/v1/tablon/${r.body.data.id}`).set(como('admin'));
   });
 });
+
+describe('fechas en formato argentino', () => {
+  test('en Pendientes la licencia muestra el tipo y la fecha como DD/MM/AAAA', async () => {
+    // Un día hábil lejano y al azar (no choca con otras corridas).
+    const d = new Date(Date.now() + (120 + Math.floor(Math.random() * 200)) * 86400000);
+    while ([0, 6].includes(d.getUTCDay())) d.setUTCDate(d.getUTCDate() + 1);
+    const dia = d.toISOString().slice(0, 10);
+    const r = await api().post('/api/v1/licencias').set(como('matias')).send({ tipo: 'personal', fecha_desde: dia, fecha_hasta: dia });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    const p = await api().get('/api/v1/pendientes').set(como('jorge'));
+    const grupo = p.body.data.find((g) => g.tipo === 'licencia');
+    const item = grupo?.items.find((i) => i.id === r.body.data.id) ?? grupo?.items[0];
+    assert.ok(item, 'la licencia aparece en Pendientes');
+    assert.match(item.sub, /^[A-ZÁÉÍÓÚ][^·]* · \d{2}\/\d{2}\/\d{4}/, item.sub);
+    assert.doesNotMatch(item.sub, /\d{4}-\d{2}-\d{2}/);
+  });
+});

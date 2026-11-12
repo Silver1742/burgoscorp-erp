@@ -89,7 +89,7 @@ function Detalle({ e, desde, hasta, alCerrar }: DetalleProps) {
     try {
       await descargarCsv(`detalle_${e.legajo}_${desde}_${hasta}`,
         ['Fecha', 'Día', 'Estado', 'Entrada', 'Salida', 'Horas', 'Minutos tarde', 'Horas extra', 'Horas faltantes'],
-        dias.map((d) => [d.fecha, DIA[new Date(`${d.fecha}T12:00:00Z`).getUTCDay()], ESTADO_DIA[d.estado].texto + (d.incompleto ? ' (fichaje sin salida)' : ''),
+        dias.map((d) => [fechaCorta(d.fecha), DIA[new Date(`${d.fecha}T12:00:00Z`).getUTCDay()], ESTADO_DIA[d.estado].texto + (d.incompleto ? ' (fichaje sin salida)' : ''),
           d.entrada, d.salida, d.horas, d.tarde_min, d.extra_h, d.faltante_h]));
     } catch (err) {
       toast.error(err.message);
@@ -136,6 +136,13 @@ function Detalle({ e, desde, hasta, alCerrar }: DetalleProps) {
     </ConfirmDialog>
   );
 }
+
+/** Horarios de entrada posibles: de 05:00 a 10:00, cada media hora. */
+const HORAS_ENTRADA = Array.from({ length: 11 }, (_, i) => {
+  const minutos = 5 * 60 + i * 30;
+  const h = `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
+  return { valor: h, titulo: h };
+});
 
 export default function Liquidacion() {
   const t = useTema();
@@ -289,8 +296,10 @@ export default function Liquidacion() {
         alConfirmar={guardarJornada} alCerrar={() => setJornada(null)}>
         {jornada ? (
           <>
-            <Campo etiqueta="Hora de entrada (HH:MM)" value={jornada.hora_entrada} maxLength={5}
-              onChangeText={(v) => setJornada((x) => ({ ...x, hora_entrada: v }))} />
+            {/* La hora de entrada se elige con un toque (no se tipea). */}
+            <Text style={{ color: t.texto, marginBottom: 6 }}>Hora de entrada</Text>
+            <Opciones opciones={HORAS_ENTRADA} valor={String(jornada.hora_entrada).slice(0, 5)}
+              alCambiar={(v) => setJornada((x) => ({ ...x, hora_entrada: v }))} />
             <Campo etiqueta="Tolerancia (minutos)" value={String(jornada.tolerancia_min)} keyboardType="number-pad" maxLength={2}
               onChangeText={(v) => setJornada((x) => ({ ...x, tolerancia_min: v }))} />
             <Campo etiqueta="Horas por día" value={String(jornada.horas_diarias)} keyboardType="decimal-pad" maxLength={5}

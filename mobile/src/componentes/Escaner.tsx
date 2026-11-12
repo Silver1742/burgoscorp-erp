@@ -4,6 +4,7 @@
 // Lo que se lee es un dato externo: se valida el formato acá y en la API, se busca por código
 // exacto y nunca se abre como enlace (un QR con "https://..." no lleva a ningún lado).
 import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -23,8 +24,10 @@ type EscanerProps = {
 
 const FORMATO = /^[A-Za-z0-9:._\-/]{1,100}$/;
 const TIPOS: BarcodeType[] = ['qr', 'code128', 'code39', 'ean13'];
-// En la web la lectura depende del navegador (BarcodeDetector: Chrome en Android, por ejemplo).
-const SIN_LECTOR_WEB = Platform.OS === 'web' && (typeof window === 'undefined' || !('BarcodeDetector' in window));
+// En la web, expo-camera usa el lector del navegador (BarcodeDetector) y, si no lo tiene (Safari en
+// iPhone, Firefox), uno propio que trae incluido: no hace falta bloquear ningún navegador.
+// Sin cámara (o sin HTTPS) queda el campo para escribir el código.
+const SIN_CAMARA_WEB = Platform.OS === 'web' && (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia);
 
 /** A qué pantalla lleva lo que devolvió /escaneo. */
 export function destinoEscaneo(r) {
@@ -48,6 +51,13 @@ export default function Escaner({ alEncontrar, tipos, ayuda = 'Apuntá al códig
   const [buscando, setBuscando] = useState(false);
   const [leido, setLeido] = useState(null);
   const ocupado = useRef(false);
+  // La cámara se monta solo mientras esta pantalla está a la vista: al salir se libera y al volver
+  // arranca de nuevo (si quedaba montada, en algunos teléfonos el visor volvía en negro).
+  const [aLaVista, setALaVista] = useState(true);
+  useFocusEffect(useCallback(() => {
+    setALaVista(true);
+    return () => setALaVista(false);
+  }, []));
 
   const resolver = useCallback(async (codigo) => {
     // Acepta el enlace impreso en las etiquetas (solo de nuestro dominio) o el código suelto.
@@ -76,16 +86,16 @@ export default function Escaner({ alEncontrar, tipos, ayuda = 'Apuntá al códig
   return (
     <View>
       <View style={[estilos.visor, { backgroundColor: '#000', borderColor: t.borde }]}>
-        {SIN_LECTOR_WEB ? (
+        {SIN_CAMARA_WEB ? (
           <View style={estilos.sinPermiso}>
             <Ionicons name="qr-code-outline" size={54} color="#ffffff" />
-            <Text style={estilos.textoClaro}>Este navegador no lee códigos con la cámara. Usá la app en el teléfono o escribí el código abajo.</Text>
+            <Text style={estilos.textoClaro}>Este navegador no tiene acceso a la cámara. Usá la app en el teléfono o escribí el código abajo.</Text>
           </View>
         ) : permiso?.granted ? (
           <>
-            <CameraView style={StyleSheet.absoluteFill} facing="back"
+            {aLaVista ? <CameraView style={StyleSheet.absoluteFill} facing="back"
               barcodeScannerSettings={{ barcodeTypes: TIPOS }}
-              onBarcodeScanned={buscando ? undefined : ({ data }) => resolver(data)} />
+              onBarcodeScanned={buscando ? undefined : ({ data }) => resolver(data)} /> : null}
             <View pointerEvents="none" style={estilos.mira} />
           </>
         ) : (
