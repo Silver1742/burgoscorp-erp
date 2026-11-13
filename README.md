@@ -67,6 +67,7 @@ búsqueda general encuentra personas, pedidos, OT, tareas, máquinas, materiales
 | MySQL y middlewares | `backend/db/schema.sql`; autenticación, permisos, validación, límites, cabeceras, errores |
 | Documentación de la API | [`backend/README.md`](backend/README.md) |
 | Manual de usuario | [`docs/manual-de-usuario.md`](docs/manual-de-usuario.md) (también en PDF, llega por email al habilitar la cuenta) |
+| Consultas SQL para mostrar la base y cargar un usuario a mano | [`docs/sql/presentacion.sql`](docs/sql/presentacion.sql) |
 | Tutorial: un pedido de punta a punta | [`docs/tutorial-pedido.md`](docs/tutorial-pedido.md) (con qué cuenta se hace cada paso) |
 | Guía de instalación | [`docs/guia-instalacion.md`](docs/guia-instalacion.md) |
 | APK | EAS Build, perfil `preview` |
