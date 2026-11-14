@@ -21,15 +21,31 @@ const REDES = [
   { id: 'discord', nombre: 'Discord', icono: 'logo-discord', color: '#5865f2' },
 ];
 
+// Lo último que contestó la API: al volver al login los botones están desde el primer momento.
+let guardados = null;
+
 export default function BotonesSociales({ texto = 'Ingresar con' }: BotonesSocialesProps) {
   const t = useTema();
   const toast = useToast();
   const { loginSocial } = useSesion();
-  const [proveedores, setProveedores] = useState(null);
+  const [proveedores, setProveedores] = useState(guardados);
   const [enCurso, setEnCurso] = useState(null);
 
+  // Si la API todavía está despertando (el hosting gratis se duerme) no contesta enseguida:
+  // se reintenta cada vez más espaciado (máx. 15 s) hasta que conteste, así los botones aparecen solos.
   useEffect(() => {
-    api('/auth/social/proveedores', { conToken: false }).then(setProveedores).catch(() => setProveedores(null));
+    let vivo = true;
+    let espera = 2000;
+    let reloj = null;
+    const pedir = () => api('/auth/social/proveedores', { conToken: false })
+      .then((p) => { if (vivo) { guardados = p; setProveedores(p); } })
+      .catch(() => {
+        if (!vivo) return;
+        reloj = setTimeout(pedir, espera);
+        espera = Math.min(espera * 2, 15000);
+      });
+    pedir();
+    return () => { vivo = false; clearTimeout(reloj); };
   }, []);
 
   const disponibles = REDES.filter((r) => proveedores?.[r.id] && proveedores.redirectUri);
