@@ -3,7 +3,7 @@
 //
 // Lo que se lee es un dato externo: se valida el formato acá y en la API, se busca por código
 // exacto y nunca se abre como enlace (un QR con "https://..." no lleva a ningún lado).
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -28,6 +28,10 @@ const TIPOS: BarcodeType[] = ['qr', 'code128', 'code39', 'ean13'];
 // iPhone, Firefox), uno propio que trae incluido: no hace falta bloquear ningún navegador.
 // Sin cámara (o sin HTTPS) queda el campo para escribir el código.
 const SIN_CAMARA_WEB = Platform.OS === 'web' && (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia);
+// En el teléfono se usa el lector del sistema (en Android, el de Google Play Services): abre su propia
+// cámara, enfoca y lee solo, y no necesita el permiso de cámara de la app. El visor propio queda
+// para los teléfonos que no lo tienen.
+const LECTOR_DEL_SISTEMA = Platform.OS !== 'web' && CameraView.isModernBarcodeScannerAvailable;
 
 /** A qué pantalla lleva lo que devolvió /escaneo. */
 export function destinoEscaneo(r) {
@@ -59,6 +63,15 @@ export default function Escaner({ alEncontrar, tipos, ayuda = 'Apuntá al códig
     return () => setALaVista(false);
   }, []));
 
+  const abrirLector = useCallback(async () => {
+    try {
+      await CameraView.launchScanner({ barcodeTypes: TIPOS });
+    } catch (err) {
+      if (/cancel/i.test(String((err as Error)?.message))) return; // la cerró sin escanear
+      toast.error('No se pudo abrir el lector. Escribí el código abajo.');
+    }
+  }, [toast]);
+
   const resolver = useCallback(async (codigo) => {
     // Acepta el enlace impreso en las etiquetas (solo de nuestro dominio) o el código suelto.
     const texto = codigoDeQR(codigo) ?? '';
@@ -83,10 +96,28 @@ export default function Escaner({ alEncontrar, tipos, ayuda = 'Apuntá al códig
     }
   }, [alEncontrar, tipos, toast]);
 
+  // Lo que lee el lector del sistema llega por este evento (solo a la pantalla que está a la vista).
+  const resolverRef = useRef(resolver);
+  resolverRef.current = resolver;
+  useEffect(() => {
+    if (!LECTOR_DEL_SISTEMA || !aLaVista) return undefined;
+    const sub = CameraView.onModernBarcodeScanned(({ data }) => {
+      if (Platform.OS === 'ios') CameraView.dismissScanner().catch(() => {});
+      resolverRef.current(data);
+    });
+    return () => sub.remove();
+  }, [aLaVista]);
+
   return (
     <View>
       <View style={[estilos.visor, { backgroundColor: '#000', borderColor: t.borde }]}>
-        {SIN_CAMARA_WEB ? (
+        {LECTOR_DEL_SISTEMA ? (
+          <View style={estilos.sinPermiso}>
+            <Ionicons name="qr-code-outline" size={54} color="#ffffff" />
+            <Text style={estilos.textoClaro}>Tocá el botón y apuntá al código: se lee solo.</Text>
+            <Boton titulo="Escanear con la cámara" icono="camera" onPress={abrirLector} cargando={buscando} estilo={{ marginTop: espacio.m, marginBottom: 0 }} />
+          </View>
+        ) : SIN_CAMARA_WEB ? (
           <View style={estilos.sinPermiso}>
             <Ionicons name="qr-code-outline" size={54} color="#ffffff" />
             <Text style={estilos.textoClaro}>Este navegador no tiene acceso a la cámara. Usá la app en el teléfono o escribí el código abajo.</Text>
