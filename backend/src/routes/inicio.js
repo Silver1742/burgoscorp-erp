@@ -11,7 +11,6 @@ import { errores } from '../utils/errores.js';
 import { fechaAr, hoy } from '../utils/fechas.js';
 import { auditar } from '../services/auditoria.js';
 import { notificar } from '../services/notificaciones.js';
-import { enviarPush, FORMATO_TOKEN, quitarDispositivo, registrarDispositivo } from '../services/push.js';
 import { resolverPermiso } from '../services/permisos.js';
 import * as tareas from '../services/tareas.js';
 import * as licencias from '../services/licencias.js';
@@ -77,14 +76,15 @@ router.post('/tablon', autenticado, validar({ body: aviso }), async (req, res) =
     `INSERT INTO avisos_tablon (titulo, texto, area_id, fijado, importante, vence_el, autor_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [d.titulo, d.texto, areaId, d.fijado ? 1 : 0, d.importante ? 1 : 0, d.vence_el ?? null, u.id]);
   await auditar(req, { accion: 'crear', entidad: 'aviso_tablon', entidadId: r.insertId });
-  // Todo aviso nuevo llega al teléfono de quienes lo pueden ver; uno importante, además, queda en la
-  // campanita de cada uno (notificar ya lo manda también al teléfono).
-  const destinatarios = (await query(`
-    SELECT u.id FROM usuarios u LEFT JOIN empleados e ON e.id = u.empleado_id
-    WHERE u.activo = 1 AND u.estado_cuenta = 'habilitada' AND u.id <> ? AND (? IS NULL OR e.area_id = ?)`, [u.id, areaId, areaId])).map((x) => x.id);
-  const aviso = { tipo: 'aviso_tablon', titulo: `Aviso: ${d.titulo}`.slice(0, 120), mensaje: d.texto.slice(0, 200), entidad: 'aviso', entidadId: r.insertId };
-  if (d.importante) await notificar(destinatarios, aviso);
-  else await enviarPush(destinatarios, { titulo: aviso.titulo, mensaje: aviso.mensaje, datos: { tipo: aviso.tipo, entidad: 'aviso', entidadId: r.insertId } });
+  // Un aviso importante, además, llega como notificación a quienes lo pueden ver.
+  if (d.importante) {
+    const destinatarios = await query(`
+      SELECT u.id FROM usuarios u LEFT JOIN empleados e ON e.id = u.empleado_id
+      WHERE u.activo = 1 AND u.estado_cuenta = 'habilitada' AND u.id <> ? AND (? IS NULL OR e.area_id = ?)`, [u.id, areaId, areaId]);
+    await notificar(destinatarios.map((x) => x.id), {
+      tipo: 'aviso_tablon', titulo: `Aviso: ${d.titulo}`.slice(0, 120), mensaje: d.texto.slice(0, 200), entidad: 'aviso', entidadId: r.insertId,
+    });
+  }
   res.status(201).json({ ok: true, data: { id: r.insertId } });
 });
 
@@ -114,23 +114,6 @@ router.delete('/tablon/:id', autenticado, validar({ params: paramsId }), async (
 
 router.post('/tablon/:id/leido', autenticado, validar({ params: paramsId }), async (req, res) => {
   await query('INSERT IGNORE INTO avisos_leidos (aviso_id, usuario_id) SELECT id, ? FROM avisos_tablon WHERE id = ?', [req.usuario.id, req.validado.params.id]);
-  res.status(204).end();
-});
-
-// ---------------------------------------------------------------- notificaciones al teléfono
-
-const dispositivo = z.object({
-  token: z.string().max(200).regex(FORMATO_TOKEN, 'Token de notificaciones inválido'),
-  plataforma: z.enum(['android', 'ios']),
-}).strict();
-
-router.post('/dispositivos', autenticado, validar({ body: dispositivo }), async (req, res) => {
-  await registrarDispositivo(req.usuario.id, req.validado.body.token, req.validado.body.plataforma);
-  res.status(204).end();
-});
-
-router.delete('/dispositivos', autenticado, validar({ body: dispositivo.pick({ token: true }) }), async (req, res) => {
-  await quitarDispositivo(req.usuario.id, req.validado.body.token);
   res.status(204).end();
 });
 

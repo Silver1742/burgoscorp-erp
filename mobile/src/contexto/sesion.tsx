@@ -5,7 +5,6 @@ import type React from 'react';
 import { createContext, use, useCallback, useEffect, useMemo, useReducer } from 'react';
 import { api, tokens, renovarSesion, leerRefreshGuardado, borrarRefreshGuardado } from '../lib/api';
 import { guardarPreferencia } from '../lib/preferencias';
-import { olvidarTelefono } from '../lib/push';
 
 type SesionProviderProps = {
   children?: React.ReactNode;
@@ -146,7 +145,6 @@ export function SesionProvider({ children }: SesionProviderProps) {
 
     async logout({ todas = false } = {}) {
       try {
-        await olvidarTelefono(); // antes de cerrar: todavía hay sesión para avisarle a la API
         if (todas) await api('/auth/logout-todas', { metodo: 'POST' });
         else {
           const refreshToken = await leerRefreshGuardado();

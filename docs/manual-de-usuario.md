@@ -300,19 +300,6 @@ un administrador activo.
 
 ---
 
-### Notificaciones en el teléfono
-
-Con la app instalada (APK), la primera vez que entrás te pide permiso para mandarte
-notificaciones: tocá **Permitir**. Desde ahí te avisa en el teléfono, aunque la app esté cerrada:
-
-- cuando **te asignan una tarea** (al tocar el aviso se abre esa tarea);
-- a los jefes, cuando hay **una tarea de su área para asignar**;
-- cuando se publica **un aviso en el tablón** de tu área o de toda la empresa (abre Inicio).
-
-Si dijiste que no, se activa desde **Ajustes del teléfono → Apps → BurgosCorp → Notificaciones**.
-Al cerrar sesión ese teléfono deja de recibir los avisos de tu cuenta. En la versión web los
-avisos siguen llegando a la campanita.
-
 ## 11. Seguridad de tu cuenta
 
 - **Perfil → Verificación en dos pasos**: tocá **"Mandarme el código"**, escribí el código que te
