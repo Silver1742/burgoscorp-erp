@@ -59,7 +59,15 @@
           "barcodeScannerEnabled": true
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#C8102E",
+          "defaultChannel": "avisos"
+        }
+      ]
     ],
     "scheme": "burgoscorp",
     "backgroundColor": "#141416",

@@ -112,6 +112,25 @@ hay que volver a entrar.
 Los cambios de ícono, splash o del comportamiento del teclado (`app.json`) solo se ven en un APK
 nuevo; los cambios de pantallas también, porque el APK lleva el código adentro.
 
+### Notificaciones push (Firebase, una sola vez)
+
+Android entrega las notificaciones por Firebase Cloud Messaging; Expo hace de intermediario.
+
+1. https://console.firebase.google.com → **Crear proyecto** (sin Analytics).
+2. **Agregar app → Android**, paquete `com.burgoscorp.erp` → descargar `google-services.json`.
+   **No se sube al repo** (está en `.gitignore`).
+3. Subirlo a EAS como archivo secreto (desde `mobile/`):
+
+   ```bash
+   npx eas-cli env:create --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --environment preview --visibility secret
+   ```
+
+   `mobile/app.config.js` lo toma de ahí al compilar.
+4. Firebase → ⚙ **Configuración del proyecto → Cuentas de servicio → Generar nueva clave privada**
+   (un `.json`). En https://expo.dev → proyecto → **Credentials → Android → com.burgoscorp.erp →
+   FCM V1 service account key → Upload** ese archivo. Después borrarlo de la compu.
+5. Generar un APK nuevo. La API (tabla `dispositivos_push`) ya manda los avisos sola.
+
 ## 6. Antes de entregar
 
 - [ ] `/api/v1/health` responde, y el login funciona desde el APK y desde la web.

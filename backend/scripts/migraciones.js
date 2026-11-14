@@ -231,6 +231,21 @@ async function todoEnUtf8mb4(conn) {
   console.log(`Migración: ${tablas.length} tablas pasaron a utf8mb4.`);
 }
 
+/** Teléfonos donde cada usuario recibe las notificaciones push (uno por instalación de la app). */
+async function dispositivosPush(conn) {
+  await conn.query(`CREATE TABLE IF NOT EXISTS dispositivos_push (
+    id             INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    usuario_id     INT UNSIGNED NOT NULL,
+    token          VARCHAR(200) NOT NULL,
+    plataforma     ENUM('android','ios') NOT NULL,
+    creado_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    actualizado_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_push_token (token),
+    KEY idx_push_usuario (usuario_id),
+    CONSTRAINT fk_push_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+}
+
 async function tablonDeAvisos(conn) {
   await conn.query(`CREATE TABLE IF NOT EXISTS avisos_tablon (
     id          INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
@@ -260,6 +275,7 @@ async function tablonDeAvisos(conn) {
 export async function migrar(conn) {
   await todoEnUtf8mb4(conn);
   await tablonDeAvisos(conn);
+  await dispositivosPush(conn);
   await jefesSoloSuArea(conn);
   await imagenesEnAvisos(conn);
   await dosPasosPorEmail(conn);

@@ -1,7 +1,7 @@
 // Pestañas principales (como la barra del portal R3). Barra negra con una línea roja y sombra roja
 // abajo; la pestaña activa con el color del rol. A la derecha: escanear QR, modo claro/oscuro y el
 // menú del avatar (Mi perfil, Notificaciones, Ayuda, Cerrar sesión).
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -18,6 +18,7 @@ import { perfilRol } from '../../lib/roles';
 import { VigiaCambios } from '../../lib/cambios';
 import { RegistroRutas } from '../../lib/volver';
 import type { NombreIcono } from '../../lib/tipos';
+import { useNotificacionesTelefono } from '../../lib/push';
 
 type IconoPestanaProps = {
   nombre?: any;
@@ -110,10 +111,19 @@ function AbrirQrPendiente() {
   return null;
 }
 
+/** Notificaciones en el teléfono: registra el aparato y abre la tarea o el aviso que se tocó. */
+function NotificacionesTelefono() {
+  const router = useRouter();
+  const abrir = useCallback((ruta: string) => router.push(ruta as never, { withAnchor: true }), [router]);
+  useNotificacionesTelefono(abrir);
+  return null;
+}
+
 export default function LayoutApp() {
   return (
     <>
       <AbrirQrPendiente />
+      <NotificacionesTelefono />
       <VigiaCambios />
       <RegistroRutas />
       <Pestanas />

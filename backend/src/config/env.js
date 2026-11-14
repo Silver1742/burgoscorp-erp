@@ -80,6 +80,8 @@ const esquema = z.object({
   DISCORD_CLIENT_SECRET: z.string().default(''),
   // Redirect URIs aceptadas en el canje de código (GitHub). Separadas por coma.
   OAUTH_REDIRECT_URIS: z.string().default(''),
+  // Notificaciones push: token de acceso de Expo (opcional, para "Enhanced push security").
+  EXPO_ACCESS_TOKEN: z.string().default(''),
 });
 
 const resultado = esquema.safeParse(process.env);

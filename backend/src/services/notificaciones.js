@@ -1,5 +1,9 @@
 // Avisos dentro de la app (campanita). No lanza errores: si falla, la operación principal sigue.
 import { query } from '../config/db.js';
+import { enviarPush } from './push.js';
+
+// Qué avisos de la campanita también llegan como notificación al teléfono.
+const AL_TELEFONO = new Set(['tarea_asignada', 'tarea_para_asignar', 'aviso_tablon']);
 
 export async function notificar(usuarioIds, { tipo, titulo, mensaje = null, entidad = null, entidadId = null }) {
   const ids = [...new Set((Array.isArray(usuarioIds) ? usuarioIds : [usuarioIds]).filter(Boolean))];
@@ -12,6 +16,9 @@ export async function notificar(usuarioIds, { tipo, titulo, mensaje = null, enti
     } catch (err) {
       console.error('[notificaciones] no se pudo crear', tipo, err.message);
     }
+  }
+  if (AL_TELEFONO.has(tipo)) {
+    await enviarPush(ids, { titulo, mensaje, datos: { tipo, entidad, entidadId } });
   }
 }
 

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import request from 'supertest';
 import { crearApp } from '../src/app.js';
 import { pool, query } from '../src/config/db.js';
+import { bandejaPush } from '../src/services/push.js';
 
 const app = crearApp();
 const api = () => request(app);
@@ -201,5 +202,46 @@ describe('fechas en formato argentino', () => {
     assert.ok(item, 'la licencia aparece en Pendientes');
     assert.match(item.sub, /^[A-ZÁÉÍÓÚ][^·]* · \d{2}\/\d{2}\/\d{4}/, item.sub);
     assert.doesNotMatch(item.sub, /\d{4}-\d{2}-\d{2}/);
+  });
+});
+
+describe('notificaciones en el teléfono (push)', () => {
+  const token = (q) => `ExponentPushToken[prueba-${q}-${sello}]`;
+  const llegaron = (desde, tk) => bandejaPush.slice(desde).filter((m) => m.to === tk);
+
+  test('registrar el teléfono: solo con un token de Expo válido y con sesión', async () => {
+    assert.equal((await api().post('/api/v1/dispositivos').send({ token: token('x'), plataforma: 'android' })).status, 401);
+    assert.equal((await api().post('/api/v1/dispositivos').set(como('ramon')).send({ token: 'https://atacante.test', plataforma: 'android' })).status, 400);
+    for (const q of ['ramon', 'claudio']) {
+      assert.equal((await api().post('/api/v1/dispositivos').set(como(q)).send({ token: token(q), plataforma: 'android' })).status, 204);
+    }
+  });
+
+  test('al asignar una tarea le llega al teléfono de quien la tiene que hacer', async () => {
+    const antes = bandejaPush.length;
+    const r = await api().post('/api/v1/tareas').set(como('jorge'))
+      .send({ titulo: `Push ${sello}`, empleado_ids: [s.ramon.usuario.empleadoId] });
+    assert.equal(r.status, 201, JSON.stringify(r.body));
+    const [m] = llegaron(antes, token('ramon'));
+    assert.ok(m, 'le llegó a Ramón');
+    assert.match(m.title, /Te asignaron/);
+    assert.deepEqual(m.data, { tipo: 'tarea_asignada', entidad: 'tarea', entidadId: r.body.data.id });
+    assert.equal(llegaron(antes, token('claudio')).length, 0, 'a otro no le llega');
+  });
+
+  test('un aviso del tablón llega a los teléfonos de su área (aunque no sea importante)', async () => {
+    const antes = bandejaPush.length;
+    const a = await api().post('/api/v1/tablon').set(como('jorge')).send({ titulo: `Reunión ${sello}`, texto: 'A las 8 en el pañol.' });
+    assert.equal(a.status, 201);
+    assert.equal(llegaron(antes, token('ramon')).length, 1, 'Ramón es de Mecanizado');
+    assert.equal(llegaron(antes, token('claudio')).length, 0, 'Claudio es de Soldadura: no lo ve, no le llega');
+    await api().delete(`/api/v1/tablon/${a.body.data.id}`).set(como('jorge'));
+  });
+
+  test('al cerrar sesión ese teléfono deja de recibir avisos', async () => {
+    assert.equal((await api().delete('/api/v1/dispositivos').set(como('ramon')).send({ token: token('ramon') })).status, 204);
+    const antes = bandejaPush.length;
+    await api().post('/api/v1/tablon').set(como('jorge')).send({ titulo: `Otro ${sello}`, texto: 'x' });
+    assert.equal(llegaron(antes, token('ramon')).length, 0);
   });
 });
