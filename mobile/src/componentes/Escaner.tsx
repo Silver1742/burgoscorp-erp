@@ -63,14 +63,23 @@ export default function Escaner({ alEncontrar, tipos, ayuda = 'Apuntá al códig
     return () => setALaVista(false);
   }, []));
 
+  // Si el lector del sistema no abre (sin Play Services, módulo de Google sin descargar, etc.), se
+  // pasa al visor propio de la app, que usa la cámara directamente.
+  const [visorPropio, setVisorPropio] = useState(!LECTOR_DEL_SISTEMA);
+  const usarVisorPropio = useCallback(() => {
+    setVisorPropio(true);
+    if (!permiso?.granted) pedirPermiso();
+  }, [permiso, pedirPermiso]);
+
   const abrirLector = useCallback(async () => {
     try {
       await CameraView.launchScanner({ barcodeTypes: TIPOS });
     } catch (err) {
       if (/cancel/i.test(String((err as Error)?.message))) return; // la cerró sin escanear
-      toast.error('No se pudo abrir el lector. Escribí el código abajo.');
+      toast.info('Abrimos la cámara de la app: apuntá al código.');
+      usarVisorPropio();
     }
-  }, [toast]);
+  }, [toast, usarVisorPropio]);
 
   const resolver = useCallback(async (codigo) => {
     // Acepta el enlace impreso en las etiquetas (solo de nuestro dominio) o el código suelto.
@@ -100,22 +109,25 @@ export default function Escaner({ alEncontrar, tipos, ayuda = 'Apuntá al códig
   const resolverRef = useRef(resolver);
   resolverRef.current = resolver;
   useEffect(() => {
-    if (!LECTOR_DEL_SISTEMA || !aLaVista) return undefined;
+    if (!LECTOR_DEL_SISTEMA || visorPropio || !aLaVista) return undefined;
     const sub = CameraView.onModernBarcodeScanned(({ data }) => {
       if (Platform.OS === 'ios') CameraView.dismissScanner().catch(() => {});
       resolverRef.current(data);
     });
     return () => sub.remove();
-  }, [aLaVista]);
+  }, [aLaVista, visorPropio]);
 
   return (
     <View>
       <View style={[estilos.visor, { backgroundColor: '#000', borderColor: t.borde }]}>
-        {LECTOR_DEL_SISTEMA ? (
+        {!visorPropio ? (
           <View style={estilos.sinPermiso}>
             <Ionicons name="qr-code-outline" size={54} color="#ffffff" />
             <Text style={estilos.textoClaro}>Tocá el botón y apuntá al código: se lee solo.</Text>
             <Boton titulo="Escanear con la cámara" icono="camera" onPress={abrirLector} cargando={buscando} estilo={{ marginTop: espacio.m, marginBottom: 0 }} />
+            <Text onPress={usarVisorPropio} style={[estilos.textoClaro, { textDecorationLine: 'underline' }]} accessibilityRole="button">
+              ¿No abre? Usar la cámara de la app
+            </Text>
           </View>
         ) : SIN_CAMARA_WEB ? (
           <View style={estilos.sinPermiso}>
