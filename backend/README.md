@@ -31,16 +31,16 @@ La guía paso a paso (XAMPP, usuario de base de datos, cuentas de prueba) está 
 ```
 backend/
 ├── db/            schema.sql (tablas) y seed.sql (catálogos, roles, permisos)
-├── scripts/       seed.js (datos de prueba)
+├── scripts/       seed.ts (datos de prueba)
 ├── src/
-│   ├── config/       env.js (valida .env), db.js (pool MySQL y transacciones)
+│   ├── config/       env.ts (valida .env), db.ts (pool MySQL y transacciones)
 │   ├── middlewares/  auth, permisos, validar, seguridad, límites, errores
 │   ├── routes/       auth, usuarios, catálogos (uno por recurso)
 │   ├── services/     auth, tokens, permisos, usuarios, auditoría
 │   ├── validators/   esquemas zod (largos iguales a los de la base)
 │   ├── utils/        motor CRUD, errores, helpers de seguridad
-│   ├── app.js        armado de Express
-│   └── server.js     arranque, timeouts y apagado
+│   ├── app.ts        armado de Express
+│   └── server.ts     arranque, timeouts y apagado
 └── tests/         tests de integración (node:test + supertest)
 ```
 

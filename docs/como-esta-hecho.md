@@ -11,7 +11,7 @@ encontrar rápido el código de cada parte.
 > **Lenguaje de la app:** TypeScript. Las pantallas y componentes son `.tsx` (llevan JSX) y la lógica
 > (API, sesión, almacenamiento, utilidades) es `.ts`. Cada componente declara el tipo de sus props y
 > los tipos compartidos están en `mobile/src/lib/tipos.ts`. Se verifica con `npm run tipos` (`tsc --noEmit`).
-> La API (backend) sigue en JavaScript con Node.js; ahí los datos se validan con zod en cada pedido.
+> La API (backend) también está en TypeScript (`.ts`) y la corre Node.js directamente (Node 22.18 o más nuevo entiende `.ts` sin compilar); ahí los datos se validan con zod en cada pedido.
 
 ## 1. La idea en dos párrafos
 
@@ -48,7 +48,7 @@ un empleado con la habilidad necesaria y a una máquina disponible.
 **Archivo:** [`backend/db/schema.sql`](../backend/db/schema.sql), con las tablas separadas por
 módulo y comentadas. Los datos iniciales (roles, áreas, máquinas, productos) están en
 [`backend/db/seed.sql`](../backend/db/seed.sql). Los datos de prueba (30 empleados y 29
-usuarios) los carga [`backend/scripts/seed.js`](../backend/scripts/seed.js).
+usuarios) los carga [`backend/scripts/seed.ts`](../backend/scripts/seed.ts).
 
 Ideas clave:
 
@@ -84,25 +84,25 @@ y se responde con un error claro.
 
 | # | Paso | Qué controla | Archivo |
 |---|---|---|---|
-| 1 | Cabeceras de seguridad | Agrega protecciones estándar a cada respuesta | [`middlewares/seguridad.js`](../backend/src/middlewares/seguridad.js) |
+| 1 | Cabeceras de seguridad | Agrega protecciones estándar a cada respuesta | [`middlewares/seguridad.ts`](../backend/src/middlewares/seguridad.ts) |
 | 2 | CORS | Solo acepta navegadores de orígenes conocidos | mismo archivo |
-| 3 | Límite de pedidos | Frena a quien manda demasiados pedidos seguidos | [`middlewares/limites.js`](../backend/src/middlewares/limites.js) |
-| 4 | Formato | El cuerpo tiene que ser JSON y pesar menos de 100 KB | [`app.js`](../backend/src/app.js) |
-| 5 | ¿Quién sos? | Lee el token y carga el usuario desde la base | [`middlewares/auth.js`](../backend/src/middlewares/auth.js) |
+| 3 | Límite de pedidos | Frena a quien manda demasiados pedidos seguidos | [`middlewares/limites.ts`](../backend/src/middlewares/limites.ts) |
+| 4 | Formato | El cuerpo tiene que ser JSON y pesar menos de 100 KB | [`app.ts`](../backend/src/app.ts) |
+| 5 | ¿Quién sos? | Lee el token y carga el usuario desde la base | [`middlewares/auth.ts`](../backend/src/middlewares/auth.ts) |
 | 6 | ¿Email verificado? | Sin verificar, no se entra a los módulos | mismo archivo |
-| 7 | ¿Tenés permiso? | Rol, módulo, acción y área | [`middlewares/permisos.js`](../backend/src/middlewares/permisos.js) |
-| 8 | ¿Los datos son válidos? | Tipos, largos y formatos de cada campo | [`middlewares/validar.js`](../backend/src/middlewares/validar.js) |
-| 9 | Trabajo real | Consulta la base filtrando por tu alcance | [`utils/crud.js`](../backend/src/utils/crud.js) |
-| 10 | Errores | Convierte cualquier error en un mensaje claro | [`middlewares/errores.js`](../backend/src/middlewares/errores.js) |
+| 7 | ¿Tenés permiso? | Rol, módulo, acción y área | [`middlewares/permisos.ts`](../backend/src/middlewares/permisos.ts) |
+| 8 | ¿Los datos son válidos? | Tipos, largos y formatos de cada campo | [`middlewares/validar.ts`](../backend/src/middlewares/validar.ts) |
+| 9 | Trabajo real | Consulta la base filtrando por tu alcance | [`utils/crud.ts`](../backend/src/utils/crud.ts) |
+| 10 | Errores | Convierte cualquier error en un mensaje claro | [`middlewares/errores.ts`](../backend/src/middlewares/errores.ts) |
 
-El servidor arranca en [`src/server.js`](../backend/src/server.js) y las rutas se juntan en
-[`src/routes/index.js`](../backend/src/routes/index.js).
+El servidor arranca en [`src/server.ts`](../backend/src/server.ts) y las rutas se juntan en
+[`src/routes/index.ts`](../backend/src/routes/index.ts).
 
 ### 4.2 Iniciar sesión y mantenerla
 
-**Archivos:** [`services/auth.js`](../backend/src/services/auth.js) (registro y login),
-[`services/tokens.js`](../backend/src/services/tokens.js) (tokens),
-[`routes/auth.js`](../backend/src/routes/auth.js) (endpoints).
+**Archivos:** [`services/auth.ts`](../backend/src/services/auth.ts) (registro y login),
+[`services/tokens.ts`](../backend/src/services/tokens.ts) (tokens),
+[`routes/auth.ts`](../backend/src/routes/auth.ts) (endpoints).
 
 Se usan **dos tokens**, como una pulsera y un ticket:
 
@@ -140,12 +140,12 @@ Otras protecciones del login:
 
 | Qué | Cómo funciona | Archivo |
 |---|---|---|
-| **Solicitud de acceso** | Como en el portal R3: quien se registra (o entra por primera vez con una red social) queda pendiente y no puede iniciar sesión hasta que un administrador lo habilita con su rol y legajo, o lo rechaza. En los dos casos le llega un email | [`services/auth.js`](../backend/src/services/auth.js), [`routes/usuarios.js`](../backend/src/routes/usuarios.js), [`modulos/usuarios/solicitudes.js`](../mobile/src/app/(app)/modulos/usuarios/solicitudes.tsx) |
-| **Verificar email** | La primera vez que entra, le llega un código de 6 dígitos; hasta confirmarlo solo se puede usar la parte de login | [`services/verificacion.js`](../backend/src/services/verificacion.js) |
+| **Solicitud de acceso** | Como en el portal R3: quien se registra (o entra por primera vez con una red social) queda pendiente y no puede iniciar sesión hasta que un administrador lo habilita con su rol y legajo, o lo rechaza. En los dos casos le llega un email | [`services/auth.ts`](../backend/src/services/auth.ts), [`routes/usuarios.ts`](../backend/src/routes/usuarios.ts), [`modulos/usuarios/solicitudes.ts`](../mobile/src/app/(app)/modulos/usuarios/solicitudes.tsx) |
+| **Verificar email** | La primera vez que entra, le llega un código de 6 dígitos; hasta confirmarlo solo se puede usar la parte de login | [`services/verificacion.ts`](../backend/src/services/verificacion.ts) |
 | **Recuperar contraseña** | Se pide un código por email y con él se define una contraseña nueva | mismo archivo |
-| **Verificación en dos pasos (2FA)** | Además de la contraseña, un código de 6 dígitos que llega al email en cada ingreso | [`services/dosPasos.js`](../backend/src/services/dosPasos.js) |
-| Códigos de un solo uso | Vencen en 10 minutos, admiten 5 intentos, se guardan como hash | [`services/codigos.js`](../backend/src/services/codigos.js) |
-| Envío de correos | En desarrollo se muestran en la consola; en producción salen por SMTP | [`services/email.js`](../backend/src/services/email.js) |
+| **Verificación en dos pasos (2FA)** | Además de la contraseña, un código de 6 dígitos que llega al email en cada ingreso | [`services/dosPasos.ts`](../backend/src/services/dosPasos.ts) |
+| Códigos de un solo uso | Vencen en 10 minutos, admiten 5 intentos, se guardan como hash | [`services/codigos.ts`](../backend/src/services/codigos.ts) |
+| Envío de correos | En desarrollo se muestran en la consola; en producción salen por SMTP | [`services/email.ts`](../backend/src/services/email.ts) |
 
 **Cómo funciona la verificación en dos pasos:** para activarla, la persona pide un código y lo
 escribe (así se comprueba que el email le llega). Desde ahí, cuando pone bien la contraseña, la API
@@ -155,7 +155,7 @@ el token temporal y los fallos cuentan para el bloqueo de la cuenta.
 
 ### 4.4 Login con Google, GitHub y Discord
 
-**Archivo:** [`services/social.js`](../backend/src/services/social.js). La guía para crear las
+**Archivo:** [`services/social.ts`](../backend/src/services/social.ts). La guía para crear las
 apps en cada proveedor está en [`docs/guia-oauth.md`](guia-oauth.md).
 
 La app abre la pantalla del proveedor; los tres vuelven a una sola página, `/oauth` de la web (desde
@@ -174,7 +174,7 @@ sesión que hubiera abierta en ese navegador.
 
 ### 4.5 Roles y permisos
 
-**Archivos:** [`services/permisos.js`](../backend/src/services/permisos.js) (la lógica) y la
+**Archivos:** [`services/permisos.ts`](../backend/src/services/permisos.ts) (la lógica) y la
 tabla `permisos_rol` en [`seed.sql`](../backend/db/seed.sql) (la matriz).
 
 Hay 4 roles: **Administrador**, **Gerencia**, **Jefe de área** y **Empleado**. Cada permiso se
@@ -200,12 +200,12 @@ la tabla `auditoria`.
 
 ### 4.6 El motor CRUD (lo que acelera el desarrollo)
 
-**Archivo:** [`utils/crud.js`](../backend/src/utils/crud.js).
+**Archivo:** [`utils/crud.ts`](../backend/src/utils/crud.ts).
 
 En vez de programar listar, ver, crear, editar y borrar para cada tabla, hay un "motor" al que se
 le pasa una configuración y arma los 5 endpoints con paginación, búsqueda, filtros, orden,
 permisos, alcance y auditoría. Por ejemplo, los clientes se configuran en
-[`routes/catalogos.js`](../backend/src/routes/catalogos.js) en unas 10 líneas.
+[`routes/catalogos.ts`](../backend/src/routes/catalogos.ts) en unas 10 líneas.
 
 Por seguridad, los nombres de columnas, filtros y órdenes solo pueden ser los que dice la
 configuración, y los valores que manda el usuario siempre van como parámetros. Eso hace
@@ -213,11 +213,11 @@ imposible la **inyección SQL**.
 
 ### 4.7 Recursos Humanos (día 5)
 
-**Archivos:** [`routes/rrhh.js`](../backend/src/routes/rrhh.js) (endpoints),
-[`services/licencias.js`](../backend/src/services/licencias.js),
-[`services/asistencias.js`](../backend/src/services/asistencias.js),
-[`services/notificaciones.js`](../backend/src/services/notificaciones.js) y
-[`validators/rrhh.js`](../backend/src/validators/rrhh.js).
+**Archivos:** [`routes/rrhh.ts`](../backend/src/routes/rrhh.ts) (endpoints),
+[`services/licencias.ts`](../backend/src/services/licencias.ts),
+[`services/asistencias.ts`](../backend/src/services/asistencias.ts),
+[`services/notificaciones.ts`](../backend/src/services/notificaciones.ts) y
+[`validators/rrhh.ts`](../backend/src/validators/rrhh.ts).
 
 - **Legajos:** cada persona ve según su rol. Un empleado ve solo el suyo, un jefe los de su área
   y RRHH todos. Fuera de RRHH, lo único que se puede cambiar es el teléfono y la dirección
@@ -244,11 +244,11 @@ Empleado pide ──▶ Pendiente ──(jefe de su área)──▶ Aprobada por
 
 ### 4.8 Producción y Tareas (día 6)
 
-**Archivos:** [`routes/produccion.js`](../backend/src/routes/produccion.js) (endpoints),
-[`services/ordenes.js`](../backend/src/services/ordenes.js) (órdenes de trabajo),
-[`services/tareas.js`](../backend/src/services/tareas.js) (tareas, asignación y avance),
-[`utils/secuencias.js`](../backend/src/utils/secuencias.js) (numeración) y
-[`validators/produccion.js`](../backend/src/validators/produccion.js).
+**Archivos:** [`routes/produccion.ts`](../backend/src/routes/produccion.ts) (endpoints),
+[`services/ordenes.ts`](../backend/src/services/ordenes.ts) (órdenes de trabajo),
+[`services/tareas.ts`](../backend/src/services/tareas.ts) (tareas, asignación y avance),
+[`utils/secuencias.ts`](../backend/src/utils/secuencias.ts) (numeración) y
+[`validators/produccion.ts`](../backend/src/validators/produccion.ts).
 
 - **Orden de trabajo (OT):** es el pedido del cliente dentro del taller ("reparar el eje de una
   cosechadora"). Se numera sola (`OT-2026-0001`), sin saltos ni números repetidos aunque dos
@@ -283,14 +283,14 @@ Pendiente ──▶ En curso ⇄ Pausada ──▶ En revisión ──(jefe)─�
 
 ### 4.9 Inventario, Compras y Mantenimiento (día 7)
 
-**Archivos:** [`services/stock.js`](../backend/src/services/stock.js) (todo movimiento de stock pasa por acá),
-[`services/inventario.js`](../backend/src/services/inventario.js),
-[`services/materiales.js`](../backend/src/services/materiales.js) (material de la OT),
-[`services/compras.js`](../backend/src/services/compras.js),
-[`services/mantenimiento.js`](../backend/src/services/mantenimiento.js),
-[`services/escaneo.js`](../backend/src/services/escaneo.js) y sus rutas en
-[`routes/inventario.js`](../backend/src/routes/inventario.js), [`routes/compras.js`](../backend/src/routes/compras.js)
-y [`routes/mantenimiento.js`](../backend/src/routes/mantenimiento.js).
+**Archivos:** [`services/stock.ts`](../backend/src/services/stock.ts) (todo movimiento de stock pasa por acá),
+[`services/inventario.ts`](../backend/src/services/inventario.ts),
+[`services/materiales.ts`](../backend/src/services/materiales.ts) (material de la OT),
+[`services/compras.ts`](../backend/src/services/compras.ts),
+[`services/mantenimiento.ts`](../backend/src/services/mantenimiento.ts),
+[`services/escaneo.ts`](../backend/src/services/escaneo.ts) y sus rutas en
+[`routes/inventario.ts`](../backend/src/routes/inventario.ts), [`routes/compras.ts`](../backend/src/routes/compras.ts)
+y [`routes/mantenimiento.ts`](../backend/src/routes/mantenimiento.ts).
 
 - **Stock disponible:** de cada producto se sabe cuánto **hay**, cuánto está **reservado** para
   órdenes de trabajo y cuánto queda **disponible** (lo que hay menos lo reservado). Cada entrada o
@@ -335,12 +335,12 @@ Abierta ──▶ En reparación ⇄ Esperando repuesto ──▶ Reparada (con 
 
 ### 4.10 Ventas, Calidad, Finanzas y Tablero (día 8)
 
-**Archivos:** [`services/ventas.js`](../backend/src/services/ventas.js),
-[`services/calidad.js`](../backend/src/services/calidad.js),
-[`services/finanzas.js`](../backend/src/services/finanzas.js),
-[`services/tablero.js`](../backend/src/services/tablero.js) y sus rutas en
-[`routes/ventas.js`](../backend/src/routes/ventas.js), [`routes/calidad.js`](../backend/src/routes/calidad.js)
-y [`routes/finanzas.js`](../backend/src/routes/finanzas.js).
+**Archivos:** [`services/ventas.ts`](../backend/src/services/ventas.ts),
+[`services/calidad.ts`](../backend/src/services/calidad.ts),
+[`services/finanzas.ts`](../backend/src/services/finanzas.ts),
+[`services/tablero.ts`](../backend/src/services/tablero.ts) y sus rutas en
+[`routes/ventas.ts`](../backend/src/routes/ventas.ts), [`routes/calidad.ts`](../backend/src/routes/calidad.ts)
+y [`routes/finanzas.ts`](../backend/src/routes/finanzas.ts).
 
 El recorrido completo de un pedido, con el ejemplo de la reducción para la cosechadora (está
 cargado en los datos de prueba):
@@ -380,8 +380,8 @@ Producción ──▶ Calidad inspecciona ── no conforme ──▶ la operac
 
 ### 4.11 Fotos y archivos adjuntos
 
-**Archivos:** [`routes/adjuntos.js`](../backend/src/routes/adjuntos.js) y
-[`services/adjuntos.js`](../backend/src/services/adjuntos.js). Sirve a todos los módulos: hoy se
+**Archivos:** [`routes/adjuntos.ts`](../backend/src/routes/adjuntos.ts) y
+[`services/adjuntos.ts`](../backend/src/services/adjuntos.ts). Sirve a todos los módulos: hoy se
 usa en las tareas (foto del trabajo), las licencias (certificado médico), las órdenes de compra
 (remito), las fallas de máquina, las solicitudes (la pieza del cliente), las inspecciones y las
 facturas de proveedor.
@@ -413,19 +413,19 @@ pantalla, y la carpeta determina la ruta.
 
 | Pantalla | Archivo |
 |---|---|
-| Login | [`(auth)/login.js`](../mobile/src/app/(auth)/login.tsx) |
-| Registro | [`(auth)/registro.js`](../mobile/src/app/(auth)/registro.tsx) |
-| Olvidé / nueva contraseña | [`(auth)/olvide.js`](../mobile/src/app/(auth)/olvide.tsx), [`(auth)/restablecer.js`](../mobile/src/app/(auth)/restablecer.tsx) |
+| Login | [`(auth)/login.ts`](../mobile/src/app/(auth)/login.tsx) |
+| Registro | [`(auth)/registro.ts`](../mobile/src/app/(auth)/registro.tsx) |
+| Olvidé / nueva contraseña | [`(auth)/olvide.ts`](../mobile/src/app/(auth)/olvide.tsx), [`(auth)/restablecer.ts`](../mobile/src/app/(auth)/restablecer.tsx) |
 | Segundo paso del login | [`dos-pasos.tsx`](../mobile/src/app/dos-pasos.tsx) |
 | Confirmar email | [`verificar-email.tsx`](../mobile/src/app/verificar-email.tsx) |
-| Inicio | [`(app)/index.js`](../mobile/src/app/(app)/index.tsx) |
+| Inicio | [`(app)/index.ts`](../mobile/src/app/(app)/index.tsx) |
 | Módulos | [`(app)/modulos/`](../mobile/src/app/(app)/modulos) |
-| Listado de cualquier recurso | [`(app)/modulos/[modulo]/[recurso].js`](../mobile/src/app/(app)/modulos/[modulo]/[recurso].tsx) |
+| Listado de cualquier recurso | [`(app)/modulos/[modulo]/[recurso].ts`](../mobile/src/app/(app)/modulos/[modulo]/[recurso].tsx) |
 | Perfil, 2FA y avisos | [`(app)/perfil/`](../mobile/src/app/(app)/perfil) |
-| Mis licencias (pedir y cancelar) | [`(app)/modulos/rrhh/licencias.js`](../mobile/src/app/(app)/modulos/rrhh/licencias.tsx) |
-| Aprobar licencias (jefes y RRHH) | [`(app)/modulos/rrhh/aprobaciones.js`](../mobile/src/app/(app)/modulos/rrhh/aprobaciones.tsx) |
-| Legajo (datos, habilidades, contacto) | [`(app)/modulos/rrhh/legajo/[id].js`](../mobile/src/app/(app)/modulos/rrhh/legajo/[id].tsx) |
-| Organigrama | [`(app)/modulos/rrhh/organigrama.js`](../mobile/src/app/(app)/modulos/rrhh/organigrama.tsx) |
+| Mis licencias (pedir y cancelar) | [`(app)/modulos/rrhh/licencias.ts`](../mobile/src/app/(app)/modulos/rrhh/licencias.tsx) |
+| Aprobar licencias (jefes y RRHH) | [`(app)/modulos/rrhh/aprobaciones.ts`](../mobile/src/app/(app)/modulos/rrhh/aprobaciones.tsx) |
+| Legajo (datos, habilidades, contacto) | [`(app)/modulos/rrhh/legajo/[id].ts`](../mobile/src/app/(app)/modulos/rrhh/legajo/[id].tsx) |
+| Organigrama | [`(app)/modulos/rrhh/organigrama.ts`](../mobile/src/app/(app)/modulos/rrhh/organigrama.tsx) |
 | Tarjeta de fichaje (en Inicio) | [`componentes/Fichaje.tsx`](../mobile/src/componentes/Fichaje.tsx) |
 | Órdenes de trabajo (lista, nueva, detalle con operaciones) | [`(app)/modulos/produccion/`](../mobile/src/app/(app)/modulos/produccion) |
 | Mis tareas (pestaña: iniciar, pausar, terminar) | [`(app)/tareas/`](../mobile/src/app/(app)/tareas) |
@@ -433,7 +433,7 @@ pantalla, y la carpeta determina la ruta.
 | Detalle de una tarea (lista de control, horas, comentarios, historial) | [`componentes/DetalleTarea.tsx`](../mobile/src/componentes/DetalleTarea.tsx) |
 | Selector con búsqueda (cliente, máquina, responsable) | [`componentes/Selector.tsx`](../mobile/src/componentes/Selector.tsx) |
 | Fotos con la cámara o la galería (tareas, certificados, remitos, fallas) | [`componentes/Fotos.tsx`](../mobile/src/componentes/Fotos.tsx) |
-| Escanear QR (ícono de la barra) | [`(app)/modulos/escanear.js`](../mobile/src/app/(app)/modulos/escanear.tsx), [`componentes/Escaner.tsx`](../mobile/src/componentes/Escaner.tsx) |
+| Escanear QR (ícono de la barra) | [`(app)/modulos/escanear.ts`](../mobile/src/app/(app)/modulos/escanear.tsx), [`componentes/Escaner.tsx`](../mobile/src/componentes/Escaner.tsx) |
 | Etiqueta QR para imprimir (pieza, máquina, estante, OC) | [`componentes/EtiquetaQR.tsx`](../mobile/src/componentes/EtiquetaQR.tsx) |
 | Material de la OT (reservar, usar, liberar) | [`componentes/MaterialesOt.tsx`](../mobile/src/componentes/MaterialesOt.tsx) |
 | Stock (lista y ficha con ajuste y transferencia) | [`(app)/modulos/inventario/`](../mobile/src/app/(app)/modulos/inventario) |
@@ -443,7 +443,7 @@ pantalla, y la carpeta determina la ruta.
 | Llamar o escribir por WhatsApp | [`componentes/Contacto.tsx`](../mobile/src/componentes/Contacto.tsx) |
 | Calidad (para inspeccionar, inspección con mediciones, detalle) | [`(app)/modulos/calidad/`](../mobile/src/app/(app)/modulos/calidad) |
 | Finanzas (saldos, por facturar, comprobantes, cobros y pagos) | [`(app)/modulos/finanzas/`](../mobile/src/app/(app)/modulos/finanzas) |
-| Tablero | [`(app)/modulos/tablero.js`](../mobile/src/app/(app)/modulos/tablero.tsx) |
+| Tablero | [`(app)/modulos/tablero.ts`](../mobile/src/app/(app)/modulos/tablero.tsx) |
 
 ### 5.2 Qué pantalla se muestra (rutas protegidas)
 
@@ -480,8 +480,8 @@ el mismo logo, las mismas animaciones y la misma forma de avisar, sin alertas.
 | Paleta | Los mismos tokens de R3: rojo `#c8102e` (`#ef3b4f` en oscuro), negro `#111` y grises zinc | [`tema.tsx`](../mobile/src/tema.tsx) |
 | Logo | El escudo negro con borde rojo y "BC" en serif (`BrandLogo` / `ShieldSeal` de R3), dibujado con SVG; "Burgos**Corp**" en Georgia | [`componentes/Marca.tsx`](../mobile/src/componentes/Marca.tsx) |
 | Intro de apertura | Pantalla negra con resplandor rojo, el escudo aparece y "BurgosCorp" se escribe letra por letra (una vez por apertura; se saltea tocando) | [`componentes/IntroSplash.tsx`](../mobile/src/componentes/IntroSplash.tsx) |
-| Login | Panel de marca (en pantallas anchas) + formulario; "Recordar mi email"; el botón pasa a "Verificando credenciales…" y, si son válidas, el escudo se sella y aparece "Acceso verificado" | [`componentes/AuthLayout.tsx`](../mobile/src/componentes/AuthLayout.tsx), [`(auth)/login.js`](../mobile/src/app/(auth)/login.tsx) |
-| Barra y pestañas | Negras en los dos modos; pestaña activa en blanco con línea roja; a la derecha, luna/sol y avatar | [`(app)/_layout.js`](../mobile/src/app/(app)/_layout.tsx) |
+| Login | Panel de marca (en pantallas anchas) + formulario; "Recordar mi email"; el botón pasa a "Verificando credenciales…" y, si son válidas, el escudo se sella y aparece "Acceso verificado" | [`componentes/AuthLayout.tsx`](../mobile/src/componentes/AuthLayout.tsx), [`(auth)/login.ts`](../mobile/src/app/(auth)/login.tsx) |
+| Barra y pestañas | Negras en los dos modos; pestaña activa en blanco con línea roja; a la derecha, luna/sol y avatar | [`(app)/_layout.ts`](../mobile/src/app/(app)/_layout.tsx) |
 | Sin alertas | Los resultados se informan con **toasts** abajo (verde, rojo, amarillo o negro), las confirmaciones usan un **diálogo propio** y los errores de un campo aparecen debajo del campo | [`contexto/toast.tsx`](../mobile/src/contexto/toast.tsx), [`componentes/ConfirmDialog.tsx`](../mobile/src/componentes/ConfirmDialog.tsx) |
 | Componentes | Botones y campos estilo Bootstrap, tarjetas con cabecera, insignias de rol (admin rojo suave, jefe negro, empleado gris), avatares con iniciales, esqueletos de carga, contadores animados, requisitos de contraseña que se tildan | [`componentes/ui.tsx`](../mobile/src/componentes/ui.tsx), [`lib/useContador.ts`](../mobile/src/lib/useContador.ts) |
 | Modo claro / oscuro | Sistema, Claro u Oscuro en Perfil, o luna/sol en la barra y el login; queda guardado en el dispositivo (dato no sensible) | [`componentes/SelectorTema.tsx`](../mobile/src/componentes/SelectorTema.tsx), [`lib/preferencias.ts`](../mobile/src/lib/preferencias.ts) |
@@ -496,11 +496,11 @@ Con "reducir movimiento" activado en el sistema, las animaciones no se reproduce
 ### 5.5 Qué muestra cada rol
 
 Cada rol tiene su color, su panel y sus pestañas ([`lib/roles.ts`](../mobile/src/lib/roles.ts) y
-[`app/(app)/_layout.js`](../mobile/src/app/(app)/_layout.tsx)): Empleado (Mi día), Jefe de área (Mi
+[`app/(app)/_layout.ts`](../mobile/src/app/(app)/_layout.tsx)): Empleado (Mi día), Jefe de área (Mi
 área, Mi equipo), Gerencia (La empresa, Áreas) y Administrador (Administración, Áreas). Inicio muestra
 para cada uno lo que espera su decisión y sus accesos.
 
-**Buscar** ([`app/(app)/buscar.js`](../mobile/src/app/(app)/buscar.tsx)) reúne el menú completo y la
+**Buscar** ([`app/(app)/buscar.ts`](../mobile/src/app/(app)/buscar.tsx)) reúne el menú completo y la
 búsqueda de datos de `GET /buscar`: personas, pedidos, OT, tareas, máquinas, materiales, clientes,
 proveedores y cuentas, cada grupo con el mismo alcance que su listado.
 [`mobile/src/modulos.ts`](../mobile/src/modulos.ts) sigue siendo el catálogo de módulos y define cómo
@@ -508,7 +508,7 @@ se muestra cada recurso.
 
 **Un jefe por área:** al poner a alguien como jefe de un área que ya tiene uno, la API responde
 `409 JEFE_OCUPADO` y la app pregunta si se destituye al actual (pasa a empleado) o se lo pasa a un
-área sin jefe ([`services/legajos.js`](../backend/src/services/legajos.js),
+área sin jefe ([`services/legajos.ts`](../backend/src/services/legajos.ts),
 [`componentes/Jefatura.tsx`](../mobile/src/componentes/Jefatura.tsx)).
 
 ### 5.6 Todo desde el celular: funciones del teléfono por área
@@ -541,28 +541,28 @@ necesita ningún permiso.
 
 | Riesgo | Qué se hizo | Dónde |
 |---|---|---|
-| Acceso indebido (A01) | Permisos por rol, módulo, acción y área en cada pedido | `services/permisos.js` |
-| Mala configuración (A02) | Cabeceras de seguridad, CORS cerrado, `.env` fuera del repo | `middlewares/seguridad.js`, `.gitignore` |
-| Robo de contraseñas o sesión (A07) | bcrypt; bloqueo por email e IP (5 fallos por IP o 20 en total en 15 min, igual exista o no la cuenta); el segundo paso no reinicia el contador y su token sirve una vez con 3 intentos; sesiones de 30 días como máximo; reusar un refresh token cierra todas las sesiones; desactivar el 2FA pide la contraseña | `services/intentos.js`, `auth.js`, `tokens.js`, `dosPasos.js` |
-| Cuentas nuevas (A01) | Toda cuenta nueva queda pendiente hasta que la habilita el administrador; una cuenta sin legajo no ve ningún módulo; el registro responde igual exista o no el email; el login social no se queda con cuentas creadas por otro sin verificar | `services/permisos.js`, `auth.js`, `social.js`, `routes/usuarios.js` |
-| Datos personales y de salud | DNI, CUIL, nacimiento, domicilio y costo solo para RRHH y el propio empleado; el certificado y el motivo de una licencia por enfermedad, solo para RRHH | `routes/rrhh.js`, `services/licencias.js` |
-| Claves (A04) | Códigos por email con HMAC y una clave propia (`CODIGOS_HMAC_KEY`); duración del JWT validada (máx. 60 min) | `services/codigos.js`, `config/env.js` |
-| Inyección SQL (A05) | Consultas con parámetros y columnas en lista blanca | `utils/crud.js` |
-| Abuso de recursos (A06) | Límite de pedidos y de tamaño, timeouts | `middlewares/limites.js`, `server.js` |
-| Falta de registros (A09) | Tabla `auditoria`: logins, bloqueos, accesos denegados | `services/auditoria.js` |
-| Errores que revelan datos (A10) | Mensajes genéricos al usuario; el detalle queda solo en el servidor | `middlewares/errores.js` |
-| Códigos QR leídos con la cámara (A01/A05) | Formato validado, búsqueda por código exacto, nunca se abren como enlace, `404` si no se puede ver | `services/escaneo.js`, `componentes/Escaner.js` |
-| Ventas, Calidad y Finanzas (A01/A04) | Importes calculados en el servidor; no se aprueba una pieza fuera de tolerancia; una factura por OT; Finanzas solo para Administración | `services/ventas.js`, `calidad.js`, `finanzas.js` |
-| WhatsApp y llamadas | El número sale de la base y se reduce a dígitos antes de armar el enlace; nunca se abre un enlace escaneado | `componentes/Contacto.js` |
-| Compras (A01/A04) | La aprueba alguien distinto de quien la pidió; importes calculados en el servidor | `services/compras.js` |
-| Archivos subidos (A05/A06) | Tipo por contenido, tamaño y cantidad máximos (con bloqueo para que no se pase el tope), cuota diaria por usuario, control de espacio libre, nombre aleatorio, sin datos de ubicación | `services/adjuntos.js` |
+| Acceso indebido (A01) | Permisos por rol, módulo, acción y área en cada pedido | `services/permisos.ts` |
+| Mala configuración (A02) | Cabeceras de seguridad, CORS cerrado, `.env` fuera del repo | `middlewares/seguridad.ts`, `.gitignore` |
+| Robo de contraseñas o sesión (A07) | bcrypt; bloqueo por email e IP (5 fallos por IP o 20 en total en 15 min, igual exista o no la cuenta); el segundo paso no reinicia el contador y su token sirve una vez con 3 intentos; sesiones de 30 días como máximo; reusar un refresh token cierra todas las sesiones; desactivar el 2FA pide la contraseña | `services/intentos.ts`, `auth.ts`, `tokens.ts`, `dosPasos.ts` |
+| Cuentas nuevas (A01) | Toda cuenta nueva queda pendiente hasta que la habilita el administrador; una cuenta sin legajo no ve ningún módulo; el registro responde igual exista o no el email; el login social no se queda con cuentas creadas por otro sin verificar | `services/permisos.ts`, `auth.ts`, `social.ts`, `routes/usuarios.ts` |
+| Datos personales y de salud | DNI, CUIL, nacimiento, domicilio y costo solo para RRHH y el propio empleado; el certificado y el motivo de una licencia por enfermedad, solo para RRHH | `routes/rrhh.ts`, `services/licencias.ts` |
+| Claves (A04) | Códigos por email con HMAC y una clave propia (`CODIGOS_HMAC_KEY`); duración del JWT validada (máx. 60 min) | `services/codigos.ts`, `config/env.ts` |
+| Inyección SQL (A05) | Consultas con parámetros y columnas en lista blanca | `utils/crud.ts` |
+| Abuso de recursos (A06) | Límite de pedidos y de tamaño, timeouts | `middlewares/limites.ts`, `server.ts` |
+| Falta de registros (A09) | Tabla `auditoria`: logins, bloqueos, accesos denegados | `services/auditoria.ts` |
+| Errores que revelan datos (A10) | Mensajes genéricos al usuario; el detalle queda solo en el servidor | `middlewares/errores.ts` |
+| Códigos QR leídos con la cámara (A01/A05) | Formato validado, búsqueda por código exacto, nunca se abren como enlace, `404` si no se puede ver | `services/escaneo.ts`, `componentes/Escaner.ts` |
+| Ventas, Calidad y Finanzas (A01/A04) | Importes calculados en el servidor; no se aprueba una pieza fuera de tolerancia; una factura por OT; Finanzas solo para Administración | `services/ventas.ts`, `calidad.ts`, `finanzas.ts` |
+| WhatsApp y llamadas | El número sale de la base y se reduce a dígitos antes de armar el enlace; nunca se abre un enlace escaneado | `componentes/Contacto.ts` |
+| Compras (A01/A04) | La aprueba alguien distinto de quien la pidió; importes calculados en el servidor | `services/compras.ts` |
+| Archivos subidos (A05/A06) | Tipo por contenido, tamaño y cantidad máximos (con bloqueo para que no se pase el tope), cuota diaria por usuario, control de espacio libre, nombre aleatorio, sin datos de ubicación | `services/adjuntos.ts` |
 | Datos en el celular | Tokens en SecureStore, sin copias de seguridad, solo el permiso de cámara | `mobile/src/lib/almacen.ts`, `mobile/app.json` |
 
 **Auditoría del día 9.** El agente `revisor-owasp` (solo lectura) revisó todo el proyecto y
 encontró 15 problemas: 2 altos (cualquiera que se registrara solo podía leer datos y parar
 máquinas; robo de cuenta a través del login con Google), 3 medios (adivinar el 2FA sin límite,
 facturar una OT salteando Calidad, datos personales y de salud a la vista de más) y 10 bajos.
-Se corrigieron todos, con un test por cada uno en [`tests/seguridad.test.js`](../backend/tests/seguridad.test.js),
+Se corrigieron todos, con un test por cada uno en [`tests/seguridad.test.ts`](../backend/tests/seguridad.test.ts),
 y una segunda revisión confirmó las correcciones y marcó 3 detalles más (proxy del hosting, DNI
 buscable, motivo de las licencias por enfermedad), que también se corrigieron.
 

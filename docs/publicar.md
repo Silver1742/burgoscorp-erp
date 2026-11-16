@@ -40,10 +40,10 @@ El archivo [`render.yaml`](../render.yaml) describe los dos servicios (API y web
 como *Blueprint* (**New → Blueprint** en Render) o crear el Web Service a mano con:
 
 - **Build:** `cd backend && npm ci --omit=dev`
-- **Start:** `cd backend && npm run db:init && node scripts/seed.js --forzar --opcional && npm start`
+- **Start:** `cd backend && npm run db:init && node scripts/seed.ts --forzar --opcional && npm start`
   - `db:init` crea las tablas si la base está vacía (y reintenta si una carga quedó cortada).
   - el seed carga las cuentas de prueba **solo** si existe `SEED_PASSWORD` (12+ caracteres).
-  - `npm start` corre antes `restablecer-admin.js`, que solo actúa si existe `ADMIN_RESET_PASSWORD`.
+  - `npm start` corre antes `restablecer-admin.ts`, que solo actúa si existe `ADMIN_RESET_PASSWORD`.
 
 **Variables** (*Environment*):
 

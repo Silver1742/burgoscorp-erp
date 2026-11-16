@@ -67,7 +67,7 @@ La contraseña **nunca** va en el código ni en este documento: en el servidor e
 
 La base tiene **57 tablas**. El detalle de cada una, comentado, está en
 [`backend/db/schema.sql`](../backend/db/schema.sql); las que se agregaron después, en
-[`backend/scripts/migraciones.js`](../backend/scripts/migraciones.js).
+[`backend/scripts/migraciones.ts`](../backend/scripts/migraciones.ts).
 
 | Módulo (como SAP) | Tablas principales |
 |---|---|

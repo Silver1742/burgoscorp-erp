@@ -2,15 +2,15 @@
   "name": "burgoscorp-erp-api",
   "version": "0.1.0",
   "description": "API REST del ERP de BurgosCorp",
-  "main": "src/server.js",
+  "main": "src/server.ts",
   "scripts": {
-    "prestart": "node scripts/restablecer-admin.js && node scripts/usuarios-prueba.js",
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
-    "seed": "node scripts/seed.js",
-    "usuarios:prueba": "node scripts/usuarios-prueba.js",
-    "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\"",
-    "db:init": "node scripts/init-db.js"
+    "prestart": "node scripts/restablecer-admin.ts && node scripts/usuarios-prueba.ts",
+    "start": "node src/server.ts",
+    "dev": "node --watch src/server.ts",
+    "seed": "node scripts/seed.ts",
+    "usuarios:prueba": "node scripts/usuarios-prueba.ts",
+    "test": "node --test --test-concurrency=1 \"tests/**/*.test.ts\"",
+    "db:init": "node scripts/init-db.ts"
   },
   "type": "module",
   "dependencies": {
@@ -30,6 +30,6 @@
   },
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18"
   }
 }

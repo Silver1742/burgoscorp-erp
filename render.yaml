@@ -11,7 +11,7 @@ services:
     rootDir: backend
     buildCommand: npm ci --omit=dev
     # Crea las tablas si la base está vacía y carga las cuentas de prueba solo si hay SEED_PASSWORD.
-    startCommand: npm run db:init && node scripts/seed.js --forzar --opcional && npm start
+    startCommand: npm run db:init && node scripts/seed.ts --forzar --opcional && npm start
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
