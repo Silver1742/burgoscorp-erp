@@ -36,7 +36,7 @@ async function jefesDe(conn, areaId, excepto) {
  * Un área tiene un solo jefe. Si va a tener uno nuevo y ya hay otro, no se sigue hasta que se decida
  * qué hacer con el actual (409 JEFE_OCUPADO, con su nombre y las áreas libres a las que se puede mover).
  */
-export async function resolverJefatura(conn, { areaId, empleadoId = null, decision }) {
+export async function resolverJefatura(conn, { areaId, empleadoId = null, decision }: any) {
   const actuales = await jefesDe(conn, areaId, empleadoId);
   if (!actuales.length) return;
   const [[area]] = await conn.execute('SELECT id, nombre FROM areas WHERE id = ?', [areaId]);

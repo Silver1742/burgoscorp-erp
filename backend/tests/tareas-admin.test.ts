@@ -15,7 +15,7 @@ const EMAILS = {
   marcelo: 'marcelo.ibanez@burgoscorp.test',  // jefe de Soldadura
   ramon: 'ramon.gimenez@burgoscorp.test',     // tornero de Mecanizado
 };
-const s = {};
+const s: any = {};
 const como = (q) => ({ Authorization: `Bearer ${s[q].accessToken}` });
 const area = async (codigo) => (await query('SELECT id FROM areas WHERE codigo = ?', [codigo]))[0].id;
 const avisos = async (usuarioId, tareaId) => (await query(

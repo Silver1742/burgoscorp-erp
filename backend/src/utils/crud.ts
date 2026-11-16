@@ -38,7 +38,7 @@ import { errores } from './errores.ts';
  * @param {boolean} [cfg.sinBorrar]  no expone DELETE (ej. legajos: la baja es un cambio de estado)
  * @param {object} [cfg.alcance]     { areaCol, areaCampo, propioCol, propioDe }; sin esto es catálogo compartido
  * @param {string[]|Function} [cfg.ocultar] columnas que no se devuelven (o (req, fila) => columnas)
- * @param {Function} [cfg.antesDeGuardar] async (datos, { req, id }) => datos  reglas de negocio
+ * @param {Function} [cfg.antesDeGuardar] async (datos, { req, id }: any) => datos  reglas de negocio
  */
 export function crearRecursoCrud(cfg) {
   const router = Router();

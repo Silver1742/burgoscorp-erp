@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 import env from '../config/env.ts';
 import { auditar } from '../services/auditoria.ts';
 
-function crearLimite({ ventanaMin, maximo, nombre, saltear }) {
+function crearLimite({ ventanaMin, maximo, nombre, saltear }: any) {
   return rateLimit({
     windowMs: ventanaMin * 60 * 1000,
     limit: env.NODE_ENV === 'test' ? 10_000 : maximo,

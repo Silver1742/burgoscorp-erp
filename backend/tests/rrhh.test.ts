@@ -18,7 +18,7 @@ const EMAILS = {
   lucia: 'lucia.benitez@burgoscorp.test',      // empleada de RRHH
   admin: 'admin@burgoscorp.test',
 };
-const s = {}; // sesiones por persona
+const s: any = {}; // sesiones por persona
 
 async function login(email) {
   const res = await api().post('/api/v1/auth/login').send({ email, password: PASSWORD });

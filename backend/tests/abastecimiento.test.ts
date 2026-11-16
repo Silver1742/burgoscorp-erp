@@ -18,7 +18,7 @@ const EMAILS = {
   claudio: 'claudio.ortiz@burgoscorp.test',   // soldador, no trabaja en la OT
   diego: 'diego.acosta@burgoscorp.test',      // jefe Comercial
 };
-const s = {};
+const s: any = {};
 const como = (q) => ({ Authorization: `Bearer ${s[q].accessToken}` });
 const sufijo = Date.now().toString(36).toUpperCase().slice(-6);
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, 0x12, 0x34, 0xff, 0xd9]);

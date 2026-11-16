@@ -74,9 +74,9 @@ export async function resolverPermiso(usuario, modulo, accion) {
 /** Mapa completo para la app (arma los menús según el rol). La validación real sigue en cada endpoint. */
 export async function mapaPermisos(usuario) {
   const { modulos } = await cargar();
-  const mapa = {};
+  const mapa: any = {};
   for (const modulo of modulos) {
-    const acciones = {};
+    const acciones: any = {};
     let alcance = null;
     for (const accion of ACCIONES) {
       const r = await resolverPermiso(usuario, modulo, accion);
@@ -95,7 +95,7 @@ export async function mapaPermisos(usuario) {
  *   propioDe:  'empleado' (compara con usuario.empleado_id) o 'usuario' (con usuario.id)
  * Los nombres de columna vienen siempre del código, nunca del cliente.
  */
-export function filtroAlcance(usuario, alcance, { areaCol, propioCol, propioDe = 'empleado' } = {}) {
+export function filtroAlcance(usuario, alcance, { areaCol, propioCol, propioDe = 'empleado' }: any = {}) {
   if (alcance === 'todo') return { sql: '1=1', params: [] };
   if (alcance === 'area' && areaCol && usuario.area_id) {
     return { sql: `${areaCol} = ?`, params: [usuario.area_id] };

@@ -1,7 +1,7 @@
 // Avisos dentro de la app (campanita). No lanza errores: si falla, la operación principal sigue.
 import { query } from '../config/db.ts';
 
-export async function notificar(usuarioIds, { tipo, titulo, mensaje = null, entidad = null, entidadId = null }) {
+export async function notificar(usuarioIds, { tipo, titulo, mensaje = null, entidad = null, entidadId = null }: any) {
   const ids = [...new Set((Array.isArray(usuarioIds) ? usuarioIds : [usuarioIds]).filter(Boolean))];
   for (const id of ids) {
     try {
@@ -42,7 +42,7 @@ export async function usuarioJefeDeArea(areaId) {
 }
 
 /** Usuarios activos de un área por su código (ej. 'ABA' para avisar a Abastecimiento). */
-export async function usuariosDeArea(codigoArea, { soloJefe = false } = {}) {
+export async function usuariosDeArea(codigoArea, { soloJefe = false }: any = {}) {
   const filas = await query(`
     SELECT u.id FROM usuarios u
     JOIN roles r ON r.id = u.rol_id

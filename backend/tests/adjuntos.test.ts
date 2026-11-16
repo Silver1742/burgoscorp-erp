@@ -19,7 +19,7 @@ const EMAILS = {
   matias: 'matias.peralta@burgoscorp.test',   // operador CNC (Mecanizado)
   carolina: 'carolina.mendez@burgoscorp.test', // jefa de RRHH
 };
-const s = {};
+const s: any = {};
 const como = (q) => ({ Authorization: `Bearer ${s[q].accessToken}` });
 
 // JPEG mínimo con un bloque EXIF que simula traer la ubicación GPS.

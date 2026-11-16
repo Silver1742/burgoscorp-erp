@@ -310,8 +310,8 @@ async function main() {
       [hash],
     );
 
-    const idsEmpleados = {};
-    const jefes = {};
+    const idsEmpleados: any = {};
+    const jefes: any = {};
     let dni = 28100200;
     for (const [legajo, nombre, apellido, area, puesto, rol, habilidades, costo] of EMPLEADOS) {
       dni += 137311;

@@ -88,7 +88,7 @@ router.use('/habilidades', crearRecursoCrud({
   ordenables: { codigo: 't.codigo', nombre: 't.nombre' },
   ordenDefecto: 't.nombre',
   esquemaCrear: v.habilidad,
-  antesDeGuardar: async (datos, { req }) => {
+  antesDeGuardar: async (datos, { req }: any) => {
     if (req.permiso.alcance !== 'todo') throw errores.prohibido('El catálogo de habilidades lo administra RRHH');
     return datos;
   },
@@ -194,7 +194,7 @@ router.use('/planes-mantenimiento', crearRecursoCrud({
   alcance: { areaCol: 'ct.area_id' }, // cada jefe, los planes de las máquinas de su área
   esquemaCrear: plan,
   bajaLogica: true,
-  antesDeGuardar: async (datos, { req, id: existente }) => {
+  antesDeGuardar: async (datos, { req, id: existente }: any) => {
     if (req.usuario.rol !== 'ADMIN' && !req.permiso.esDuenia) throw errores.prohibido('Los planes preventivos los administra Mantenimiento');
     if (!existente && !datos.proxima_fecha) return { ...datos, proxima_fecha: sumarDias(hoy(), datos.frecuencia_dias) };
     return datos;

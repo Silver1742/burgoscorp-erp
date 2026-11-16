@@ -67,7 +67,7 @@ async function claveGoogle(kid) {
   return jwksGoogle.claves.get(kid);
 }
 
-async function perfilGoogle({ idToken, nonce }) {
+async function perfilGoogle({ idToken, nonce }: any) {
   if (!env.googleClientIds.length) throw noConfigurado('Google');
   const kid = jwt.decode(idToken, { complete: true })?.header?.kid;
   const clave = kid && (await claveGoogle(kid));
@@ -93,7 +93,7 @@ async function perfilGoogle({ idToken, nonce }) {
 
 // ---------------------------------------------------------------- GitHub (canje de código + PKCE)
 
-async function perfilGithub({ code, codeVerifier, redirectUri }) {
+async function perfilGithub({ code, codeVerifier, redirectUri }: any) {
   if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET) throw noConfigurado('GitHub');
   // Solo se aceptan redirect URIs conocidas (evita que se canjeen códigos emitidos para otra app).
   if (!env.oauthRedirectUris.includes(redirectUri)) throw errores.validacion([{ campo: 'body.redirectUri', mensaje: 'Redirect URI no permitida' }]);
@@ -130,7 +130,7 @@ async function perfilGithub({ code, codeVerifier, redirectUri }) {
 
 // ---------------------------------------------------------------- Discord (canje de código + PKCE)
 
-async function perfilDiscord({ code, codeVerifier, redirectUri }) {
+async function perfilDiscord({ code, codeVerifier, redirectUri }: any) {
   if (!env.DISCORD_CLIENT_ID || !env.DISCORD_CLIENT_SECRET) throw noConfigurado('Discord');
   if (!env.oauthRedirectUris.includes(redirectUri)) throw errores.validacion([{ campo: 'body.redirectUri', mensaje: 'Redirect URI no permitida' }]);
 
@@ -161,7 +161,7 @@ async function perfilDiscord({ code, codeVerifier, redirectUri }) {
 
 // ---------------------------------------------------------------- Facebook (validación del access token)
 
-async function perfilFacebook({ accessToken }) {
+async function perfilFacebook({ accessToken }: any) {
   if (!env.FACEBOOK_APP_ID || !env.FACEBOOK_APP_SECRET) throw noConfigurado('Facebook');
   const tokenApp = `${env.FACEBOOK_APP_ID}|${env.FACEBOOK_APP_SECRET}`;
 

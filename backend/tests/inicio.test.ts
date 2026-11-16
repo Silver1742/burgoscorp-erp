@@ -16,7 +16,7 @@ const EMAILS = {
   claudio: 'claudio.ortiz@burgoscorp.test',   // soldador (otra área)
   ricardo: 'ricardo.ferreyra@burgoscorp.test', // gerencia
 };
-const s = {};
+const s: any = {};
 const como = (q) => ({ Authorization: `Bearer ${s[q].accessToken}` });
 const sello = Date.now() % 1e7;
 

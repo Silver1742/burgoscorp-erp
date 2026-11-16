@@ -140,7 +140,7 @@ function calcularEmpleado(emp, registros, licencias, j, desde, hasta, conDetalle
 }
 
 /** Liquidación de todos los empleados (o de un área, o de una persona) en el período. */
-export async function liquidar({ desde, hasta, areaId, empleadoId, conDetalle = false }) {
+export async function liquidar({ desde, hasta, areaId, empleadoId, conDetalle = false }: any) {
   validarPeriodo(desde, hasta);
   const j = await jornada();
   const where = ["e.estado <> 'baja'", 'e.fecha_ingreso <= ?'];

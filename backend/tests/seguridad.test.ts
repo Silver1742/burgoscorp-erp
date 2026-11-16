@@ -19,7 +19,7 @@ const EMAILS = {
   claudio: 'claudio.ortiz@burgoscorp.test',    // soldador (otra área)
   ricardo: 'ricardo.ferreyra@burgoscorp.test', // gerencia
 };
-const s = {};
+const s: any = {};
 const como = (q) => ({ Authorization: `Bearer ${s[q].accessToken}` });
 const sufijo = Date.now().toString(36);
 const login = (email, password = PASSWORD) => api().post('/api/v1/auth/login').send({ email, password });

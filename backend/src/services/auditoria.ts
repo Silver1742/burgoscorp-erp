@@ -7,7 +7,7 @@ import { ipDe } from '../utils/seguridad.ts';
  * Registra un evento. No lanza errores: si la auditoría falla, la operación
  * principal sigue y el problema queda en consola.
  */
-export async function auditar(req, { accion, entidad = null, entidadId = null, detalle = null, usuarioId }) {
+export async function auditar(req, { accion, entidad = null, entidadId = null, detalle = null, usuarioId }: any) {
   const uid = usuarioId !== undefined ? usuarioId : (req?.usuario?.id ?? null);
   try {
     await query(

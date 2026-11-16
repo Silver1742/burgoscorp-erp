@@ -70,7 +70,7 @@ export async function ingresar(conn, { productoId, depositoId, cantidad, costoUn
   return p;
 }
 
-async function registrar(conn, { productoId, depositoId, cantidad, costoUnitario }, { tipo, refTipo = null, refId = null, usuarioId, observacion = null }) {
+async function registrar(conn, { productoId, depositoId, cantidad, costoUnitario }, { tipo, refTipo = null, refId = null, usuarioId, observacion = null }: any) {
   await conn.execute(
     `INSERT INTO movimientos_stock (producto_id, deposito_id, tipo, cantidad, costo_unitario, ref_tipo, ref_id, usuario_id, observacion)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,

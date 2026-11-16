@@ -59,7 +59,7 @@ after(async () => {
 
 const habilitar = (email) => query("UPDATE usuarios SET estado_cuenta = 'habilitada' WHERE email = ?", [email]);
 
-function idTokenGoogle(datos, { clave = claveGoogle.privateKey, aud = env.googleClientIds[0] } = {}) {
+function idTokenGoogle(datos, { clave = claveGoogle.privateKey, aud = env.googleClientIds[0] }: any = {}) {
   return jwt.sign({ email_verified: true, given_name: 'Ana', family_name: 'Paz', ...datos }, clave, {
     algorithm: 'RS256', keyid: 'clave-1', audience: aud, issuer: 'https://accounts.google.com', expiresIn: '5m',
   });

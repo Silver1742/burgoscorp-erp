@@ -279,7 +279,7 @@ export async function crear(usuario, datos, req) {
  * habilidad pedida (primero la que más tiene). Devuelve todas las áreas con su jefe y cuántos
  * pueden hacerla, para que quien la crea confirme o cambie la sugerencia.
  */
-export async function destinos(usuario, { centro_trabajo_id: centroId, habilidad_requerida_id: habilidadId }) {
+export async function destinos(usuario, { centro_trabajo_id: centroId, habilidad_requerida_id: habilidadId }: any) {
   const permiso = await resolverPermiso(usuario, 'TAR', 'crear');
   if (!permiso.permitido || permiso.alcance !== 'todo') throw errores.prohibido();
   let maquina = null;
@@ -347,7 +347,7 @@ export async function candidatos(usuario, id) {
 }
 
 /** Personas activas del área que pueden hacer el trabajo (habilidad y certificación vigente), las menos cargadas primero. */
-function listaCandidatos({ tareaId = 0, areaId, habilidadId }) {
+function listaCandidatos({ tareaId = 0, areaId, habilidadId }: any) {
   return query(`
     SELECT e.id, e.legajo, e.nombre, e.apellido, p.nombre AS puesto_nombre,
            eh.nivel, eh.certificado_vence,
@@ -370,7 +370,7 @@ function listaCandidatos({ tareaId = 0, areaId, habilidadId }) {
  * habilidad) y la habilidad pedida. `puede_asignar` dice si quien la crea la asigna él mismo (jefe del
  * área, o el administrador si el área no tiene jefe) o si le va a llegar al jefe.
  */
-export async function candidatosPrevios(usuario, { area_id: areaPedida, centro_trabajo_id: centroId, habilidad_requerida_id: habilidadId }) {
+export async function candidatosPrevios(usuario, { area_id: areaPedida, centro_trabajo_id: centroId, habilidad_requerida_id: habilidadId }: any) {
   const permiso = await resolverPermiso(usuario, 'TAR', 'crear');
   if (!permiso.permitido) throw errores.prohibido();
   const d = await completarConMaquina({ centro_trabajo_id: centroId, habilidad_requerida_id: habilidadId });

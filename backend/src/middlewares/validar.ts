@@ -2,10 +2,10 @@
 // El resultado limpio queda en req.validado = { body, params, query }.
 import { errores } from '../utils/errores.ts';
 
-export function validar({ body, params, query } = {}) {
+export function validar({ body, params, query }: any = {}) {
   return (req, res, next) => {
     const detalles = [];
-    const validado = {};
+    const validado: any = {};
 
     for (const [parte, esquema] of Object.entries({ body, params, query })) {
       if (!esquema) continue;

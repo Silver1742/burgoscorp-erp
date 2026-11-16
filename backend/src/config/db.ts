@@ -26,13 +26,13 @@ pool.pool.on('connection', (conexion) => {
 });
 
 /** Ejecuta una consulta y devuelve las filas. */
-export async function query(sql, params = []) {
+export async function query(sql: string, params: any[] = []): Promise<any> {
   const [filas] = await pool.execute(sql, params);
   return filas;
 }
 
 /** Devuelve la primera fila o null. */
-export async function queryOne(sql, params = []) {
+export async function queryOne(sql: string, params: any[] = []): Promise<any> {
   const filas = await query(sql, params);
   return filas[0] ?? null;
 }
@@ -41,7 +41,7 @@ export async function queryOne(sql, params = []) {
  * Ejecuta `fn(conexion)` dentro de una transacción.
  * Si `fn` lanza un error se hace rollback y el error se propaga.
  */
-export async function transaccion(fn) {
+export async function transaccion<T>(fn: (conexion: any) => Promise<T>): Promise<T> {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();

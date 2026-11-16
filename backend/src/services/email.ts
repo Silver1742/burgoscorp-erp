@@ -40,7 +40,7 @@ function remitente(from) {
   return m ? { name: m[1] || undefined, email: m[2] } : { email: from.trim() };
 }
 
-async function enviarPorBrevo({ para, asunto, texto, html, adjuntos }) {
+async function enviarPorBrevo({ para, asunto, texto, html, adjuntos }: any) {
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: { 'api-key': env.BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
@@ -72,7 +72,7 @@ async function leerAdjuntos(claves = []) {
   return leidos;
 }
 
-async function enviar({ para, asunto, texto, html, adjuntar }) {
+async function enviar({ para, asunto, texto, html, adjuntar }: any) {
   const adjuntos = await leerAdjuntos(adjuntar);
   if (env.BREVO_API_KEY) {
     await enviarPorBrevo({ para, asunto, texto, html, adjuntos });
@@ -125,7 +125,7 @@ const TEXTOS = {
 };
 
 /** Aviso de texto simple (cuenta habilitada o rechazada). `adjuntar`: claves de ADJUNTOS. */
-export async function enviarAviso({ para, nombre, asunto, lineas, adjuntar }) {
+export async function enviarAviso({ para, nombre, asunto, lineas, adjuntar }: any) {
   const texto = `Hola ${nombre}:\n\n${lineas.join('\n')}\n`;
   const html = `<p>Hola ${escapar(nombre)}:</p>${lineas.map((l) => `<p>${escapar(l)}</p>`).join('')}`;
   await enviar({ para, asunto: `${asunto} · ${env.APP_NOMBRE}`, texto, html, adjuntar });
@@ -136,7 +136,7 @@ export async function enviarAviso({ para, nombre, asunto, lineas, adjuntar }) {
  * `plantilla` elige el texto cuando no es el del tipo (ej. el admin manda un código de recuperación
  * para que la persona cree su contraseña).
  */
-export async function enviarCodigo({ para, nombre, tipo, codigo, plantilla = tipo }) {
+export async function enviarCodigo({ para, nombre, tipo, codigo, plantilla = tipo }: any) {
   const t = TEXTOS[plantilla];
   const texto = `Hola ${nombre}:\n\n${t.intro} ${env.APP_NOMBRE}:\n\n    ${codigo}\n\n`
     + (t.pasos ? `${t.pasos}\n` : '')

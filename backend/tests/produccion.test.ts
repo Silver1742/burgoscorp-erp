@@ -20,7 +20,7 @@ const EMAILS = {
   diego: 'diego.acosta@burgoscorp.test',        // jefe Comercial
   ricardo: 'ricardo.ferreyra@burgoscorp.test',  // gerencia
 };
-const s = {};
+const s: any = {};
 const como = (q) => ({ Authorization: `Bearer ${s[q].accessToken}` });
 const empleado = (q) => s[q].usuario.empleadoId;
 let otId;

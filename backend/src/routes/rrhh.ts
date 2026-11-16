@@ -52,7 +52,7 @@ router.use('/empleados', crearRecursoCrud({
   sinBorrar: true, // la baja es estado = 'baja' + fecha_egreso, para conservar la historia
   alcance: { areaCol: 't.area_id', areaCampo: 'area_id', propioCol: 't.id' },
   ocultar: (req, fila) => (esRrhhOAdmin(req) || fila.id === req.usuario.empleado_id ? [] : DATOS_PERSONALES),
-  async antesDeGuardar(datos, { req, id: empleadoId }) {
+  async antesDeGuardar(datos, { req, id: empleadoId }: any) {
     if (esRrhhOAdmin(req)) {
       // Alta sin número: el siguiente libre (si dos altas chocan, el índice único lo frena).
       if (!empleadoId && !datos.legajo) return { ...datos, legajo: await proximoLegajo(pool) };
@@ -158,7 +158,7 @@ router.use('/epp-entregas', crearRecursoCrud({
   ordenDefecto: 't.fecha_entrega',
   esquemaCrear: v.epp,
   alcance: { areaCol: 'e.area_id', propioCol: 't.empleado_id' },
-  async antesDeGuardar(datos, { req, id: eppId }) {
+  async antesDeGuardar(datos, { req, id: eppId }: any) {
     exigirRrhh(req, 'Solo RRHH registra entregas de EPP');
     return eppId ? datos : { ...datos, entregado_por: req.usuario.id };
   },
