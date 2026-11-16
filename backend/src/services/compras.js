@@ -307,10 +307,14 @@ export async function recibir(usuario, id, d, req) {
   if (oc.orden_trabajo_id) {
     const r = await queryOne(`SELECT o.numero, u.id AS usuario_id FROM ordenes_trabajo o
       LEFT JOIN usuarios u ON u.empleado_id = o.responsable_id WHERE o.id = ?`, [oc.orden_trabajo_id]);
-    if (r?.usuario_id) avisar.push(r.usuario_id);
-    await notificar(avisar.filter((u) => u !== usuario.id), {
-      tipo: 'material_recibido', titulo: `Llegó material para ${r?.numero ?? 'la OT'}`,
-      mensaje: `${oc.numero} ${oc.estado === 'recibida' ? 'recibida completa' : 'recibida en parte'}.`, entidad: 'orden_trabajo', entidadId: oc.orden_trabajo_id,
+    const titulo = `Llegó material para ${r?.numero ?? 'la OT'}`;
+    const mensaje = `${oc.numero} ${oc.estado === 'recibida' ? 'recibida completa' : 'recibida en parte'}.`;
+    if (r?.usuario_id && r.usuario_id !== usuario.id) {
+      await notificar(r.usuario_id, { tipo: 'material_recibido', titulo, mensaje, entidad: 'orden_trabajo', entidadId: oc.orden_trabajo_id });
+    }
+    // Quien pidió la compra (Abastecimiento) no ve las OT de Producción: su aviso abre la compra.
+    await notificar(avisar.filter((u) => u !== usuario.id && u !== r?.usuario_id), {
+      tipo: 'material_recibido', titulo, mensaje, entidad: 'orden_compra', entidadId: id,
     });
   } else {
     await notificar(avisar.filter((u) => u !== usuario.id), {

@@ -14,6 +14,7 @@ import { notificar } from '../services/notificaciones.js';
 import { resolverPermiso } from '../services/permisos.js';
 import * as tareas from '../services/tareas.js';
 import * as licencias from '../services/licencias.js';
+import * as calidad from '../services/calidad.js';
 import * as compras from '../services/compras.js';
 import * as adjuntos from '../services/adjuntos.js';
 import { puedeEditar, veTodos } from '../services/tablon.js';
@@ -155,6 +156,14 @@ router.get('/pendientes', autenticado, async (req, res) => {
     const oc = await compras.listar(u, { estado: 'pendiente_aprobacion', pagina: 1, limite: POR_GRUPO });
     agregar('compra', 'Compras por aprobar', oc.meta.total, oc.data.map((x) => ({
       id: x.id, titulo: `${x.numero} · ${x.proveedor_nombre ?? ''}`.trim(), sub: `$ ${Number(x.total ?? 0).toLocaleString('es-AR')}`,
+    })));
+  }
+  // Grupos nuevos: solo para la app que los sabe mostrar (?v=2). El APK anterior no los conoce y
+  // tocarlos no lo llevaría a ningún lado.
+  if (Number(req.query.v) >= 2 && (await resolverPermiso(u, 'CAL', 'crear')).permitido) {
+    const ots = await calidad.pendientes(u);
+    agregar('inspeccionar', 'Órdenes para inspeccionar', ots.length, ots.slice(0, POR_GRUPO).map((x) => ({
+      id: x.id, titulo: `${x.numero} · ${x.titulo}`, sub: [x.cliente_nombre, x.area_nombre].filter(Boolean).join(' · '),
     })));
   }
   res.json({ ok: true, data: grupos });

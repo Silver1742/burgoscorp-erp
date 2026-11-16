@@ -93,12 +93,14 @@ validación) → servicio → base de datos**. La explicación de la arquitectur
 | Funcionalidad | Pantalla | Ruta de la API | Lógica |
 |---|---|---|---|
 | Pantalla de Inicio | `app/(app)/index.tsx` | — | — |
-| **Tablón de avisos** (con imágenes) | `componentes/Tablon.tsx` `Tablon()` línea 113 | `routes/inicio.js` 47 (ver), 71 (publicar), 91 (editar), 105 (borrar) | `services/tablon.js` `acceso()` 12 |
-| **Pendientes** (lo que espera una decisión) | `componentes/Pendientes.tsx` | `routes/inicio.js` 131 `GET /pendientes` | La misma ruta junta licencias, tareas, compras y solicitudes |
+| **Tablón de avisos** (con imágenes) | `componentes/Tablon.tsx` `Tablon()` línea 113 | `routes/inicio.js` 48 (ver), 72 (publicar), 92 (editar), 106 (borrar) | `services/tablon.js` `acceso()` 12 |
+| **Pendientes** (lo que espera una decisión) | `componentes/Pendientes.tsx` | `routes/inicio.js` 132 `GET /pendientes` | La misma ruta junta licencias, tareas, compras, órdenes para inspeccionar y solicitudes |
 | Fichar entrada/salida | `componentes/Fichaje.tsx` | `routes/rrhh.js` 116 y 119 | `services/asistencias.js` `ficharEntrada()` 34, `ficharSalida()` 45 |
 | Campanita de notificaciones | `app/(app)/perfil/notificaciones.tsx` | `routes/rrhh.js` 314 | `services/notificaciones.js` `notificar()` línea 4 |
+| A qué pantalla lleva tocar cada aviso | `app/(app)/perfil/notificaciones.tsx` (lista `DESTINO`, línea 42) | — | Cada aviso lleva a algo que quien lo recibe puede abrir (por ejemplo, Abastecimiento va al producto que falta, no a la orden de Producción) |
+| Aviso a Calidad cuando una orden queda lista para inspeccionar | — | — | `services/tareas.js` `avisarCalidad()` línea 484 (al aprobarse la última tarea de la orden) |
 | **Buscador general** | `app/(app)/buscar.tsx` | `routes/buscar.js` 78 `GET /buscar` | Misma ruta (busca solo en lo que el rol puede ver) |
-| La app se actualiza sola cuando otro cambia algo | `lib/cambios.ts` `VigiaCambios()` 53, `useCargar()` 45 | `routes/inicio.js` 123 `GET /cambios` | `middlewares/cambios.js` `contarCambios()` 13 |
+| La app se actualiza sola cuando otro cambia algo | `lib/cambios.ts` `VigiaCambios()` 53, `useCargar()` 45 | `routes/inicio.js` 124 `GET /cambios` | `middlewares/cambios.js` `contarCambios()` 13 |
 
 ## 5. Personas, usuarios y RRHH
 
@@ -129,9 +131,9 @@ validación) → servicio → base de datos**. La explicación de la arquitectur
 | **Mis tareas** (empleado) | `app/(app)/tareas/index.tsx` y `[id].tsx`, lista en `componentes/ListaTareas.tsx` | `routes/produccion.js` 31 y 41 | `services/tareas.js` `listar()` 56, `obtener()` 135 |
 | **Crear una tarea** (fecha y hora con calendario) | `app/(app)/modulos/tareas/nueva.tsx` | `routes/produccion.js` 44 | `services/tareas.js` `crear()` 217 |
 | **Asignar una tarea a un empleado** | `componentes/DetalleTarea.tsx` `DialogoAsignar()` línea 36 | `routes/produccion.js` 55 | `services/tareas.js` `asignar()` 419 (valida área y habilidad en `validarAsignable()` 392) |
-| Iniciar, pausar y terminar (horas trabajadas) | `componentes/DetalleTarea.tsx` | `routes/produccion.js` 64, 67, 70 | `services/tareas.js` `iniciar()` 483, `pausar()` 503, `terminar()` 517 |
-| Aprobar o rechazar el trabajo (jefe) | `componentes/DetalleTarea.tsx` | `routes/produccion.js` 75 y 78 | `services/tareas.js` `aprobar()` 549, `rechazar()` 558 |
-| Comentarios y checklist | `componentes/DetalleTarea.tsx` | `routes/produccion.js` 86–92 | `services/tareas.js` `comentar()` 583, `agregarItem()` 591, `marcarItem()` 599 |
+| Iniciar, pausar y terminar (horas trabajadas) | `componentes/DetalleTarea.tsx` | `routes/produccion.js` 64, 67, 70 | `services/tareas.js` `iniciar()` 493, `pausar()` 513, `terminar()` 527 |
+| Aprobar o rechazar el trabajo (jefe) | `componentes/DetalleTarea.tsx` | `routes/produccion.js` 75 y 78 | `services/tareas.js` `aprobar()` 563, `rechazar()` 573 |
+| Comentarios y checklist | `componentes/DetalleTarea.tsx` | `routes/produccion.js` 86–92 | `services/tareas.js` `comentar()` 599, `agregarItem()` 607, `marcarItem()` 615 |
 | Fotos del trabajo (cámara o galería) | `componentes/Fotos.tsx` (cámara en línea 71) | `routes/adjuntos.js` 42–59 | `services/adjuntos.js` `subir()` 104 (revisa que sea imagen de verdad en `detectarTipo()` 56) |
 
 ## 7. Códigos QR
@@ -164,7 +166,7 @@ validación) → servicio → base de datos**. La explicación de la arquitectur
 | Funcionalidad | Pantalla | Ruta de la API | Lógica |
 |---|---|---|---|
 | Solicitudes de clientes | `app/(app)/modulos/ventas/index.tsx`, `nueva.tsx`, `solicitud/[id].tsx` | `routes/ventas.js` 13–25 | `services/ventas.js` `crearSolicitud()` 113 |
-| **Presupuestos** (con IVA) | `app/(app)/modulos/ventas/presupuesto/nuevo.tsx` y `[id].tsx` | `routes/ventas.js` 30–49 | `services/ventas.js` `crearPresupuesto()` 259, `aprobarPresupuesto()` 333 (crea la OT) |
+| **Presupuestos** (con IVA) | `app/(app)/modulos/ventas/presupuesto/nuevo.tsx` y `[id].tsx` | `routes/ventas.js` 30–49 | `services/ventas.js` `crearPresupuesto()` 259, `aprobarPresupuesto()` 343 (crea la OT) |
 | **Control de calidad** | `app/(app)/modulos/calidad/index.tsx`, `inspeccionar/[otId].tsx` | `routes/calidad.js` 12–22 | `services/calidad.js` `inspeccionar()` 96 |
 | Facturas y pagos | `app/(app)/modulos/finanzas/index.tsx` y `[id].tsx` | `routes/finanzas.js` 14–36 | `services/finanzas.js` `facturarOt()` 102, `registrarPago()` 159, `anular()` 175 |
 | **Liquidación de sueldos** (resumen por empleado) | `app/(app)/modulos/finanzas/liquidacion.tsx` | `routes/liquidacion.js` 53 y 61 | `services/liquidacion.js` `liquidar()` 143, cálculo por persona `calcularEmpleado()` 49 |

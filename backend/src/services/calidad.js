@@ -109,7 +109,7 @@ export async function inspeccionar(usuario, otId, d, req) {
   }
 
   const r = await transaccion(async (conn) => {
-    const [[ot]] = await conn.execute('SELECT id, numero, titulo, estado, area_id, responsable_id FROM ordenes_trabajo WHERE id = ? FOR UPDATE', [otId]);
+    const [[ot]] = await conn.execute('SELECT id, numero, titulo, estado, area_id, responsable_id, presupuesto_id FROM ordenes_trabajo WHERE id = ? FOR UPDATE', [otId]);
     if (!ot) throw errores.noEncontrado('La orden de trabajo no existe');
     if (ot.estado !== 'control_calidad') throw errores.negocio('La orden de trabajo no está esperando control de calidad');
     let tarea = null;
@@ -152,9 +152,13 @@ export async function inspeccionar(usuario, otId, d, req) {
     const responsable = await queryOne('SELECT id FROM usuarios WHERE empleado_id = ? AND activo = 1', [r.ot.responsable_id ?? 0]);
     const comercial = await usuariosDeArea('COM', { soloJefe: true });
     const finanzas = await usuariosDeArea('ADM');
-    await notificar([responsable?.id, ...comercial, ...finanzas], {
-      tipo: 'ot_terminada', titulo: `${r.ot.numero} aprobada por Calidad`, mensaje: 'Lista para entregar y facturar.', entidad: 'orden_trabajo', entidadId: otId,
-    });
+    const titulo = `${r.ot.numero} aprobada por Calidad`;
+    // Producción ve la OT; Administración va a lo pendiente de facturar; Comercial, al presupuesto del cliente.
+    await notificar(responsable?.id, { tipo: 'ot_terminada', titulo, mensaje: 'Lista para entregar y facturar.', entidad: 'orden_trabajo', entidadId: otId });
+    await notificar(finanzas, { tipo: 'ot_para_facturar', titulo, mensaje: 'Lista para facturar (Finanzas → Para facturar).', entidad: 'orden_trabajo', entidadId: otId });
+    if (r.ot.presupuesto_id) {
+      await notificar(comercial, { tipo: 'pedido_terminado', titulo, mensaje: 'El trabajo del cliente está listo para entregar.', entidad: 'presupuesto', entidadId: r.ot.presupuesto_id });
+    }
   }
   return obtener(usuario, r.id);
 }

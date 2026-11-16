@@ -281,7 +281,17 @@ export async function crearPresupuesto(usuario, d, req) {
     return r.insertId;
   });
   await auditar(req, { accion: 'crear', entidad: 'presupuesto', entidadId: id });
-  return obtenerPresupuesto(usuario, id);
+  const p = await obtenerPresupuesto(usuario, id);
+  if (d.solicitud_id) {
+    // Quien recibió el pedido del cliente (y el jefe de Comercial) se enteran de que ya se puede enviar.
+    const s = await queryOne('SELECT numero, recibida_por FROM solicitudes WHERE id = ?', [d.solicitud_id]);
+    const destino = [s?.recibida_por, ...(await usuariosDeArea('COM', { soloJefe: true }))];
+    await notificar([...new Set(destino)].filter((u) => u && u !== usuario.id), {
+      tipo: 'presupuesto_listo', titulo: `${p.numero} listo para enviar`, mensaje: `Presupuesto de ${s?.numero ?? 'la solicitud'}: revisalo y mandalo al cliente.`,
+      entidad: 'presupuesto', entidadId: id,
+    });
+  }
+  return p;
 }
 
 export async function editarPresupuesto(usuario, id, d, req) {
@@ -355,6 +365,7 @@ export async function aprobarPresupuesto(usuario, id, d, req) {
 
     let secuencia = 0;
     const faltantes = [];
+    const productosFaltantes = [];
     for (const it of items) {
       if (it.centro_trabajo_id) {
         secuencia += 10;
@@ -368,12 +379,15 @@ export async function aprobarPresupuesto(usuario, id, d, req) {
         await conn.execute('INSERT INTO reservas_material (orden_trabajo_id, producto_id, cantidad, creado_por) VALUES (?, ?, ?, ?)',
           [ot.insertId, it.producto_id, it.cantidad, usuario.id]);
         const falta = Math.max(0, Number(it.cantidad) - antes.disponible);
-        if (falta > 0) faltantes.push(`${it.descripcion}: faltan ${Math.round(falta * 1000) / 1000} ${it.unidad}`);
+        if (falta > 0) {
+          faltantes.push(`${it.descripcion}: faltan ${Math.round(falta * 1000) / 1000} ${it.unidad}`);
+          productosFaltantes.push(it.producto_id);
+        }
       }
     }
     await conn.execute("UPDATE presupuestos SET estado = 'aprobado', respuesta_cliente_at = UTC_TIMESTAMP() WHERE id = ?", [id]);
     if (p.solicitud_id) await conn.execute("UPDATE solicitudes SET estado = 'aprobada' WHERE id = ?", [p.solicitud_id]);
-    return { otId: ot.insertId, numero, presupuesto: p.numero, faltantes };
+    return { otId: ot.insertId, numero, presupuesto: p.numero, faltantes, productosFaltantes };
   });
 
   await auditar(req, { accion: 'aprobar', entidad: 'presupuesto', entidadId: id, detalle: { ot: r.numero } });
@@ -393,7 +407,8 @@ export async function aprobarPresupuesto(usuario, id, d, req) {
   }
   if (r.faltantes.length) {
     await notificar(await usuariosDeArea('ABA'), {
-      tipo: 'material_faltante', titulo: `Falta material para ${r.numero}`, mensaje: r.faltantes.join(' · ').slice(0, 500), entidad: 'orden_trabajo', entidadId: r.otId,
+      // Abastecimiento no ve las OT de Producción: el aviso abre el (primer) producto que falta.
+      tipo: 'material_faltante', titulo: `Falta material para ${r.numero}`, mensaje: r.faltantes.join(' · ').slice(0, 500), entidad: 'producto', entidadId: r.productosFaltantes[0],
     });
   }
   return { ...(await obtenerPresupuesto(usuario, id)), faltantes: r.faltantes };

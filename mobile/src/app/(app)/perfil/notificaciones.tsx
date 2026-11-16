@@ -32,6 +32,11 @@ const ICONO = {
   no_conformidad: ['alert-circle', 'error'],
   ot_terminada: ['ribbon', 'exito'],
   cuenta_pendiente: ['person-add', 'aviso'],
+  aviso_tablon: ['megaphone', 'aviso'],
+  ot_para_inspeccionar: ['shield-checkmark', 'aviso'],
+  ot_para_facturar: ['receipt', 'aviso'],
+  pedido_terminado: ['ribbon', 'exito'],
+  presupuesto_listo: ['document-text', 'aviso'],
 };
 // A dónde lleva cada aviso al tocarlo.
 const DESTINO = {
@@ -58,6 +63,11 @@ const DESTINO = {
   no_conformidad: (n) => `/tareas/${n.entidad_id}`,
   ot_terminada: (n) => `/modulos/produccion/${n.entidad_id}`,
   cuenta_pendiente: () => '/modulos/usuarios/solicitudes',
+  aviso_tablon: () => '/', // el tablón está en Inicio
+  ot_para_inspeccionar: (n) => `/modulos/calidad/inspeccionar/${n.entidad_id}`,
+  ot_para_facturar: () => '/modulos/finanzas', // ahí está "Para facturar"
+  pedido_terminado: (n) => `/modulos/ventas/presupuesto/${n.entidad_id}`,
+  presupuesto_listo: (n) => `/modulos/ventas/presupuesto/${n.entidad_id}`,
 };
 
 export default function Notificaciones() {

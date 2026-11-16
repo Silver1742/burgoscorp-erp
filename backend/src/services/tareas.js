@@ -19,7 +19,7 @@ import { errores } from '../utils/errores.js';
 import { hoy, fechaAr } from '../utils/fechas.js';
 import { resolverPermiso } from './permisos.js';
 import { auditar } from './auditoria.js';
-import { notificar } from './notificaciones.js';
+import { notificar, usuariosAdmin, usuariosDeArea } from './notificaciones.js';
 import { actualizarPorOperaciones } from './ordenes.js';
 
 const SELECT = `
@@ -477,7 +477,17 @@ async function cambiarEstado(conn, t, usuario, nuevo, comentario = null, extra =
   if (!r.affectedRows) throw errores.conflicto('La tarea cambió mientras tanto. Actualizá y probá de nuevo.');
   await conn.execute('INSERT INTO tarea_historial (tarea_id, usuario_id, estado_anterior, estado_nuevo, comentario) VALUES (?, ?, ?, ?, ?)',
     [t.id, usuario.id, t.estado, nuevo, comentario]);
-  if (t.orden_trabajo_id) await actualizarPorOperaciones(conn, t.orden_trabajo_id);
+  return t.orden_trabajo_id ? actualizarPorOperaciones(conn, t.orden_trabajo_id) : null;
+}
+
+/** Cuando se aprueba la última operación, la OT pasa a Calidad: se le avisa a esa área. */
+async function avisarCalidad(estadoOt, otId) {
+  if (estadoOt !== 'control_calidad') return;
+  const ot = await query('SELECT numero, titulo FROM ordenes_trabajo WHERE id = ?', [otId]);
+  await notificar(await usuariosDeArea('CAL'), {
+    tipo: 'ot_para_inspeccionar', titulo: `${ot[0]?.numero ?? 'Una OT'} lista para inspeccionar`,
+    mensaje: ot[0]?.titulo ?? null, entidad: 'orden_trabajo', entidadId: otId,
+  });
 }
 
 export async function iniciar(usuario, id, req) {
@@ -526,7 +536,11 @@ export async function terminar(usuario, id, comentario, req) {
     await cambiarEstado(conn, t, usuario, 'en_revision', comentario ?? null, ', completada_at = UTC_TIMESTAMP()');
   });
   await auditar(req, { accion: 'terminar', entidad: 'tarea', entidadId: id });
-  await notificar(t.creado_por, {
+  // La revisa el jefe del área de la tarea (no quien la creó: en las OT que vienen de un presupuesto,
+  // la creó Comercial, que no ve Producción). Si el área no tiene jefe, los administradores.
+  const asignados = (await query('SELECT u.id FROM tarea_asignaciones ta JOIN usuarios u ON u.empleado_id = ta.empleado_id WHERE ta.tarea_id = ?', [id])).map((u) => u.id);
+  const jefes = (await jefesDelArea(t.area_id)).map((j) => j.usuario_id).filter((u) => !asignados.includes(u));
+  await notificar(jefes.length ? jefes : await usuariosAdmin(), {
     tipo: 'tarea_en_revision', titulo: `Para revisar: ${t.titulo}`,
     mensaje: `${usuario.nombre} ${usuario.apellido} la marcó como terminada${t.ot_numero ? ` · ${t.ot_numero}` : ''}`,
     entidad: 'tarea', entidadId: id,
@@ -549,8 +563,9 @@ async function exigirRevisor(usuario, id) {
 export async function aprobar(usuario, id, comentario, req) {
   const { t } = await exigirRevisor(usuario, id);
   if (t.estado !== 'en_revision') throw errores.conflicto('La tarea no está esperando revisión');
-  await transaccion((conn) => cambiarEstado(conn, t, usuario, 'aprobada', comentario ?? null, ', revisado_por = ?', [usuario.id]));
+  const estadoOt = await transaccion((conn) => cambiarEstado(conn, t, usuario, 'aprobada', comentario ?? null, ', revisado_por = ?', [usuario.id]));
   await auditar(req, { accion: 'aprobar', entidad: 'tarea', entidadId: id });
+  await avisarCalidad(estadoOt, t.orden_trabajo_id);
   await avisarAsignados(id, { tipo: 'tarea_aprobada', titulo: `Aprobaron: ${t.titulo}`, mensaje: comentario ?? null });
   return obtener(usuario, id);
 }
@@ -568,12 +583,13 @@ export async function cancelar(usuario, id, comentario, req) {
   const { t, puedeGestionar } = await cargar(usuario, id);
   if (!puedeGestionar) throw errores.prohibido('Solo el jefe del área cancela tareas');
   if (['aprobada', 'cancelada'].includes(t.estado)) throw errores.conflicto('La tarea ya está cerrada');
-  await transaccion(async (conn) => {
+  const estadoOt = await transaccion(async (conn) => {
     const [abiertos] = await conn.execute('SELECT DISTINCT empleado_id FROM registros_horas WHERE tarea_id = ? AND fin_at IS NULL', [id]);
     for (const a of abiertos) await cerrarHoras(conn, id, a.empleado_id);
-    await cambiarEstado(conn, t, usuario, 'cancelada', comentario ?? null);
+    return cambiarEstado(conn, t, usuario, 'cancelada', comentario ?? null);
   });
   await auditar(req, { accion: 'cancelar', entidad: 'tarea', entidadId: id });
+  await avisarCalidad(estadoOt, t.orden_trabajo_id);
   await avisarAsignados(id, { tipo: 'tarea_cancelada', titulo: `Se canceló: ${t.titulo}`, mensaje: comentario ?? null });
   return obtener(usuario, id);
 }

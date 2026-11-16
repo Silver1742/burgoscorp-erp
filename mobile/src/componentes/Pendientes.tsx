@@ -16,17 +16,18 @@ type PendientesProps = {
 };
 
 
-const ICONO = { acceso: 'person-add', licencia: 'airplane', asignar: 'people', revisar: 'eye', compra: 'cart' };
+const ICONO = { acceso: 'person-add', licencia: 'airplane', asignar: 'people', revisar: 'eye', compra: 'cart', inspeccionar: 'shield-checkmark' };
 const DESTINO = {
   acceso: () => '/modulos/usuarios/solicitudes',
   licencia: () => '/modulos/rrhh/aprobaciones',
   asignar: (i) => `/modulos/tareas/${i.id}`,
   revisar: (i) => `/modulos/tareas/${i.id}`,
   compra: (i) => `/modulos/compras/${i.id}`,
+  inspeccionar: (i) => `/modulos/calidad/inspeccionar/${i.id}`,
 };
-const ACCION = { acceso: 'Habilitar', asignar: 'Asignar', revisar: 'Revisar', compra: 'Ver' };
+const ACCION = { acceso: 'Habilitar', asignar: 'Asignar', revisar: 'Revisar', compra: 'Ver', inspeccionar: 'Inspeccionar' };
 // La lista completa de cada tipo.
-const TODOS = { acceso: '/modulos/usuarios/solicitudes', licencia: '/modulos/rrhh/aprobaciones', asignar: '/modulos/tareas', revisar: '/modulos/tareas', compra: '/modulos/compras' };
+const TODOS = { acceso: '/modulos/usuarios/solicitudes', licencia: '/modulos/rrhh/aprobaciones', asignar: '/modulos/tareas', revisar: '/modulos/tareas', compra: '/modulos/compras', inspeccionar: '/modulos/calidad' };
 
 export default function Pendientes({ color }: PendientesProps) {
   const t = useTema();
@@ -36,7 +37,8 @@ export default function Pendientes({ color }: PendientesProps) {
   const [ocupado, setOcupado] = useState(null);
 
   const cargar = useCallback(async () => {
-    try { setGrupos(await api('/pendientes')); } catch { setGrupos([]); }
+    // v=2: esta versión de la app sabe mostrar todos los grupos (la API no le manda al APK viejo los que no conoce).
+    try { setGrupos((await api('/pendientes', { consulta: { v: 2 } })).filter((g) => DESTINO[g.tipo])); } catch { setGrupos([]); }
   }, []);
   useCargar(cargar);
 

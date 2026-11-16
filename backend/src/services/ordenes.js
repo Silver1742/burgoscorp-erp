@@ -161,16 +161,20 @@ export async function editar(usuario, permiso, id, datos, req) {
 }
 
 /** Cambios automáticos de estado de la OT según sus operaciones (los llama services/tareas.js). */
+/** Devuelve el estado nuevo de la OT si cambió (null si quedó igual). */
 export async function actualizarPorOperaciones(conn, otId) {
   const [[ot]] = await conn.execute('SELECT estado FROM ordenes_trabajo WHERE id = ? FOR UPDATE', [otId]);
-  if (!ot) return;
+  if (!ot) return null;
   const [[c]] = await conn.execute(
     `SELECT SUM(estado <> 'cancelada') AS activas, SUM(estado = 'aprobada') AS aprobadas,
             SUM(estado IN ('en_curso','pausada','en_revision','aprobada','rechazada')) AS iniciadas
      FROM tareas WHERE orden_trabajo_id = ?`, [otId]);
   if (ot.estado === 'planificada' && Number(c.iniciadas) > 0) {
     await conn.execute("UPDATE ordenes_trabajo SET estado = 'en_proceso' WHERE id = ?", [otId]);
+    return 'en_proceso';
   } else if (ot.estado === 'en_proceso' && Number(c.activas) > 0 && Number(c.aprobadas) === Number(c.activas)) {
     await conn.execute("UPDATE ordenes_trabajo SET estado = 'control_calidad' WHERE id = ?", [otId]);
+    return 'control_calidad';
   }
+  return null;
 }

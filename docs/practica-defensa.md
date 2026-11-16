@@ -136,9 +136,9 @@ de la línea, **Ctrl+Shift+F** busca el nombre de la función en todo el proyect
 
 **21.** Diálogo `componentes/DetalleTarea.tsx` → `DialogoAsignar()` (línea 36) → ruta `routes/produccion.js` línea 55 → `services/tareas.js` → `asignar()` (línea 419). Que la persona sea del área y tenga la habilidad se controla en `validarAsignable()` (línea 392).
 
-**22.** `services/tareas.js` → `iniciar()` (línea 483), `pausar()` (línea 503) y `terminar()` (línea 517). Las rutas están en `routes/produccion.js`, líneas 64, 67 y 70.
+**22.** `services/tareas.js` → `iniciar()` (línea 493), `pausar()` (línea 513) y `terminar()` (línea 527). Las rutas están en `routes/produccion.js`, líneas 64, 67 y 70.
 
-**23.** `services/tareas.js` → `aprobar()` (línea 549); rechazar está en `rechazar()` (línea 558).
+**23.** `services/tareas.js` → `aprobar()` (línea 563); rechazar está en `rechazar()` (línea 573).
 
 **24.** `componentes/Fotos.tsx` (abre la cámara en la línea 71) → `services/adjuntos.js` → `subir()` (línea 104). Que sea una imagen real se comprueba mirando los primeros bytes del archivo en `detectarTipo()` (línea 56), no confiando en la extensión.
 
@@ -164,7 +164,7 @@ de la línea, **Ctrl+Shift+F** busca el nombre de la función en todo el proyect
 
 **35.** Pantalla `app/(app)/modulos/mantenimiento/nueva.tsx` → `services/mantenimiento.js` → `crear()` (línea 133).
 
-**36.** `services/ventas.js` → `aprobarPresupuesto()` (línea 333). Al aprobarlo se crea automáticamente la orden de trabajo.
+**36.** `services/ventas.js` → `aprobarPresupuesto()` (línea 343). Al aprobarlo se crea automáticamente la orden de trabajo.
 
 **37.** Pantalla `app/(app)/modulos/calidad/inspeccionar/[otId].tsx` → `services/calidad.js` → `inspeccionar()` (línea 96).
 
@@ -174,11 +174,11 @@ de la línea, **Ctrl+Shift+F** busca el nombre de la función en todo el proyect
 
 **40.** `services/tablero.js` → `obtener()` (línea 89), que junta producción, ventas, calidad, mantenimiento, inventario y facturación. La ruta es `routes/finanzas.js` línea 40.
 
-**41.** `componentes/Tablon.tsx` → `Tablon()` (línea 113) → ruta `routes/inicio.js` línea 71 (`POST /tablon`).
+**41.** `componentes/Tablon.tsx` → `Tablon()` (línea 113) → ruta `routes/inicio.js` línea 72 (`POST /tablon`).
 
 **42.** Pantalla `app/(app)/buscar.tsx` → `routes/buscar.js` línea 78 (busca solo en lo que el rol puede ver).
 
-**43.** `mobile/src/lib/cambios.ts` → `VigiaCambios()` (línea 53) pregunta cada 15 segundos a `GET /cambios` (`routes/inicio.js` línea 123) si hubo cambios, y recarga lo que estás mirando.
+**43.** `mobile/src/lib/cambios.ts` → `VigiaCambios()` (línea 53) pregunta cada 15 segundos a `GET /cambios` (`routes/inicio.js` línea 124) si hubo cambios, y recarga lo que estás mirando.
 
 **44.** `mobile/src/componentes/CampoFecha.tsx`, línea 53: muestra DD/MM/AAAA y guarda AAAA-MM-DD.
 

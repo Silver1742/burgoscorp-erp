@@ -30,6 +30,9 @@ const s = {};
 const como = (q) => ({ Authorization: `Bearer ${s[q].accessToken}` });
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3f, 0x00, 0x12, 0x34, 0xff, 0xd9]);
 const idDe = async (sql, p) => (await query(sql, p))[0].id;
+/** Último aviso de un tipo para esa persona (o undefined). */
+const ultimoAviso = async (q, tipo) => (await query(
+  'SELECT entidad, entidad_id FROM notificaciones WHERE usuario_id = ? AND tipo = ? ORDER BY id DESC LIMIT 1', [s[q].usuario.id, tipo]))[0];
 
 let cliente;
 let solicitudId;
@@ -122,6 +125,15 @@ describe('ventas', () => {
     assert.equal(sol.body.data.estado, 'presupuestada');
   });
 
+  test('el presupuesto listo le llega a Comercial, que lo puede abrir para mandarlo', async () => {
+    for (const q of ['florencia', 'diego']) {
+      const aviso = await ultimoAviso(q, 'presupuesto_listo');
+      assert.deepEqual(aviso, { entidad: 'presupuesto', entidad_id: presupuestoId }, `aviso a ${q}`);
+      assert.equal((await api().get(`/api/v1/presupuestos/${presupuestoId}`).set(como(q))).status, 200);
+    }
+    assert.equal(await ultimoAviso('valentina', 'presupuesto_listo'), undefined, 'quien lo armó no se avisa a sí misma');
+  });
+
   test('aceptado por el cliente: se crea la OT con su operación y el material reservado', async () => {
     const sol = await idDe("SELECT id FROM areas WHERE codigo = 'SOL'");
     assert.equal((await api().post(`/api/v1/presupuestos/${presupuestoId}/aprobar`).set(como('diego')).send({ area_id: sol })).status, 409); // todavía en borrador
@@ -148,6 +160,11 @@ describe('ventas', () => {
     assert.ok(m.body.data.some((x) => x.faltante > 0));
     const s2 = await api().get(`/api/v1/solicitudes/${solicitudId}`).set(como('florencia'));
     assert.equal(s2.body.data.estado, 'aprobada');
+    // Falta chapa gruesa: Abastecimiento recibe el aviso y lo puede abrir (el producto, no la OT que no ve).
+    const falta = await ultimoAviso('mariana', 'material_faltante');
+    assert.equal(falta.entidad, 'producto');
+    assert.equal(falta.entidad_id, await idDe("SELECT id FROM productos WHERE codigo = 'MP-CH-64'"));
+    assert.equal((await api().get(`/api/v1/inventario/stock/${falta.entidad_id}`).set(como('mariana'))).status, 200);
     const aviso = await query("SELECT titulo FROM notificaciones WHERE usuario_id = ? AND tipo = 'ot_nueva' ORDER BY id DESC LIMIT 1", [s.marcelo.usuario.id]);
     assert.match(aviso[0]?.titulo ?? '', new RegExp(ot.numero));
   });
@@ -161,6 +178,23 @@ describe('calidad', () => {
     const pendiente = p.body.data.find((x) => x.id === ot.id);
     assert.ok(pendiente, 'la OT tiene que estar en la lista de Calidad');
     assert.equal(pendiente.operaciones[0].id, operacionId);
+  });
+
+  test('la tarea terminada le llega al jefe del área para revisar (no a Comercial, que la creó)', async () => {
+    assert.deepEqual(await ultimoAviso('marcelo', 'tarea_en_revision'), { entidad: 'tarea', entidad_id: operacionId });
+    const deDiego = await query("SELECT COUNT(*) AS n FROM notificaciones WHERE usuario_id = ? AND tipo = 'tarea_en_revision' AND entidad_id = ?", [s.diego.usuario.id, operacionId]);
+    assert.equal(deDiego[0].n, 0);
+  });
+
+  test('Calidad recibe el aviso de la OT y la tiene en Pendientes (solo la app nueva, v=2)', async () => {
+    assert.deepEqual(await ultimoAviso('leandro', 'ot_para_inspeccionar'), { entidad: 'orden_trabajo', entidad_id: ot.id });
+    const nueva = await api().get('/api/v1/pendientes').query({ v: 2 }).set(como('leandro'));
+    const grupo = nueva.body.data.find((g) => g.tipo === 'inspeccionar');
+    assert.ok(grupo?.items.some((i) => i.id === ot.id), 'la OT en Pendientes de Calidad');
+    const vieja = await api().get('/api/v1/pendientes').set(como('leandro'));
+    assert.ok(!vieja.body.data.some((g) => g.tipo === 'inspeccionar'), 'el APK anterior no recibe el grupo nuevo');
+    const otraArea = await api().get('/api/v1/pendientes').query({ v: 2 }).set(como('ramon'));
+    assert.ok(!otraArea.body.data.some((g) => g.tipo === 'inspeccionar'));
   });
 
   test('no se aprueba con mediciones fuera de tolerancia; el rechazo pide qué rehacer', async () => {
@@ -202,8 +236,12 @@ describe('calidad', () => {
     assert.equal(r.body.data.mediciones[0].conforme, 1);
     const o = await api().get(`/api/v1/ordenes-trabajo/${ot.id}`).set(como('marcelo'));
     assert.equal(o.body.data.estado, 'terminada');
-    const aviso = await query("SELECT COUNT(*) AS n FROM notificaciones WHERE usuario_id = ? AND tipo = 'ot_terminada' AND entidad_id = ?", [s.pablo.usuario.id, ot.id]);
-    assert.equal(aviso[0].n, 1);
+    assert.deepEqual(await ultimoAviso('pablo', 'ot_para_facturar'), { entidad: 'orden_trabajo', entidad_id: ot.id });
+    assert.equal((await api().get('/api/v1/comprobantes/pendientes').set(como('pablo'))).status, 200);
+    assert.deepEqual(await ultimoAviso('diego', 'pedido_terminado'), { entidad: 'presupuesto', entidad_id: presupuestoId });
+    assert.equal((await api().get(`/api/v1/presupuestos/${presupuestoId}`).set(como('diego'))).status, 200);
+    const aOtrosSinPermiso = await query("SELECT COUNT(*) AS n FROM notificaciones WHERE usuario_id IN (?, ?) AND tipo = 'ot_terminada' AND entidad_id = ?", [s.pablo.usuario.id, s.diego.usuario.id, ot.id]);
+    assert.equal(aOtrosSinPermiso[0].n, 0, 'nadie recibe un aviso que lo lleve a una OT que no puede ver');
   });
 });
 
@@ -249,6 +287,9 @@ describe('finanzas', () => {
     const dep = await idDe("SELECT id FROM depositos WHERE codigo = 'DEP-MP'");
     const rec = await api().post(`/api/v1/ordenes-compra/${ocId}/recibir`).set(como('ruben')).send({ deposito_id: dep, items: [{ item_id: oc.body.data.items[0].id, cantidad: 2 }] });
     assert.equal(rec.body.data.estado, 'recibida');
+    assert.deepEqual(await ultimoAviso('gabriel', 'material_recibido'), { entidad: 'orden_compra', entidad_id: ocId });
+    assert.equal((await api().get(`/api/v1/ordenes-compra/${ocId}`).set(como('gabriel'))).status, 200);
+    assert.deepEqual(await ultimoAviso('marcelo', 'material_recibido'), { entidad: 'orden_trabajo', entidad_id: ot.id });
 
     const r = await api().post('/api/v1/comprobantes/factura-compra').set(como('pablo')).send(datos);
     assert.equal(r.status, 201, JSON.stringify(r.body));
