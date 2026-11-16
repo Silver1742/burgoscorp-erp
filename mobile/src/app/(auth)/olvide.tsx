@@ -36,7 +36,7 @@ export default function Olvide() {
   return (
     <AuthLayout titulo="Recuperar contraseña" sub="Te mandamos un código de 6 dígitos para que definas una contraseña nueva.">
       <Campo etiqueta="Email de tu cuenta" value={email} onChangeText={setEmail} error={error}
-        keyboardType="email-address" autoCapitalize="none" autoComplete="email" maxLength={254} onSubmitEditing={enviar} />
+        keyboardType="email-address" autoCapitalize="none" autoComplete="off" importantForAutofill="no" maxLength={254} onSubmitEditing={enviar} />
       <Boton titulo="Enviar código" onPress={enviar} cargando={enviando} textoCargando="Enviando…" icono="mail-outline" />
       {/* Si el administrador ya le mandó un código por email (cuenta nueva), va directo a usarlo */}
       <Boton titulo="Ya tengo un código" variante="secundario" icono="keypad-outline"

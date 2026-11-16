@@ -16,6 +16,8 @@ import { espacio, useTema } from '../../tema';
 const DURACION_SELLO_MS = 750;
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const CLAVE_EMAIL = 'email-recordado-v2';
+
 export default function Login() {
   const { login } = useSesion();
   const toast = useToast();
@@ -29,8 +31,11 @@ export default function Login() {
   const refPassword = useRef(null);
 
   // Solo el email (dato no sensible) y solo si el usuario lo pidió. Nunca la contraseña.
+  // Los campos no le piden al navegador ni a Android que sugieran cuentas guardadas: el login arranca
+  // vacío (no aparece el email de otra persona, como el del administrador de prueba).
   useEffect(() => {
-    leerPreferencia('email-recordado').then((v) => {
+    guardarPreferencia('email-recordado', ''); // el de versiones anteriores, que no se borraba
+    leerPreferencia(CLAVE_EMAIL).then((v) => {
       if (v) { setEmail(v); setRecordar(true); }
     });
   }, []);
@@ -46,7 +51,7 @@ export default function Login() {
     try {
       await login(email.trim(), password, {
         antesDeEntrar: async () => {
-          await guardarPreferencia('email-recordado', recordar ? email.trim() : '');
+          await guardarPreferencia(CLAVE_EMAIL, recordar ? email.trim() : '');
           setSellado(true);
           await esperar(DURACION_SELLO_MS);
         },
@@ -67,12 +72,12 @@ export default function Login() {
     <AuthLayout titulo="Iniciar sesión" sub="Ingresá con tu cuenta corporativa de BurgosCorp." sellado={sellado}>
       <Campo
         etiqueta="Email" value={email} onChangeText={setEmail} error={errores.email}
-        keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="username"
+        keyboardType="email-address" autoCapitalize="none" autoComplete="off" textContentType="none" importantForAutofill="no"
         returnKeyType="next" onSubmitEditing={() => refPassword.current?.focus()} maxLength={254}
       />
       <CampoContrasena
         ref={refPassword} etiqueta="Contraseña" value={password} onChangeText={setPassword} error={errores.password}
-        autoComplete="current-password" textContentType="password" returnKeyType="go" onSubmitEditing={enviar} maxLength={200}
+        autoComplete="off" textContentType="none" importantForAutofill="no" returnKeyType="go" onSubmitEditing={enviar} maxLength={200}
       />
       <View style={estilos.filaOpciones}>
         <Casilla marcada={recordar} alCambiar={setRecordar} etiqueta="Recordar mi email" />

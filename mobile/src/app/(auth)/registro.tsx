@@ -56,7 +56,7 @@ export default function Registro() {
         <Campo etiqueta="Apellido" value={datos.apellido} onChangeText={cambiar('apellido')} error={errores.apellido} autoComplete="family-name" maxLength={60} estilo={{ flex: 1 }} />
       </View>
       <Campo etiqueta="Email" value={datos.email} onChangeText={cambiar('email')} error={errores.email}
-        keyboardType="email-address" autoCapitalize="none" autoComplete="email" maxLength={254} />
+        keyboardType="email-address" autoCapitalize="none" autoComplete="off" importantForAutofill="no" maxLength={254} />
       <CampoContrasena etiqueta="Contraseña" value={datos.password} onChangeText={cambiar('password')} error={errores.password}
         autoComplete="new-password" textContentType="newPassword" maxLength={72} />
       <ChecklistContrasena valor={datos.password} />

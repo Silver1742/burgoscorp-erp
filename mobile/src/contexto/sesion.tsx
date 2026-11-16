@@ -154,7 +154,7 @@ export function SesionProvider({ children }: SesionProviderProps) {
         // Aunque falle la llamada (sin conexión), la sesión local se cierra igual.
       }
       // Al cerrar sesión se olvida el email recordado: el próximo que use este equipo no ve la cuenta anterior.
-      await guardarPreferencia('email-recordado', '');
+      await guardarPreferencia('email-recordado-v2', '');
       await cerrarLocal();
     },
   }), [abrirSesion, cargarPerfil, cerrarLocal, estado.pendiente2fa, procesarRespuestaLogin]);
