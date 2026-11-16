@@ -94,7 +94,7 @@ hay que volver a entrar.
 
 ## 5. APK con EAS Build
 
-**Último APK:** https://expo.dev/artifacts/eas/BsbOo7yL4-jyhpaJ54EA5OIdu7gqx5hUPpUp1KbxcTM.apk (se actualiza en cada entrega).
+**Último APK:** https://expo.dev/artifacts/eas/9QBei4xDVC1SZJgdruojLFC1b2ip4QISy_n266L13Zg.apk (se actualiza en cada entrega).
 
 1. `mobile/eas.json` ya apunta a la API publicada (`EXPO_PUBLIC_API_URL`). La app se niega a usar
    `http://` en producción.
