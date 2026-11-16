@@ -14,7 +14,7 @@ from pathlib import Path
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
-from reportlab.platypus import PageBreak, Paragraph, Preformatted, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.platypus import KeepTogether, PageBreak, Paragraph, Preformatted, SimpleDocTemplate, Spacer, Table, TableStyle
 
 RAIZ = Path(__file__).resolve().parent.parent
 _spec = importlib.util.spec_from_file_location('manual', RAIZ / 'docs' / 'generar-manual-pdf.py')
@@ -47,12 +47,16 @@ def convertir(md):
         if i % 2:
             salida += bloque_codigo(parte.rstrip('\n'))
         elif parte.strip():
-            # En la práctica, las respuestas empiezan en otra hoja (para no verlas al responder).
-            antes, separador, despues = parte.partition('\n## Respuestas')
-            salida += manual.convertir(antes)
-            if separador:
-                salida += [PageBreak()] + manual.convertir(separador + despues)
-    return salida
+            salida += manual.convertir(parte)
+    # En la práctica, cada pregunta ("**12. ...**") va en la misma hoja que su respuesta (el recuadro).
+    juntos = []
+    for f in salida:
+        previo = juntos[-1] if juntos else None
+        if isinstance(f, Table) and isinstance(previo, Paragraph) and re.match(r'<b>\d+\.', previo.text):
+            juntos[-1] = KeepTogether([previo, f])
+        else:
+            juntos.append(f)
+    return juntos
 
 
 def generar(archivo, titulo, sub):

@@ -167,23 +167,45 @@ def pie(canvas, doc):
     canvas.restoreState()
 
 
-def portada(canvas, doc):
+def escudo(canvas, x, y, lado):
+    """El escudo BC de la app (mobile/src/componentes/Marca.tsx, viewBox 48x48): cuerpo negro con
+    degradado, borde interior rojo y "BC" en blanco con serifas. (x, y) es la esquina inferior izquierda."""
+    e = lado / 48
+    P = lambda px, py: (x + px * e, y + (48 - py) * e)  # el SVG mide y hacia abajo; el PDF, hacia arriba
+
+    def forma(puntos):
+        p = canvas.beginPath()
+        p.moveTo(*P(*puntos[0]))
+        for tramo in puntos[1:]:
+            if len(tramo) == 2:
+                p.lineTo(*P(*tramo))
+            else:
+                p.curveTo(*P(*tramo[0:2]), *P(*tramo[2:4]), *P(*tramo[4:6]))
+        p.close()
+        return p
+
+    # M24 2 43 9v14c0 11.5-8 19.8-19 23C13 42.8 5 34.5 5 23V9Z
+    cuerpo = forma([(24, 2), (43, 9), (43, 23), (43, 34.5, 35, 42.8, 24, 46), (13, 42.8, 5, 34.5, 5, 23), (5, 9)])
+    # M24 5.5 40 11.4V23c0 9.7-6.6 16.8-16 19.8C14.6 39.8 8 32.7 8 23V11.4Z
+    borde = forma([(24, 5.5), (40, 11.4), (40, 23), (40, 32.7, 33.4, 39.8, 24, 42.8), (14.6, 39.8, 8, 32.7, 8, 23), (8, 11.4)])
+
     canvas.saveState()
-    # Escudo "BC" como en la app.
-    cx, cy = A4[0] / 2, A4[1] - 95 * mm
-    canvas.setFillColor(ROJO)
-    p = canvas.beginPath()
-    p.moveTo(cx - 22 * mm, cy + 26 * mm)
-    p.lineTo(cx + 22 * mm, cy + 26 * mm)
-    p.lineTo(cx + 22 * mm, cy)
-    p.curveTo(cx + 22 * mm, cy - 16 * mm, cx + 6 * mm, cy - 24 * mm, cx, cy - 28 * mm)
-    p.curveTo(cx - 6 * mm, cy - 24 * mm, cx - 22 * mm, cy - 16 * mm, cx - 22 * mm, cy)
-    p.close()
-    canvas.drawPath(p, fill=1, stroke=0)
-    canvas.setFillColor(colors.white)
-    canvas.setFont('Helvetica-Bold', 30)
-    canvas.drawCentredString(cx, cy - 2 * mm, 'BC')
+    canvas.clipPath(cuerpo, stroke=0, fill=0)
+    canvas.linearGradient(*P(0, 0), *P(48, 48), (colors.HexColor('#2e2e33'), colors.HexColor('#050505')), extend=True)
     canvas.restoreState()
+    canvas.saveState()
+    canvas.setStrokeColor(colors.HexColor('#e11d2e'))
+    canvas.setLineWidth(1.75 * e)
+    canvas.drawPath(borde, stroke=1, fill=0)
+    canvas.setFillColor(colors.white)
+    canvas.setFont('Times-Bold', 17 * e)
+    canvas.drawCentredString(*P(24, 30), 'BC')
+    canvas.restoreState()
+
+
+def portada(canvas, doc):
+    lado = 62 * mm
+    escudo(canvas, (A4[0] - lado) / 2, A4[1] - 125 * mm, lado)
 
 
 def main():
