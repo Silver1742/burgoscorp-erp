@@ -68,6 +68,8 @@ búsqueda general encuentra personas, pedidos, OT, tareas, máquinas, materiales
 | Documentación de la API | [`backend/README.md`](backend/README.md) |
 | Manual de usuario | [`docs/manual-de-usuario.md`](docs/manual-de-usuario.md) (también en PDF, llega por email al habilitar la cuenta) |
 | Consultas SQL para mostrar la base y cargar un usuario a mano | [`docs/sql/presentacion.sql`](docs/sql/presentacion.sql) |
+| Cómo usar la base en MySQL Workbench | [`docs/guia-base-de-datos.md`](docs/guia-base-de-datos.md) |
+| Dónde está cada funcionalidad en el código (archivo y línea) | [`docs/donde-esta-cada-cosa.md`](docs/donde-esta-cada-cosa.md) |
 | Tutorial: un pedido de punta a punta | [`docs/tutorial-pedido.md`](docs/tutorial-pedido.md) (con qué cuenta se hace cada paso) |
 | Guía de instalación | [`docs/guia-instalacion.md`](docs/guia-instalacion.md) |
 | APK | EAS Build, perfil `preview` |
@@ -117,6 +119,8 @@ Tests de la API: `cd backend && npm test`.
 - [Qué puede hacer cada área, rol y habilidad](docs/capacidades-por-area.md)
 - [Documentación de la API](backend/README.md)
 - [Guía de instalación](docs/guia-instalacion.md)
+- [Guía de la base de datos en Workbench](docs/guia-base-de-datos.md)
+- [Dónde está cada cosa en el código](docs/donde-esta-cada-cosa.md)
 - [Ingreso con Google, GitHub y Discord](docs/guia-oauth.md)
 - [Publicación (Render, Aiven, Brevo, EAS)](docs/publicar.md)
 - [Cómo está hecho](docs/como-esta-hecho.md)
